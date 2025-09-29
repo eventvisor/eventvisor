@@ -1,6 +1,6 @@
 {
   "name": "@eventvisor/types",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "description": "Common Typescript types for Eventvisor",
   "main": "src/index.js",
   "module": "src/index.js",

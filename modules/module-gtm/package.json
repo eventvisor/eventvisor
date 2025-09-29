@@ -1,6 +1,6 @@
 {
   "name": "@eventvisor/module-gtm",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "description": "Eventvisor GTM module",
   "main": "dist/index.cjs.js",
   "module": "dist/index.mjs",
@@ -38,7 +38,7 @@
     "url": "https://github.com/eventvisor/eventvisor/issues"
   },
   "devDependencies": {
-    "@eventvisor/sdk": "0.0.1"
+    "@eventvisor/sdk": "0.0.2"
   },
   "license": "MIT"
 }
