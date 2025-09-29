@@ -1,0 +1,26 @@
+{
+  "description": "Browser destination",
+  "tags": ["web"],
+  "transport": "console",
+  "transforms": [
+    {
+      "type": "set",
+      "value": {}
+    },
+    {
+      "source": "eventName",
+      "type": "set",
+      "target": "eventName"
+    },
+    {
+      "source": "attributes",
+      "type": "set",
+      "target": "attributes"
+    },
+    {
+      "source": "payload",
+      "type": "set",
+      "target": "payload"
+    }
+  ]
+}

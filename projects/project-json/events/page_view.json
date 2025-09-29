@@ -1,0 +1,12 @@
+{
+  "description": "Page view",
+  "tags": ["web"],
+  "type": "object",
+  "properties": {
+    "url": {
+      "type": "string",
+      "description": "The URL of the page that was viewed"
+    }
+  },
+  "required": ["url"]
+}
