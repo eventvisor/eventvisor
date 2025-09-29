@@ -1,0 +1,13 @@
+description: Button click
+tags:
+  - web
+
+type: object
+
+properties:
+  buttonId:
+    type: string
+    description: The ID of the button that was clicked
+
+required:
+  - buttonId
