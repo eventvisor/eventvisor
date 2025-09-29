@@ -1,0 +1,39 @@
+{
+  "name": "@eventvisor/types",
+  "version": "0.0.1",
+  "description": "Common Typescript types for Eventvisor",
+  "main": "src/index.js",
+  "module": "src/index.js",
+  "types": "src/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./src/index.d.ts",
+      "import": "./src/index.js",
+      "require": "./src/index.js"
+    }
+  },
+  "scripts": {
+    "transpile": "echo 'Nothing to transpile'",
+    "dist": "echo 'Nothing to dist'",
+    "build": "tsc ./src/index.d.ts",
+    "test": "echo 'Nothing to test in types package'"
+  },
+  "author": {
+    "name": "Fahad Heylaal",
+    "url": "https://fahad19.com"
+  },
+  "homepage": "https://eventvisor.org",
+  "keywords": [],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/eventvisor/eventvisor.git"
+  },
+  "publishConfig": {
+    "access": "public",
+    "registry": "https://registry.npmjs.org/"
+  },
+  "bugs": {
+    "url": "https://github.com/eventvisor/eventvisor/issues"
+  },
+  "license": "MIT"
+}
