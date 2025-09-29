@@ -9,21 +9,6 @@
 via remote configuration.</small>
 </div>
 
-<br />
-
-<div align="center">
-  <!-- NPM version -->
-  <a href="https://npmjs.org/package/@eventvisor/sdk">
-    <img src="https://img.shields.io/npm/v/@eventvisor/sdk.svg"
-      alt="NPM version" />
-  </a>
-  <!-- License -->
-  <a href="./LICENSE">
-    <img src="https://img.shields.io/npm/l/@eventvisor/sdk.svg"
-      alt="License" />
-  </a>
-</div>
-
 <div align="center">
   <h3>
     <a href="https://eventvisor.org">
