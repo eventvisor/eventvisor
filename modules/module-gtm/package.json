@@ -37,8 +37,5 @@
   "bugs": {
     "url": "https://github.com/eventvisor/eventvisor/issues"
   },
-  "license": "MIT",
-  "peerDependencies": {
-    "@eventvisor/sdk": "0.0.1"
-  }
+  "license": "MIT"
 }
