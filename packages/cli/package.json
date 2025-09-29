@@ -1,0 +1,37 @@
+{
+  "name": "@eventvisor/cli",
+  "version": "0.0.1",
+  "description": "CLI package of Eventvisor",
+  "main": "bin.js",
+  "types": "lib/index.d.ts",
+  "bin": {
+    "eventvisor": "./bin.js"
+  },
+  "scripts": {
+    "transpile": "rimraf lib && tsc --project tsconfig.cjs.json",
+    "dist": "echo 'Nothing to dist here'",
+    "build": "npm run transpile",
+    "test": "echo 'Nothing to test in this package'"
+  },
+  "homepage": "https://eventvisor.org",
+  "keywords": [],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/eventvisor/eventvisor.git"
+  },
+  "publishConfig": {
+    "access": "public",
+    "registry": "https://registry.npmjs.org/"
+  },
+  "bugs": {
+    "url": "https://github.com/eventvisor/eventvisor/issues"
+  },
+  "author": {
+    "name": "Fahad Heylaal",
+    "url": "https://fahad19.com"
+  },
+  "license": "MIT",
+  "dependencies": {
+    "@eventvisor/core": "0.0.1"
+  }
+}
