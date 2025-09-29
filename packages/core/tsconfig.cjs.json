@@ -1,0 +1,11 @@
+{
+  "extends": "../../tsconfig.cjs.json",
+  "compilerOptions": {
+    "target": "es2020",
+    "outDir": "./lib",
+    "moduleResolution": "node",
+    "esModuleInterop": true,
+    "allowSyntheticDefaultImports": true
+  },
+  "include": ["./src/**/*.ts"]
+}
