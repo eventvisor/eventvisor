@@ -1,0 +1,32 @@
+description: Inject cookie banner
+tags:
+  - web
+
+on:
+  event_tracked:
+    - page_view
+
+state:
+  injected: false
+
+conditions:
+  - state: injected
+    operator: equals
+    value: false
+
+steps:
+  - handler: pixel
+    params:
+      snippet: |
+        <div>
+          <h1>Cookie Banner</h1>
+          <p>This is a cookie banner</p>
+        </div>
+      selector: body
+
+  - transforms:
+      - type: set
+        target: injected
+        value: true
+
+persist: localstorage

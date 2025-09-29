@@ -1,0 +1,23 @@
+attribute: testRequired
+
+assertions:
+  ##
+  # Valid
+  #
+  - description: "attribute should be set"
+    setAttribute:
+      id: "123"
+      country: "NL"
+    expectedToBeValid: true
+    expectedAttribute:
+      id: "123"
+      country: "NL"
+
+  ##
+  # Invalid
+  #
+  - description: "attribute should NOT be set"
+    setAttribute:
+      country: "DE"
+    expectedToBeValid: false
+    expectedAttribute: null

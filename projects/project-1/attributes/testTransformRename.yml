@@ -1,0 +1,22 @@
+description: Test transformed attribute
+tags:
+  - web
+
+type: object
+
+properties:
+  id:
+    type: string
+    description: The user's ID
+
+  name:
+    type: string
+
+required:
+  - id
+  - name
+
+transforms:
+  - type: rename
+    targetMap:
+      name: fullName

@@ -1,0 +1,34 @@
+destination: consoleSimple
+
+assertions:
+  ##
+  # Valid
+  #
+  - description: "destination valid"
+    actions:
+      - type: setAttribute
+        name: userId
+        value: "123"
+
+      - type: setAttribute
+        name: country
+        value: "nl"
+
+      - type: track
+        name: page_view
+        value:
+          url: "https://example.com"
+    expectedToBeTransported: true
+    expectedBody:
+      attributes:
+        userId: "123"
+        country: "nl"
+      payload:
+        url: "https://example.com"
+        eventName: "page_view"
+
+  ##
+  # Invalid
+  #
+  # - description: "destination invalid"
+  #   expectedToBeValid: false

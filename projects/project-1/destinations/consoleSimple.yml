@@ -1,0 +1,27 @@
+description: Console destination
+tags:
+  - web
+
+transport: console
+##
+# Simple one event tracked => one console.log
+#
+transforms:
+  - type: set
+    value: {}
+
+  - source: attributes
+    type: set
+    target: attributes
+
+  - source: payload
+    type: set
+    target: payload
+
+  - source: eventName
+    type: set
+    target: payload.eventName
+# - type: map
+#   maps:
+#     contexts: contexts
+#     payload: payload

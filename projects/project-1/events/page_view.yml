@@ -1,0 +1,17 @@
+description: Page view
+tags:
+  - web
+
+type: object
+
+properties:
+  url:
+    type: string
+    description: The URL of the page that was viewed
+
+  referrer:
+    type: string
+    description: The URL of the page that referred the user to the current page
+
+required:
+  - url

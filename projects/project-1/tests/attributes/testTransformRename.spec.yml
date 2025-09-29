@@ -1,0 +1,14 @@
+attribute: testTransformRename
+
+assertions:
+  ##
+  # Valid
+  #
+  - description: "attribute should be set"
+    setAttribute:
+      id: "123"
+      name: "Bilbo Baggins"
+    expectedToBeValid: true
+    expectedAttribute:
+      id: "123"
+      fullName: "Bilbo Baggins"

@@ -1,0 +1,35 @@
+description: Test transformed attribute
+tags:
+  - web
+
+type: object
+
+properties:
+  id:
+    type: string
+    description: The user's ID
+
+  firstName:
+    type: string
+
+  lastName:
+    type: string
+
+required:
+  - id
+  - firstName
+  - lastName
+
+transforms:
+  - payload:
+      - firstName
+      - lastName
+    type: concat
+    separator: " "
+    target: fullName
+
+  - type: remove
+    target: firstName
+
+  - type: remove
+    target: lastName

@@ -1,0 +1,23 @@
+event: banner_click
+
+assertions:
+  # no transformations needed
+  - description: "event should be valid"
+    track:
+      bannerId: "123"
+      screenWidth: 100
+    expectedToBeValid: true
+    expectedEvent:
+      bannerId: "123"
+      screenWidth: 100
+
+  # with transformations
+  - description: "event should be valid (with transformations)"
+    withLookups:
+      browser.screen.width: 200
+    track:
+      bannerId: "234"
+    expectedToBeValid: true
+    expectedEvent:
+      bannerId: "234"
+      screenWidth: 200

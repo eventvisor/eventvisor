@@ -1,0 +1,43 @@
+effect: inject_cookie_banner
+
+assertions:
+  - description: "effect should NOT be handled"
+    actions:
+      - type: track
+        name: some_other_event
+        value:
+          some_other_property: "some_other_value"
+    expectedState:
+      injected: false
+
+  - description: "effect should be handled"
+    actions:
+      - type: track
+        name: page_view
+        value:
+          url: "https://example.com"
+    expectedState:
+      injected: true
+    expectedToBeCalled:
+      - handler: pixel
+        times: 1
+
+  - description: "effect should be handled maximum once"
+    actions:
+      - type: track
+        name: page_view
+        value:
+          url: "https://example.com"
+      - type: track
+        name: page_view
+        value:
+          url: "https://example.com/about"
+      - type: track
+        name: page_view
+        value:
+          url: "https://example.com/contact"
+    expectedState:
+      injected: true
+    expectedToBeCalled:
+      - handler: pixel
+        times: 1

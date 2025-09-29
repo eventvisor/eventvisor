@@ -1,0 +1,27 @@
+attribute: testDefaultValue
+
+assertions:
+  ##
+  # Valid
+  #
+  - description: "User attribute should be set"
+    setAttribute:
+      id: "123"
+      country: "NL"
+    expectedToBeValid: true
+    expectedAttribute:
+      id: "123"
+      country: "NL"
+      isHuman: true
+      consentToMarketing: false
+      isSubscribed: false
+
+  ##
+  # Invalid
+  #
+  - description: "User attribute should NOT be set"
+    setAttribute:
+      unknownField: "123"
+      country: "DE"
+    expectedToBeValid: false
+    expectedAttribute: null

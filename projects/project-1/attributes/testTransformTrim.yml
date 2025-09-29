@@ -1,0 +1,31 @@
+description: Test transformed attribute
+tags:
+  - web
+
+type: object
+
+properties:
+  id:
+    type: string
+    description: The user's ID
+
+  firstName:
+    type: string
+
+  lastName:
+    type: string
+
+required:
+  - id
+  - firstName
+  - lastName
+
+transforms:
+  # without source
+  - type: trim
+    target: firstName
+
+  # with source
+  - payload: lastName
+    type: trim
+    target: lastName

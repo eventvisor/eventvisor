@@ -1,0 +1,16 @@
+attribute: testTransformTrim
+
+assertions:
+  ##
+  # Valid
+  #
+  - description: "attribute should be set with transformed values"
+    setAttribute:
+      id: "123"
+      firstName: "  John  "
+      lastName: "  Doe  "
+    expectedToBeValid: true
+    expectedAttribute:
+      id: "123"
+      firstName: "John"
+      lastName: "Doe"

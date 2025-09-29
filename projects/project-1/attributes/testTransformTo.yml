@@ -1,0 +1,46 @@
+description: Test transformed attribute
+tags:
+  - web
+
+type: object
+
+properties:
+  id:
+    type: string
+    description: The user's ID
+
+  firstName:
+    type: string
+
+  lastName:
+    type: string
+
+  age:
+    type: string
+
+  isHuman:
+    type: string
+
+  balance:
+    type: string
+
+  itemsCount:
+    type: number
+
+required:
+  - id
+  - firstName
+  - lastName
+
+transforms:
+  - type: toInteger
+    target: age
+
+  - type: toBoolean
+    target: isHuman
+
+  - type: toDouble
+    target: balance
+
+  - type: toString
+    target: itemsCount

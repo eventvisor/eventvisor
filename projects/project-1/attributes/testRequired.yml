@@ -1,0 +1,18 @@
+description: Test required attribute
+tags:
+  - web
+
+type: object
+
+properties:
+  id:
+    type: string
+    description: The user's ID
+
+  country:
+    type: string
+    description: The user's country in ISO 3166-1 alpha-2 format, like "NL" or "DE"
+
+required:
+  - id
+  - country
