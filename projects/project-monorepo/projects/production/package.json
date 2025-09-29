@@ -1,0 +1,11 @@
+{
+  "name": "production",
+  "private": true,
+  "version": "0.0.1",
+  "scripts": {
+    "lint": "eventvisor lint",
+    "build": "eventvisor build",
+    "test": "eventvisor test"
+  },
+  "dependencies": {}
+}

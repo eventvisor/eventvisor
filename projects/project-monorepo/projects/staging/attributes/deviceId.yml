@@ -1,0 +1,5 @@
+description: Device ID attribute
+tags:
+  - web
+
+type: string
