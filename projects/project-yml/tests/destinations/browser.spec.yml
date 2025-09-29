@@ -1,0 +1,25 @@
+destination: browser
+
+assertions:
+  - description: destination valid
+    actions:
+      - type: setAttribute
+        name: userId
+        value: user-123
+
+      - type: setAttribute
+        name: country
+        value: nl
+
+      - type: track
+        name: page_view
+        value:
+          url: https://example.com
+    expectedToBeTransported: true
+    expectedBody:
+      eventName: page_view
+      attributes:
+        userId: user-123
+        country: nl
+      payload:
+        url: https://example.com

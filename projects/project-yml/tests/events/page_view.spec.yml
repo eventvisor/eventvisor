@@ -1,0 +1,18 @@
+event: page_view
+
+assertions:
+  # valid
+  - description: "event should be valid"
+    track:
+      url: "https://example.com"
+    expectedToBeValid: true
+    expectedEvent:
+      url: "https://example.com"
+    expectedDestinations:
+      - console
+
+  # invalid
+  - description: "event should be invalid"
+    track:
+      some_unknown_property: "https://example.com"
+    expectedToBeValid: false
