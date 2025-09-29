@@ -1,0 +1,26 @@
+{
+  "name": "@eventvisor/example-react",
+  "private": true,
+  "version": "0.0.1",
+  "scripts": {
+    "build:eventvisor": "eventvisor build",
+    "build": "npm run build:eventvisor && vite build",
+    "dev": "npm run build:eventvisor && vite",
+    "test": "echo 'Nothing to test'",
+    "lint": "eventvisor lint",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "@eventvisor/sdk": "0.0.1",
+    "@eventvisor/module-console": "0.0.1",
+    "@eventvisor/module-localstorage": "0.0.1",
+    "@eventvisor/module-pixel": "0.0.1",
+    "react": "^19.1.1",
+    "react-dom": "^19.1.1"
+  },
+  "devDependencies": {
+    "@eventvisor/cli": "0.0.1",
+    "@vitejs/plugin-react": "^5.0.3",
+    "vite": "^7.1.7"
+  }
+}

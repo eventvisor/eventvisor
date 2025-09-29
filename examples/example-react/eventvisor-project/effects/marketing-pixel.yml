@@ -1,0 +1,31 @@
+description: Marketing pixel
+tags:
+  - web
+
+on:
+  event_tracked:
+    - page_view
+
+state:
+  injected: false
+
+conditions:
+  - state: injected
+    operator: equals
+    value: false
+
+steps:
+  - handler: pixel
+    params:
+      snippet: |
+        <script>
+          console.log("Marketing pixel from {{ payload.url }}");
+        </script>
+      selector: body
+
+  - transforms:
+      - type: set
+        target: injected
+        value: true
+
+persist: localstorage

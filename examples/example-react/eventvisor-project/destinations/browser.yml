@@ -1,0 +1,9 @@
+description: Browser destination
+tags:
+  - web
+
+transport: console
+
+transforms:
+  - type: spread
+    source: attributes

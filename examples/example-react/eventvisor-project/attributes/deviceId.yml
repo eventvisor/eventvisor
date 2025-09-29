@@ -1,0 +1,7 @@
+description: Device ID attributes
+tags:
+  - web
+
+type: string
+
+persist: localstorage
