@@ -1,19 +1,4 @@
 {
   "$schema": "node_modules/lerna/schemas/lerna-schema.json",
-  "version": "0.0.1",
-  "npmClient": "npm",
-  "useWorkspaces": true,
-  "command": {
-    "version": {
-      "allowBranch": "main",
-      "conventionalCommits": true,
-      "exact": true,
-      "noGitReset": true,
-      "noPush": true
-    },
-    "publish": {
-      "registry": "https://registry.npmjs.org/",
-      "access": "public"
-    }
-  }
+  "version": "0.0.1"
 }
