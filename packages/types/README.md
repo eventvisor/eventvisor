@@ -2,7 +2,7 @@
 
 > Common TypeScript typings for Eventvisor packages
 
-Visit [https://eventvisor.org](https://eventvisor.org) for more information
+Visit [https://eventvisor.org](https://eventvisor.org) for more information.
 
 ## License
 
