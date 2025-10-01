@@ -53,7 +53,7 @@ export interface RemoveFromStorageOptions {
 export interface ModuleDependencies {
   datafileReader: DatafileReader;
   logger: Logger;
-  sourceResolver: SourceResolver;
+  sourceResolver: SourceResolver; // @TODO: single resolveSource function?
 }
 
 export interface Module {

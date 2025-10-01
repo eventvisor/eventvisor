@@ -17,8 +17,8 @@
     "transpile": "echo 'Nothing to transpile'",
     "dist": "webpack --config ./webpack.config.js && tsc --project tsconfig.esm.json --declaration --emitDeclarationOnly --declarationDir dist",
     "build": "npm run transpile && npm run dist",
-    "testJest": "jest --config jest.config.js --verbose --coverage",
-    "test": "echo 'Nothing to test'"
+    "test:jest": "jest --config jest.config.js --verbose --coverage",
+    "test": "npm run test:jest"
   },
   "author": {
     "name": "Fahad Heylaal",
