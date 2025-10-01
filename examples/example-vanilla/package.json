@@ -1,7 +1,7 @@
 {
   "name": "@eventvisor/example-vanilla",
   "private": true,
-  "version": "0.2.0",
+  "version": "0.2.1",
   "scripts": {
     "build:eventvisor": "eventvisor build",
     "build": "npm run build:eventvisor && vite build",
@@ -11,11 +11,11 @@
     "preview": "vite preview"
   },
   "dependencies": {
-    "@eventvisor/module-console": "0.2.0",
-    "@eventvisor/sdk": "0.2.0"
+    "@eventvisor/module-console": "0.2.1",
+    "@eventvisor/sdk": "0.2.1"
   },
   "devDependencies": {
-    "@eventvisor/cli": "0.2.0",
+    "@eventvisor/cli": "0.2.1",
     "vite": "^7.1.7"
   }
 }

@@ -1,6 +1,6 @@
 {
   "name": "@eventvisor/sdk",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "description": "Eventvisor SDK for Node.js and the browser",
   "main": "dist/index.cjs.js",
   "module": "dist/index.mjs",
