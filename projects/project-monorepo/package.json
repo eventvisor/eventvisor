@@ -1,13 +1,13 @@
 {
   "name": "@eventvisor/project-monorepo",
   "private": true,
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Example Eventvisor monorepo setup",
   "workspaces": [
     "projects/*"
   ],
   "scripts": {},
   "dependencies": {
-    "@eventvisor/cli": "0.1.0"
+    "@eventvisor/cli": "0.2.0"
   }
 }
