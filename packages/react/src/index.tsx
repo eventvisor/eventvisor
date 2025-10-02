@@ -12,7 +12,7 @@ export const EventvisorContext = React.createContext<Eventvisor | undefined>(und
  */
 export interface EventvisorProviderProps {
   instance: Eventvisor;
-  children: React.ReactNode;
+  children?: React.ReactNode;
 }
 
 export function EventvisorProvider(props: EventvisorProviderProps) {
