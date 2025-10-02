@@ -2,7 +2,7 @@
 
 React components and hooks for Eventvisor.
 
-Visit [https://eventvisor.org/docs/react/](https://eventvisor.org/docs/react/) for more information
+Visit [https://eventvisor.org/docs/sdks/react/](https://eventvisor.org/docs/sdks/react/) for more information
 
 ## License <!-- omit in toc -->
 
