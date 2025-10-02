@@ -71,12 +71,18 @@ describe("react :: index", function () {
         },
       },
     ],
+    logLevel: "error",
   });
 
   it("should run tests", async function () {
     function TestComponent() {
-      track("page_view", { url: "https://www.example.com" });
       const ready = isReady();
+      const instance = useInstance();
+
+      // Track page_view when component mounts
+      React.useEffect(() => {
+        instance.track("page_view", { url: "https://www.example.com" });
+      }, [instance]);
 
       if (!ready) {
         return <div>Loading...</div>;
@@ -84,7 +90,10 @@ describe("react :: index", function () {
 
       return (
         <div>
-          <button id="my-button" onClick={() => track("button_click", { buttonId: "my-button" })}>
+          <button
+            id="my-button"
+            onClick={() => instance.track("button_click", { buttonId: "my-button" })}
+          >
             Button
           </button>
         </div>
