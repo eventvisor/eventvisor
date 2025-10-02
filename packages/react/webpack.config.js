@@ -1,12 +1,7 @@
 const path = require("path");
 
 const externals = {
-  react: {
-    commonjs: "react",
-    commonjs2: "react",
-    amd: "react",
-    root: "React",
-  },
+  react: "react",
 };
 
 module.exports = [
@@ -50,6 +45,7 @@ module.exports = [
     },
     optimization: {
       minimize: true,
+      concatenateModules: false,
     },
   },
 
@@ -86,6 +82,9 @@ module.exports = [
     },
     performance: {
       hints: false,
+    },
+    optimization: {
+      concatenateModules: false,
     },
   },
 ];
