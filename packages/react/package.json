@@ -1,7 +1,7 @@
 {
   "name": "@eventvisor/react",
   "version": "0.3.0",
-  "description": "React package for Featurevisor",
+  "description": "React package for Eventvisor",
   "main": "dist/index.js",
   "module": "lib/index.js",
   "types": "lib/index.d.ts",

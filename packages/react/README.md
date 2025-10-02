@@ -1,4 +1,4 @@
-# @featurevisor/react <!-- omit in toc -->
+# @eventvisor/react <!-- omit in toc -->
 
 React components and hooks for Eventvisor.
 

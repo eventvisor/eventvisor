@@ -99,9 +99,11 @@ describe("react :: index", function () {
 
     // expect to be not found
     try {
-      const loading = screen.getByText("Loading...");
+      screen.getByText("Loading...");
 
       throw new Error("Loading element should not be found");
+
+      // eslint-disable-next-line
     } catch (error) {
       // pass
     }
