@@ -45,32 +45,24 @@ export function isReady(): boolean {
   return isEventvisorReady;
 }
 
-export function track(eventName: EventName, value: Value) {
-  const instance = useInstance();
-
-  instance.track(eventName, value);
+export interface UseEventvisor {
+  instance: Eventvisor;
+  track: (eventName: EventName, value: Value) => void;
+  setAttribute: (name: AttributeName, value: Value) => void;
+  getAttributeValue: (name: AttributeName) => Value | null;
+  isAttributeSet: (name: AttributeName) => boolean;
+  removeAttribute: (name: AttributeName) => void;
 }
 
-export function setAttribute(name: AttributeName, value: Value) {
+export function useEventvisor(): UseEventvisor {
   const instance = useInstance();
 
-  instance.setAttribute(name, value);
-}
-
-export function getAttributeValue(name: AttributeName) {
-  const instance = useInstance();
-
-  return instance.getAttributeValue(name);
-}
-
-export function isAttributeSet(name: AttributeName) {
-  const instance = useInstance();
-
-  return instance.isAttributeSet(name);
-}
-
-export function removeAttribute(name: AttributeName) {
-  const instance = useInstance();
-
-  instance.removeAttribute(name);
+  return {
+    instance,
+    track: (eventName, value) => instance.track(eventName, value),
+    setAttribute: (name, value) => instance.setAttribute(name, value),
+    getAttributeValue: (name) => instance.getAttributeValue(name),
+    isAttributeSet: (name) => instance.isAttributeSet(name),
+    removeAttribute: (name) => instance.removeAttribute(name),
+  };
 }

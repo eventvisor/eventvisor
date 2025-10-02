@@ -3,16 +3,7 @@ import { render, screen, act } from "@testing-library/react";
 
 import { createInstance } from "@eventvisor/sdk";
 
-import {
-  EventvisorProvider,
-  useInstance,
-  isReady,
-  track,
-  setAttribute,
-  getAttributeValue,
-  isAttributeSet,
-  removeAttribute,
-} from "./index";
+import { EventvisorProvider, isReady, useEventvisor } from "./index";
 
 async function waitFor(ms: number) {
   return new Promise((resolve) => setTimeout(resolve, ms));
@@ -77,12 +68,15 @@ describe("react :: index", function () {
   it("should run tests", async function () {
     function TestComponent() {
       const ready = isReady();
-      const instance = useInstance();
+      const { track, setAttribute } = useEventvisor();
 
       // Track page_view when component mounts
       React.useEffect(() => {
-        instance.track("page_view", { url: "https://www.example.com" });
-      }, [instance]);
+        setAttribute("userId", "user-123");
+        setAttribute("deviceId", "device-234");
+
+        track("page_view", { url: "https://www.example.com" });
+      }, []);
 
       if (!ready) {
         return <div>Loading...</div>;
@@ -90,10 +84,7 @@ describe("react :: index", function () {
 
       return (
         <div>
-          <button
-            id="my-button"
-            onClick={() => instance.track("button_click", { buttonId: "my-button" })}
-          >
+          <button id="my-button" onClick={() => track("button_click", { buttonId: "my-button" })}>
             Button
           </button>
         </div>
@@ -132,6 +123,9 @@ describe("react :: index", function () {
       expect(transportedEvents.length).toEqual(2);
       expect(transportedEvents[0].eventName).toEqual("page_view");
       expect(transportedEvents[1].eventName).toEqual("button_click");
+
+      expect(eventvisor.getAttributeValue("userId")).toEqual("user-123");
+      expect(eventvisor.getAttributeValue("deviceId")).toEqual("device-234");
     } catch (error) {
       throw error;
     }
