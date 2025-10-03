@@ -12,8 +12,14 @@ export function createConsoleModule(options: ConsoleModuleOptions = {}): Module 
   return {
     name,
 
-    transport: async ({ eventName, eventLevel, payload }) => {
+    transport: async ({ eventName, eventLevel, payload, error }) => {
       const message = `${prefix}[${eventName}]`;
+
+      if (error) {
+        console.error(message, error, payload);
+
+        return;
+      }
 
       if (eventLevel === "error") {
         console.error(message, payload);
