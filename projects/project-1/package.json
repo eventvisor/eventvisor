@@ -1,7 +1,7 @@
 {
   "name": "@eventvisor/project-1",
   "private": true,
-  "version": "0.4.0",
+  "version": "0.5.0",
   "description": "For testing only",
   "scripts": {
     "lint": "eventvisor lint",
@@ -10,6 +10,6 @@
     "show-config": "eventvisor config"
   },
   "dependencies": {
-    "@eventvisor/cli": "0.4.0"
+    "@eventvisor/cli": "0.5.0"
   }
 }
