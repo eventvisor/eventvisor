@@ -35,6 +35,7 @@ export interface TransportOptions {
   eventName: EventName;
   eventLevel?: EventLevel;
   payload: Value; // @TODO: rename to body?
+  error?: Error;
 }
 
 export interface ReadFromStorageOptions {
@@ -199,6 +200,7 @@ export class ModulesManager {
     eventName: EventName,
     payload: Value,
     eventLevel?: EventLevel,
+    error?: Error,
   ): Promise<void> {
     const [moduleName, key] = fullKey.split("."); // eslint-disable-line
 
@@ -207,7 +209,7 @@ export class ModulesManager {
     if (moduleInstance && moduleInstance.transport) {
       try {
         return await moduleInstance.transport(
-          { destinationName, eventName, eventLevel, payload },
+          { destinationName, eventName, eventLevel, payload, error },
           this.getModuleDependencies(),
         );
       } catch (error) {

@@ -227,8 +227,6 @@ export class Eventvisor {
         await this.setAttributeAsync(action.name, action.value);
       } else if (action.type === "removeAttribute") {
         await this.removeAttributeAsync(action.name);
-      } else if (action.type === "removeAttribute") {
-        await this.removeAttributeAsync(action.name);
       }
     } catch (error) {
       this.logger.error(`Error processing queue`, {
@@ -333,6 +331,7 @@ export class Eventvisor {
     /**
      * Validate
      */
+    let error: Error | undefined = value instanceof Error ? value : undefined;
     const validationResult = await this.validator.validate(eventSchema, value);
 
     if (!validationResult.valid) {
@@ -572,6 +571,7 @@ export class Eventvisor {
         eventName,
         transportBody,
         eventLevel,
+        error,
       );
     }
 
