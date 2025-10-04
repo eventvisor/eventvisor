@@ -3,6 +3,17 @@
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.6.0](https://github.com/eventvisor/eventvisor/compare/v0.5.0...v0.6.0) (2025-10-04)
+
+
+### Features
+
+* handle tracked errors in module-console ([#8](https://github.com/eventvisor/eventvisor/issues/8)) ([ce6fb65](https://github.com/eventvisor/eventvisor/commit/ce6fb6599dc05c2a36ac2c1b918141e34d5be3f0))
+
+
+
+
+
 # [0.5.0](https://github.com/eventvisor/eventvisor/compare/v0.4.0...v0.5.0) (2025-10-03)
 
 **Note:** Version bump only for package @eventvisor/module-console
