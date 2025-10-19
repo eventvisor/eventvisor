@@ -1,5 +1,3 @@
-import { Catalog } from "@eventvisor/types";
-
 import { Plugin } from "../cli";
 import { exportCatalog } from "./exportCatalog";
 import { serveCatalog } from "./serveCatalog";

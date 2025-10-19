@@ -1,11 +1,4 @@
-import type {
-  HistoryEntry,
-  AttributeName,
-  EventName,
-  DestinationName,
-  EffectName,
-  Catalog,
-} from "@eventvisor/types";
+import type { HistoryEntry, Catalog } from "@eventvisor/types";
 
 import { getRelativePaths } from "./getRelativePaths";
 import { getLastModifiedFromHistory } from "./getLastModifiedFromHistory";
