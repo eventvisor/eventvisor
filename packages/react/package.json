@@ -1,6 +1,6 @@
 {
   "name": "@eventvisor/react",
-  "version": "0.6.0",
+  "version": "0.7.0",
   "description": "React package for Eventvisor",
   "main": "dist/index.js",
   "module": "lib/index.js",
@@ -29,8 +29,8 @@
     "url": "https://github.com/eventvisor/eventvisor/issues"
   },
   "devDependencies": {
-    "@eventvisor/sdk": "0.6.0",
-    "@eventvisor/types": "0.6.0",
+    "@eventvisor/sdk": "0.7.0",
+    "@eventvisor/types": "0.7.0",
     "@testing-library/jest-dom": "^6.9.1",
     "@testing-library/react": "^16.3.0",
     "jest-environment-jsdom": "^29.5.0",

@@ -1,7 +1,7 @@
 {
   "name": "@eventvisor/catalog",
   "private": true,
-  "version": "0.6.0",
+  "version": "0.7.0",
   "scripts": {
     "build": "vite build",
     "dev": "vite",
