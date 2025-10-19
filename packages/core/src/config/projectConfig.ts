@@ -13,7 +13,7 @@ export const TESTS_DIRECTORY_NAME = "tests";
 export const SYSTEM_DIRECTORY_NAME = ".eventvisor";
 export const DATAFILES_DIRECTORY_NAME = "datafiles";
 export const DATAFILE_NAME_PATTERN = "eventvisor-%s.json";
-export const SITE_EXPORT_DIRECTORY_NAME = "out";
+export const CATALOG_EXPORT_DIRECTORY_NAME = "out";
 
 export const CONFIG_MODULE_NAME = "eventvisor.config.js";
 export const ROOT_DIR_PLACEHOLDER = "<rootDir>";
@@ -34,6 +34,7 @@ export interface ProjectConfig {
   testsDirectoryPath: string;
   datafilesDirectoryPath: string;
   systemDirectoryPath: string;
+  catalogExportDirectoryPath: string;
   datafileNamePattern: string;
 
   tags: string[];
@@ -68,6 +69,7 @@ export function getProjectConfig(rootDirectoryPath: string): ProjectConfig {
     datafilesDirectoryPath: path.join(rootDirectoryPath, DATAFILES_DIRECTORY_NAME),
     datafileNamePattern: DATAFILE_NAME_PATTERN,
     systemDirectoryPath: path.join(rootDirectoryPath, SYSTEM_DIRECTORY_NAME),
+    catalogExportDirectoryPath: path.join(rootDirectoryPath, CATALOG_EXPORT_DIRECTORY_NAME),
 
     plugins: [],
   };

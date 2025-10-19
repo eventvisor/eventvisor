@@ -1,4 +1,4 @@
-import type { DatafileContent, EntityType } from "@eventvisor/types";
+import type { DatafileContent, EntityType, HistoryEntry, Commit } from "@eventvisor/types";
 
 export interface DatafileOptions {
   tag: string;
@@ -20,4 +20,8 @@ export abstract class Adapter {
   // revision
   abstract readRevision(): Promise<string>;
   abstract writeRevision(revision: string): Promise<void>;
+
+  // history
+  abstract listHistoryEntries(entityType?: EntityType, entityKey?: string): Promise<HistoryEntry[]>;
+  abstract readCommit(commit: string, entityType?: EntityType, entityKey?: string): Promise<Commit>;
 }
