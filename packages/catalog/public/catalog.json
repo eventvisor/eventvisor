@@ -1,0 +1,266 @@
+{
+  "links": {
+    "attribute": "https://github.com/eventvisor/eventvisor/blob/catalog/projects/project-1/attributes/{{name}}.yml",
+    "event": "https://github.com/eventvisor/eventvisor/blob/catalog/projects/project-1/events/{{name}}.yml",
+    "destination": "https://github.com/eventvisor/eventvisor/blob/catalog/projects/project-1/destinations/{{name}}.yml",
+    "effect": "https://github.com/eventvisor/eventvisor/blob/catalog/projects/project-1/effects/{{name}}.yml",
+    "commit": "https://github.com/eventvisor/eventvisor/commit/{{hash}}"
+  },
+  "projectConfig": { "tags": ["web", "mobile"] },
+  "entities": {
+    "attributes": {
+      "country": {
+        "description": "Country attribute",
+        "tags": ["web"],
+        "type": "string",
+        "lastModified": {
+          "commit": "2e90890",
+          "timestamp": "2025-09-29T23:00:33+02:00",
+          "author": "Fahad Heylaal"
+        }
+      },
+      "testDefaultValue": {
+        "description": "User attribute",
+        "tags": ["web"],
+        "type": "object",
+        "properties": {
+          "id": { "type": "string", "description": "The user's ID" },
+          "country": {
+            "type": "string",
+            "description": "The user's country in ISO 3166-1 alpha-2 format, like \"NL\" or \"DE\""
+          },
+          "isHuman": { "type": "boolean", "default": true },
+          "consentToMarketing": { "type": "boolean", "default": false },
+          "isSubscribed": { "type": "boolean", "default": false }
+        },
+        "required": ["id", "country"],
+        "lastModified": {
+          "commit": "2e90890",
+          "timestamp": "2025-09-29T23:00:33+02:00",
+          "author": "Fahad Heylaal"
+        }
+      },
+      "testRequired": {
+        "description": "Test required attribute",
+        "tags": ["web"],
+        "type": "object",
+        "properties": {
+          "id": { "type": "string", "description": "The user's ID" },
+          "country": {
+            "type": "string",
+            "description": "The user's country in ISO 3166-1 alpha-2 format, like \"NL\" or \"DE\""
+          }
+        },
+        "required": ["id", "country"],
+        "lastModified": {
+          "commit": "2e90890",
+          "timestamp": "2025-09-29T23:00:33+02:00",
+          "author": "Fahad Heylaal"
+        }
+      },
+      "testTransformConcat": {
+        "description": "Test transformed attribute",
+        "tags": ["web"],
+        "type": "object",
+        "properties": {
+          "id": { "type": "string", "description": "The user's ID" },
+          "firstName": { "type": "string" },
+          "lastName": { "type": "string" }
+        },
+        "required": ["id", "firstName", "lastName"],
+        "transforms": [
+          {
+            "payload": ["firstName", "lastName"],
+            "type": "concat",
+            "separator": " ",
+            "target": "fullName"
+          },
+          { "type": "remove", "target": "firstName" },
+          { "type": "remove", "target": "lastName" }
+        ],
+        "lastModified": {
+          "commit": "2e90890",
+          "timestamp": "2025-09-29T23:00:33+02:00",
+          "author": "Fahad Heylaal"
+        }
+      },
+      "testTransformRename": {
+        "description": "Test transformed attribute",
+        "tags": ["web"],
+        "type": "object",
+        "properties": {
+          "id": { "type": "string", "description": "The user's ID" },
+          "name": { "type": "string" }
+        },
+        "required": ["id", "name"],
+        "transforms": [{ "type": "rename", "targetMap": { "name": "fullName" } }],
+        "lastModified": {
+          "commit": "2e90890",
+          "timestamp": "2025-09-29T23:00:33+02:00",
+          "author": "Fahad Heylaal"
+        }
+      },
+      "testTransformTo": {
+        "description": "Test transformed attribute",
+        "tags": ["web"],
+        "type": "object",
+        "properties": {
+          "id": { "type": "string", "description": "The user's ID" },
+          "firstName": { "type": "string" },
+          "lastName": { "type": "string" },
+          "age": { "type": "string" },
+          "isHuman": { "type": "string" },
+          "balance": { "type": "string" },
+          "itemsCount": { "type": "number" }
+        },
+        "required": ["id", "firstName", "lastName"],
+        "transforms": [
+          { "type": "toInteger", "target": "age" },
+          { "type": "toBoolean", "target": "isHuman" },
+          { "type": "toDouble", "target": "balance" },
+          { "type": "toString", "target": "itemsCount" }
+        ],
+        "lastModified": {
+          "commit": "2e90890",
+          "timestamp": "2025-09-29T23:00:33+02:00",
+          "author": "Fahad Heylaal"
+        }
+      },
+      "testTransformTrim": {
+        "description": "Test transformed attribute",
+        "tags": ["web"],
+        "type": "object",
+        "properties": {
+          "id": { "type": "string", "description": "The user's ID" },
+          "firstName": { "type": "string" },
+          "lastName": { "type": "string" }
+        },
+        "required": ["id", "firstName", "lastName"],
+        "transforms": [
+          { "type": "trim", "target": "firstName" },
+          { "payload": "lastName", "type": "trim", "target": "lastName" }
+        ],
+        "lastModified": {
+          "commit": "2e90890",
+          "timestamp": "2025-09-29T23:00:33+02:00",
+          "author": "Fahad Heylaal"
+        }
+      },
+      "userId": {
+        "description": "User ID attribute",
+        "tags": ["web"],
+        "type": "string",
+        "lastModified": {
+          "commit": "2e90890",
+          "timestamp": "2025-09-29T23:00:33+02:00",
+          "author": "Fahad Heylaal"
+        }
+      }
+    },
+    "events": {
+      "banner_click": {
+        "description": "Banner click",
+        "tags": ["web"],
+        "type": "object",
+        "properties": {
+          "bannerId": { "type": "string", "description": "The ID of the banner that was clicked" },
+          "screenWidth": { "type": "number", "description": "The width of the screen" }
+        },
+        "required": ["bannerId"],
+        "transforms": [
+          {
+            "lookup": "browser.screen.width",
+            "type": "set",
+            "target": "screenWidth",
+            "conditions": [{ "payload": "screenWidth", "operator": "notExists" }]
+          }
+        ],
+        "lastModified": {
+          "commit": "2e90890",
+          "timestamp": "2025-09-29T23:00:33+02:00",
+          "author": "Fahad Heylaal"
+        }
+      },
+      "button_click": {
+        "description": "Button click",
+        "tags": ["web"],
+        "type": "object",
+        "properties": {
+          "buttonId": { "type": "string", "description": "The ID of the button that was clicked" },
+          "buttonType": { "type": "string", "description": "The type of button that was clicked" },
+          "buttonText": {
+            "type": "string",
+            "description": "The text of the button that was clicked"
+          }
+        },
+        "required": ["buttonId"],
+        "lastModified": {
+          "commit": "2e90890",
+          "timestamp": "2025-09-29T23:00:33+02:00",
+          "author": "Fahad Heylaal"
+        }
+      },
+      "page_view": {
+        "description": "Page view",
+        "tags": ["web"],
+        "type": "object",
+        "properties": {
+          "url": { "type": "string", "description": "The URL of the page that was viewed" },
+          "referrer": {
+            "type": "string",
+            "description": "The URL of the page that referred the user to the current page"
+          }
+        },
+        "required": ["url"],
+        "lastModified": {
+          "commit": "2e90890",
+          "timestamp": "2025-09-29T23:00:33+02:00",
+          "author": "Fahad Heylaal"
+        }
+      }
+    },
+    "destinations": {
+      "consoleSimple": {
+        "description": "Console destination",
+        "tags": ["web"],
+        "transport": "console",
+        "transforms": [
+          { "type": "set", "value": {} },
+          { "source": "attributes", "type": "set", "target": "attributes" },
+          { "source": "payload", "type": "set", "target": "payload" },
+          { "source": "eventName", "type": "set", "target": "payload.eventName" }
+        ],
+        "lastModified": {
+          "commit": "2e90890",
+          "timestamp": "2025-09-29T23:00:33+02:00",
+          "author": "Fahad Heylaal"
+        }
+      }
+    },
+    "effects": {
+      "inject_cookie_banner": {
+        "description": "Inject cookie banner",
+        "tags": ["web"],
+        "on": { "event_tracked": ["page_view"] },
+        "state": { "injected": false },
+        "conditions": [{ "state": "injected", "operator": "equals", "value": false }],
+        "steps": [
+          {
+            "handler": "pixel",
+            "params": {
+              "snippet": "<div>\n  <h1>Cookie Banner</h1>\n  <p>This is a cookie banner</p>\n</div>\n",
+              "selector": "body"
+            }
+          },
+          { "transforms": [{ "type": "set", "target": "injected", "value": true }] }
+        ],
+        "persist": "localstorage",
+        "lastModified": {
+          "commit": "2e90890",
+          "timestamp": "2025-09-29T23:00:33+02:00",
+          "author": "Fahad Heylaal"
+        }
+      }
+    }
+  }
+}

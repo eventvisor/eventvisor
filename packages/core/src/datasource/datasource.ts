@@ -10,6 +10,7 @@ import type {
   Test,
   TestName,
   DatafileContent,
+  EntityType,
 } from "@eventvisor/types";
 
 import { ProjectConfig, CustomParser } from "../config";
@@ -160,5 +161,14 @@ export class Datasource {
 
   getTestSpecName(testName: TestName) {
     return `${testName}.${this.getExtension()}`;
+  }
+
+  // history
+  listHistoryEntries(entityType?: EntityType, entityKey?: string) {
+    return this.adapter.listHistoryEntries(entityType, entityKey);
+  }
+
+  readCommit(commitHash: string, entityType?: EntityType, entityKey?: string) {
+    return this.adapter.readCommit(commitHash, entityType, entityKey);
   }
 }

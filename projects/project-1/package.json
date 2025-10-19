@@ -5,9 +5,10 @@
   "description": "For testing only",
   "scripts": {
     "lint": "eventvisor lint",
-    "build": "eventvisor build",
+    "build": "eventvisor build && eventvisor catalog export",
     "test": "eventvisor test",
-    "show-config": "eventvisor config"
+    "show-config": "eventvisor config",
+    "start": "npm run build && eventvisor catalog serve"
   },
   "dependencies": {
     "@eventvisor/cli": "0.6.0"

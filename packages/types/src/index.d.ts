@@ -433,3 +433,77 @@ export interface DestinationTest {
 export type Test = EventTest | AttributeTest | EffectTest | DestinationTest;
 
 export type TestName = string;
+
+/**
+ * Catalog
+ */
+export interface LastModified {
+  commit: string;
+  timestamp: string;
+  author: string;
+}
+
+export interface Catalog {
+  projectConfig: {
+    tags: string[];
+  };
+
+  links?: {
+    attribute: string;
+    event: string;
+    destination: string;
+    effect: string;
+    commit: string;
+  };
+
+  entities: {
+    attributes: {
+      [key: AttributeName]: Attribute & {
+        lastModified?: LastModified;
+      };
+    };
+    events: {
+      [key: EventName]: Event & {
+        lastModified?: LastModified;
+      };
+    };
+    destinations: {
+      [key: DestinationName]: Destination & {
+        lastModified?: LastModified;
+      };
+    };
+    effects: {
+      [key: EffectName]: Effect & {
+        lastModified?: LastModified;
+      };
+    };
+  };
+}
+
+export interface HistoryEntity {
+  type: EntityType;
+  key: string;
+}
+
+export interface HistoryEntry {
+  commit: string;
+  author: string;
+  timestamp: string;
+  entities: HistoryEntity[];
+}
+
+export interface Commit {
+  hash: string;
+  author: string;
+  timestamp: string;
+  entities: EntityDiff[];
+}
+
+export interface EntityDiff {
+  type: EntityType;
+  key: string;
+  created?: boolean;
+  deleted?: boolean;
+  updated?: boolean;
+  content?: string;
+}
