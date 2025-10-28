@@ -6,7 +6,6 @@ import { useEntity } from "../hooks";
 import { Alert } from "./alert";
 import { Tabs } from "./tabs";
 import { Markdown } from "./markdown";
-import { Properties } from "./properties";
 import { Tag } from "./tag";
 
 export function DisplayDestinationOverview() {
