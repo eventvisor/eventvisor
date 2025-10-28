@@ -1,9 +1,9 @@
 {
   "links": {
-    "attribute": "https://github.com/eventvisor/eventvisor/blob/catalog/projects/project-1/attributes/{{name}}.yml",
-    "event": "https://github.com/eventvisor/eventvisor/blob/catalog/projects/project-1/events/{{name}}.yml",
-    "destination": "https://github.com/eventvisor/eventvisor/blob/catalog/projects/project-1/destinations/{{name}}.yml",
-    "effect": "https://github.com/eventvisor/eventvisor/blob/catalog/projects/project-1/effects/{{name}}.yml",
+    "attribute": "https://github.com/eventvisor/eventvisor/blob/catalog-attributes/projects/project-1/attributes/{{name}}.yml",
+    "event": "https://github.com/eventvisor/eventvisor/blob/catalog-attributes/projects/project-1/events/{{name}}.yml",
+    "destination": "https://github.com/eventvisor/eventvisor/blob/catalog-attributes/projects/project-1/destinations/{{name}}.yml",
+    "effect": "https://github.com/eventvisor/eventvisor/blob/catalog-attributes/projects/project-1/effects/{{name}}.yml",
     "commit": "https://github.com/eventvisor/eventvisor/commit/{{hash}}"
   },
   "projectConfig": { "tags": ["web", "mobile"] },
@@ -37,6 +37,37 @@
         "lastModified": {
           "commit": "2e90890",
           "timestamp": "2025-09-29T23:00:33+02:00",
+          "author": "Fahad Heylaal"
+        }
+      },
+      "testNested": {
+        "description": "Test nested attribute",
+        "tags": ["web"],
+        "type": "object",
+        "properties": {
+          "foo": { "type": "string" },
+          "user": {
+            "type": "object",
+            "properties": {
+              "id": { "type": "string", "description": "The user's ID" },
+              "name": { "type": "string", "description": "User's name" },
+              "address": {
+                "type": "object",
+                "properties": {
+                  "street": { "type": "string", "description": "User's street" },
+                  "city": { "type": "string", "description": "User's city" },
+                  "zip": { "type": "string", "description": "User's zip" },
+                  "country": { "type": "string", "description": "User's country" }
+                },
+                "required": ["street", "city", "country"]
+              }
+            }
+          }
+        },
+        "required": ["user"],
+        "lastModified": {
+          "commit": "b97d430",
+          "timestamp": "2025-10-28T22:40:20+01:00",
           "author": "Fahad Heylaal"
         }
       },
@@ -159,7 +190,7 @@
     },
     "events": {
       "banner_click": {
-        "description": "Banner click",
+        "description": "Banner click description here",
         "tags": ["web"],
         "type": "object",
         "properties": {
@@ -176,8 +207,8 @@
           }
         ],
         "lastModified": {
-          "commit": "2e90890",
-          "timestamp": "2025-09-29T23:00:33+02:00",
+          "commit": "30690e7",
+          "timestamp": "2025-10-19T23:42:22+02:00",
           "author": "Fahad Heylaal"
         }
       },

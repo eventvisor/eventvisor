@@ -6,7 +6,6 @@ import { useEntity } from "../hooks";
 import { Alert } from "./alert";
 import { Tabs } from "./tabs";
 import { Markdown } from "./markdown";
-import { Properties } from "./properties";
 import { Tag } from "./tag";
 
 export function DisplayEffectOverview() {
@@ -51,7 +50,9 @@ export function DisplayEffectOverview() {
           <div className="col-span-2">
             <dt className="text-sm font-medium text-gray-500">On</dt>
             <dd className="mt-1 text-sm text-gray-900">
-              <Properties properties={entity.on} />
+              <pre>
+                <code>{JSON.stringify(entity.on, null, 2)}</code>
+              </pre>
             </dd>
           </div>
         )}
@@ -60,7 +61,9 @@ export function DisplayEffectOverview() {
           <div className="col-span-2">
             <dt className="text-sm font-medium text-gray-500">State</dt>
             <dd className="mt-1 text-sm text-gray-900">
-              <Properties properties={entity.state} />
+              <pre>
+                <code>{JSON.stringify(entity.state, null, 2)}</code>
+              </pre>
             </dd>
           </div>
         )}
@@ -69,7 +72,9 @@ export function DisplayEffectOverview() {
           <div className="col-span-2">
             <dt className="text-sm font-medium text-gray-500">Conditions</dt>
             <dd className="mt-1 text-sm text-gray-900">
-              <Properties properties={entity.conditions} />
+              <pre>
+                <code>{JSON.stringify(entity.conditions, null, 2)}</code>
+              </pre>
             </dd>
           </div>
         )}
@@ -78,7 +83,9 @@ export function DisplayEffectOverview() {
           <div className="col-span-2">
             <dt className="text-sm font-medium text-gray-500">Steps</dt>
             <dd className="mt-1 text-sm text-gray-900">
-              <Properties properties={entity.steps} />
+              <pre>
+                <code>{JSON.stringify(entity.steps, null, 2)}</code>
+              </pre>
             </dd>
           </div>
         )}
@@ -87,7 +94,9 @@ export function DisplayEffectOverview() {
           <div className="col-span-2">
             <dt className="text-sm font-medium text-gray-500">Persist</dt>
             <dd className="mt-1 text-sm text-gray-900">
-              <Properties properties={entity.persist} />
+              <pre>
+                <code>{JSON.stringify(entity.persist, null, 2)}</code>
+              </pre>
             </dd>
           </div>
         )}

@@ -59,18 +59,21 @@ export function DisplayAttributeOverview() {
           <dd className="mt-1 text-sm text-gray-900">{entity.type}</dd>
         </div>
 
-        <div className="col-span-2">
-          <dt className="text-sm font-medium text-gray-500">Properties</dt>
-          <dd className="mt-1 text-sm text-gray-900">
-            <Properties properties={entity.properties} required={entity.required} />
-          </dd>
-        </div>
+        {entity.properties && (
+          <div className="col-span-2">
+            <dd className="mt-1 text-sm text-gray-900">
+              <Properties schema={entity} />
+            </dd>
+          </div>
+        )}
 
         {entity.transforms && (
           <div className="col-span-2">
             <dt className="text-sm font-medium text-gray-500">Transforms</dt>
             <dd className="mt-1 text-sm text-gray-900">
-              <Properties properties={entity.transforms} />
+              <pre>
+                <code>{JSON.stringify(entity.transforms, null, 2)}</code>
+              </pre>
             </dd>
           </div>
         )}
@@ -79,7 +82,9 @@ export function DisplayAttributeOverview() {
           <div className="col-span-2">
             <dt className="text-sm font-medium text-gray-500">Persist</dt>
             <dd className="mt-1 text-sm text-gray-900">
-              <Properties properties={entity.persist} />
+              <pre>
+                <code>{JSON.stringify(entity.persist, null, 2)}</code>
+              </pre>
             </dd>
           </div>
         )}

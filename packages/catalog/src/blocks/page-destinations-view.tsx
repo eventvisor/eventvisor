@@ -6,7 +6,6 @@ import { useEntity } from "../hooks";
 import { Alert } from "./alert";
 import { Tabs } from "./tabs";
 import { Markdown } from "./markdown";
-import { Properties } from "./properties";
 import { Tag } from "./tag";
 
 export function DisplayDestinationOverview() {
@@ -63,7 +62,9 @@ export function DisplayDestinationOverview() {
           <div className="col-span-2">
             <dt className="text-sm font-medium text-gray-500">Conditions</dt>
             <dd className="mt-1 text-sm text-gray-900">
-              <Properties properties={entity.conditions} />
+              <pre>
+                <code>{JSON.stringify(entity.conditions, null, 2)}</code>
+              </pre>
             </dd>
           </div>
         )}
@@ -72,7 +73,9 @@ export function DisplayDestinationOverview() {
           <div className="col-span-2">
             <dt className="text-sm font-medium text-gray-500">Sample</dt>
             <dd className="mt-1 text-sm text-gray-900">
-              <Properties properties={entity.sample} />
+              <pre>
+                <code>{JSON.stringify(entity.sample, null, 2)}</code>
+              </pre>
             </dd>
           </div>
         )}
@@ -81,7 +84,9 @@ export function DisplayDestinationOverview() {
           <div className="col-span-2">
             <dt className="text-sm font-medium text-gray-500">Transforms</dt>
             <dd className="mt-1 text-sm text-gray-900">
-              <Properties properties={entity.transforms} />
+              <pre>
+                <code>{JSON.stringify(entity.transforms, null, 2)}</code>
+              </pre>
             </dd>
           </div>
         )}

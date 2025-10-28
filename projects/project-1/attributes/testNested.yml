@@ -1,0 +1,42 @@
+description: Test nested attribute
+tags:
+  - web
+
+type: object
+
+properties:
+  foo:
+    type: string
+
+  user:
+    type: object
+
+    properties:
+      id:
+        type: string
+        description: The user's ID
+      name:
+        type: string
+        description: User's name
+      address:
+        type: object
+        properties:
+          street:
+            type: string
+            description: User's street
+          city:
+            type: string
+            description: User's city
+          zip:
+            type: string
+            description: User's zip
+          country:
+            type: string
+            description: User's country
+        required:
+          - street
+          - city
+          - country
+
+required:
+  - user

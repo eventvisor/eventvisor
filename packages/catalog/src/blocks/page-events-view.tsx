@@ -60,9 +60,8 @@ export function DisplayEventOverview() {
         </div>
 
         <div className="col-span-2">
-          <dt className="text-sm font-medium text-gray-500">Properties</dt>
           <dd className="mt-1 text-sm text-gray-900">
-            <Properties properties={entity.properties} required={entity.required} />
+            <Properties schema={entity} />
           </dd>
         </div>
 
@@ -70,7 +69,9 @@ export function DisplayEventOverview() {
           <div className="col-span-2">
             <dt className="text-sm font-medium text-gray-500">Conditions</dt>
             <dd className="mt-1 text-sm text-gray-900">
-              <Properties properties={entity.conditions} />
+              <pre>
+                <code>{JSON.stringify(entity.conditions, null, 2)}</code>
+              </pre>
             </dd>
           </div>
         )}
@@ -79,7 +80,9 @@ export function DisplayEventOverview() {
           <div className="col-span-2">
             <dt className="text-sm font-medium text-gray-500">Sample</dt>
             <dd className="mt-1 text-sm text-gray-900">
-              <Properties properties={entity.sample} />
+              <pre>
+                <code>{JSON.stringify(entity.sample, null, 2)}</code>
+              </pre>
             </dd>
           </div>
         )}
@@ -88,7 +91,9 @@ export function DisplayEventOverview() {
           <div className="col-span-2">
             <dt className="text-sm font-medium text-gray-500">Transforms</dt>
             <dd className="mt-1 text-sm text-gray-900">
-              <Properties properties={entity.transforms} />
+              <pre>
+                <code>{JSON.stringify(entity.transforms, null, 2)}</code>
+              </pre>
             </dd>
           </div>
         )}
@@ -97,7 +102,9 @@ export function DisplayEventOverview() {
           <div className="col-span-2">
             <dt className="text-sm font-medium text-gray-500">Destination overrides</dt>
             <dd className="mt-1 text-sm text-gray-900">
-              <Properties properties={entity.destinations} />
+              <pre>
+                <code>{JSON.stringify(entity.destinations, null, 2)}</code>
+              </pre>
             </dd>
           </div>
         )}
