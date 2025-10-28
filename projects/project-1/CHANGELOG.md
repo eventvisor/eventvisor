@@ -3,6 +3,17 @@
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.8.0](https://github.com/eventvisor/eventvisor/compare/v0.7.0...v0.8.0) (2025-10-28)
+
+
+### Features
+
+* properties table in catalog ([#25](https://github.com/eventvisor/eventvisor/issues/25)) ([0ada0d8](https://github.com/eventvisor/eventvisor/commit/0ada0d8f45088f5c126d2e76d30e65990a48e106))
+
+
+
+
+
 # [0.7.0](https://github.com/eventvisor/eventvisor/compare/v0.6.0...v0.7.0) (2025-10-19)
 
 
