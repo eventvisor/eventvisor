@@ -10,15 +10,14 @@ properties:
 
   user:
     type: object
+
     properties:
       id:
         type: string
         description: The user's ID
-
       name:
         type: string
         description: User's name
-
       address:
         type: object
         properties:
@@ -34,11 +33,10 @@ properties:
           country:
             type: string
             description: User's country
-
-      required:
-        - street
-        - city
-        - country
+        required:
+          - street
+          - city
+          - country
 
 required:
   - user
