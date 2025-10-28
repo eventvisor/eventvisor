@@ -35,10 +35,10 @@ properties:
             type: string
             description: User's country
 
-    required:
-      - street
-      - city
-      - country
+      required:
+        - street
+        - city
+        - country
 
 required:
   - user

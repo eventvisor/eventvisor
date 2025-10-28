@@ -7,11 +7,7 @@ type PropertyInfo = {
   description?: string;
 };
 
-function flattenSchemaProperties(
-  schema: any,
-  basePath: string = "",
-  requiredList: string[] = [],
-): PropertyInfo[] {
+function flattenSchemaProperties(schema: any, basePath: string = ""): PropertyInfo[] {
   let results: PropertyInfo[] = [];
   if (!schema || typeof schema !== "object") return results;
 
@@ -19,7 +15,8 @@ function flattenSchemaProperties(
     const keys = Object.keys(schema.properties);
     for (const key of keys) {
       const propSchema = schema.properties[key];
-      const isRequired = (schema.required || requiredList || []).includes(key);
+      // A property is required if it's listed in the current schema's required array
+      const isRequired = (schema.required || []).includes(key);
       const fullPath = basePath ? `${basePath}.${key}` : key;
 
       if (
@@ -28,9 +25,7 @@ function flattenSchemaProperties(
         typeof propSchema.properties === "object"
       ) {
         // Recursively flatten nested objects
-        results = results.concat(
-          flattenSchemaProperties(propSchema, fullPath, propSchema.required),
-        );
+        results = results.concat(flattenSchemaProperties(propSchema, fullPath));
       } else if (propSchema.type === "array" && propSchema.items) {
         // Show the type as array of type if it's an array
         let itemType = "";
@@ -50,9 +45,7 @@ function flattenSchemaProperties(
 
         // If array items are objects with properties, also flatten them:
         if (propSchema.items && propSchema.items.type === "object" && propSchema.items.properties) {
-          results = results.concat(
-            flattenSchemaProperties(propSchema.items, `${fullPath}[]`, propSchema.items.required),
-          );
+          results = results.concat(flattenSchemaProperties(propSchema.items, `${fullPath}[]`));
         }
       } else {
         // Leaf property
@@ -69,7 +62,7 @@ function flattenSchemaProperties(
 }
 
 export const PropertiesTable: React.FC<{ schema: any }> = ({ schema }) => {
-  const properties = flattenSchemaProperties(schema, "", schema?.required || []);
+  const properties = flattenSchemaProperties(schema);
 
   if (!schema || !schema.properties || Object.keys(schema.properties).length === 0) {
     return <div className="text-gray-500">No properties</div>;
