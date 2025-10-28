@@ -24,6 +24,14 @@ function flattenSchemaProperties(schema: any, basePath: string = ""): PropertyIn
         propSchema.properties &&
         typeof propSchema.properties === "object"
       ) {
+        // Add the intermediate object path if it has properties
+        results.push({
+          path: fullPath,
+          type: "object",
+          required: isRequired,
+          description: propSchema.description,
+        });
+
         // Recursively flatten nested objects
         results = results.concat(flattenSchemaProperties(propSchema, fullPath));
       } else if (propSchema.type === "array" && propSchema.items) {
