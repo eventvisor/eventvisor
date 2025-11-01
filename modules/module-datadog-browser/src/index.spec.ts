@@ -1,7 +1,7 @@
-import { createSentryBrowserModule } from "./index";
+import { createDatadogBrowserModule } from "./index";
 
-describe("createSentryBrowserModule", () => {
+describe("createDatadogBrowserModule", () => {
   it("should be a function", async () => {
-    expect(createSentryBrowserModule).toBeDefined();
+    expect(createDatadogBrowserModule).toBeDefined();
   });
 });
