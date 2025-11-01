@@ -1,4 +1,4 @@
-import { Module } from "@eventvisor/sdk";
+import type { Module } from "@eventvisor/sdk";
 
 export type GA4ModuleOptions = {
   name?: string;
