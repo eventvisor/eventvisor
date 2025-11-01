@@ -1,7 +1,7 @@
 {
   "name": "@eventvisor/project-yml",
   "private": true,
-  "version": "0.8.0",
+  "version": "0.9.0",
   "description": "Example Eventvisor project using YAML",
   "scripts": {
     "lint": "eventvisor lint",
@@ -9,6 +9,6 @@
     "test": "eventvisor test"
   },
   "dependencies": {
-    "@eventvisor/cli": "0.8.0"
+    "@eventvisor/cli": "0.9.0"
   }
 }

@@ -3,6 +3,17 @@
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.9.0](https://github.com/eventvisor/eventvisor/compare/v0.8.0...v0.9.0) (2025-11-01)
+
+
+### Features
+
+* New Relic Browser module ([#26](https://github.com/eventvisor/eventvisor/issues/26)) ([d6ad9ed](https://github.com/eventvisor/eventvisor/commit/d6ad9edd4fd895f48070fffad4ac3f8967671229))
+
+
+
+
+
 # [0.8.0](https://github.com/eventvisor/eventvisor/compare/v0.7.0...v0.8.0) (2025-10-28)
 
 **Note:** Version bump only for package @eventvisor/module-localstorage
