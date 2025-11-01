@@ -1,6 +1,6 @@
 {
   "name": "@eventvisor/module-console",
-  "version": "0.10.0",
+  "version": "0.11.0",
   "description": "Eventvisor Console module",
   "main": "dist/index.cjs.js",
   "module": "dist/index.mjs",
@@ -38,7 +38,7 @@
     "url": "https://github.com/eventvisor/eventvisor/issues"
   },
   "devDependencies": {
-    "@eventvisor/sdk": "0.10.0"
+    "@eventvisor/sdk": "0.11.0"
   },
   "license": "MIT"
 }
