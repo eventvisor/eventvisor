@@ -1,11 +1,11 @@
 import type { Module } from "@eventvisor/sdk";
 
-export type NewRelicBrowserModuleOptions = {
+export type NewrelicBrowserModuleOptions = {
   name?: string;
   nr?: any; // @TODO: type this later
 };
 
-export function createNewRelicBrowserModule(options: NewRelicBrowserModuleOptions = {}): Module {
+export function createNewrelicBrowserModule(options: NewrelicBrowserModuleOptions = {}): Module {
   const { name = "newrelic-browser", nr = (window as any).newrelic } = options;
 
   return {

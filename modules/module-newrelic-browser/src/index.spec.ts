@@ -1,8 +1,7 @@
-import { createNewRelicBrowserModule } from "./index";
-import { ModuleDependencies } from "@eventvisor/sdk";
+import { createNewrelicBrowserModule } from "./index";
 
 describe("createNewRelicBrowserModule", () => {
   it("should be a function", async () => {
-    expect(createNewRelicBrowserModule).toBeDefined();
+    expect(createNewrelicBrowserModule).toBeDefined();
   });
 });
