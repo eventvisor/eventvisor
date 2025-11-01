@@ -3,6 +3,17 @@
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.10.0](https://github.com/eventvisor/eventvisor/compare/v0.9.0...v0.10.0) (2025-11-01)
+
+
+### Features
+
+* Segment browser module ([#27](https://github.com/eventvisor/eventvisor/issues/27)) ([b18109f](https://github.com/eventvisor/eventvisor/commit/b18109f949bee116360fca70e3447ea440c4438c))
+
+
+
+
+
 # [0.9.0](https://github.com/eventvisor/eventvisor/compare/v0.8.0...v0.9.0) (2025-11-01)
 
 
