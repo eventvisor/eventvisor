@@ -6,6 +6,7 @@ import { buildPlugin } from "../builder";
 import { testPlugin } from "../tester";
 import { initPlugin } from "../init";
 import { catalogPlugin } from "../catalog";
+import { generateCodePlugin } from "../generate-code";
 
 export const commonPlugins: Plugin[] = [];
 
@@ -17,4 +18,5 @@ export const projectBasedPlugins: Plugin[] = [
   buildPlugin,
   testPlugin,
   catalogPlugin,
+  generateCodePlugin,
 ];

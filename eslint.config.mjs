@@ -25,6 +25,9 @@ export default [
       // examples
       "**/examples/example*/plugins/",
       "**/examples/example*/src/",
+
+      // projects
+      "**/projects/project*/src/",
     ],
   },
 
