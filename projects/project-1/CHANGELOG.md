@@ -3,6 +3,17 @@
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.15.0](https://github.com/eventvisor/eventvisor/compare/v0.14.0...v0.15.0) (2025-11-07)
+
+
+### Features
+
+* generate-code command ([#34](https://github.com/eventvisor/eventvisor/issues/34)) ([e776094](https://github.com/eventvisor/eventvisor/commit/e7760940da5f7913119e5e8c76cea2058e957970))
+
+
+
+
+
 # [0.14.0](https://github.com/eventvisor/eventvisor/compare/v0.13.0...v0.14.0) (2025-11-01)
 
 **Note:** Version bump only for package @eventvisor/project-1
