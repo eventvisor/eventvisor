@@ -29,7 +29,7 @@ export function getInterfaceName(entityName: string, suffix: string = ""): strin
 }
 
 export async function generateTypeScriptCodeForProject(deps: Dependencies, outputPath: string) {
-  const { rootDirectoryPath, projectConfig, datasource } = deps;
+  const { datasource } = deps;
 
   /**
    * Attributes
@@ -59,7 +59,7 @@ export async function generateTypeScriptCodeForProject(deps: Dependencies, outpu
   const attributesCodePath = path.resolve(outputPath, "attributes.ts");
   let attributesContent = generatedAttributes
     .map(
-      ({ entityName, interfaceName, code }) => `/**
+      ({ entityName, code }) => `/**
  * ${entityName}
  */
 ${code}
@@ -108,7 +108,7 @@ ${generatedAttributes.map(({ entityName, interfaceName }) => `  ${entityName}: $
   const eventsCodePath = path.resolve(outputPath, "events.ts");
   let eventsContent = generatedEvents
     .map(
-      ({ entityName, interfaceName, code }) => `/**
+      ({ entityName, code }) => `/**
  * ${entityName}
  */
 ${code}
