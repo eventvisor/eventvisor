@@ -3,6 +3,17 @@
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.16.0](https://github.com/eventvisor/eventvisor/compare/v0.15.0...v0.16.0) (2025-11-30)
+
+
+### Features
+
+* rename handler assignment functions in custom generated code ([#35](https://github.com/eventvisor/eventvisor/issues/35)) ([92950a7](https://github.com/eventvisor/eventvisor/commit/92950a7a8efdf09ab04b49ece631fa5b6eb3753f))
+
+
+
+
+
 # [0.15.0](https://github.com/eventvisor/eventvisor/compare/v0.14.0...v0.15.0) (2025-11-07)
 
 

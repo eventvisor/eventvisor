@@ -1,7 +1,7 @@
 {
   "name": "@eventvisor/project-json",
   "private": true,
-  "version": "0.15.0",
+  "version": "0.16.0",
   "description": "Example Eventvisor project using JSON",
   "scripts": {
     "lint": "eventvisor lint",
@@ -9,6 +9,6 @@
     "test": "eventvisor test"
   },
   "dependencies": {
-    "@eventvisor/cli": "0.15.0"
+    "@eventvisor/cli": "0.16.0"
   }
 }

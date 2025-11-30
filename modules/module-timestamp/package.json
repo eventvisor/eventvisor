@@ -1,6 +1,6 @@
 {
   "name": "@eventvisor/module-timestamp",
-  "version": "0.15.0",
+  "version": "0.16.0",
   "description": "Eventvisor Timestamp module",
   "main": "dist/index.cjs.js",
   "module": "dist/index.mjs",
@@ -39,7 +39,7 @@
     "url": "https://github.com/eventvisor/eventvisor/issues"
   },
   "devDependencies": {
-    "@eventvisor/sdk": "0.15.0"
+    "@eventvisor/sdk": "0.16.0"
   },
   "license": "MIT"
 }

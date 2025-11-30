@@ -1,7 +1,7 @@
 {
   "name": "@eventvisor/project-1",
   "private": true,
-  "version": "0.15.0",
+  "version": "0.16.0",
   "description": "For testing only",
   "scripts": {
     "lint": "eventvisor lint",
@@ -11,6 +11,6 @@
     "start": "npm run build && eventvisor catalog serve"
   },
   "dependencies": {
-    "@eventvisor/cli": "0.15.0"
+    "@eventvisor/cli": "0.16.0"
   }
 }
