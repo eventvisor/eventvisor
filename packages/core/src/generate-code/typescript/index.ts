@@ -154,7 +154,7 @@ type TrackHandler = (eventName: string, payload: Value) => void;
 
 let trackHandler: TrackHandler | null = null;
 
-export function setTrackHandler(handler: TrackHandler | null) {
+export function assignEventHandler(handler: TrackHandler | null) {
   trackHandler = handler;
 }
 
@@ -176,7 +176,7 @@ type SetAttributeHandler = (attributeName: string, value: Value) => void;
 
 let setAttributeHandler: SetAttributeHandler | null = null;
 
-export function setSetAttributeHandler(handler: SetAttributeHandler | null) {
+export function assignAttributeHandler(handler: SetAttributeHandler | null) {
   setAttributeHandler = handler;
 }
 
