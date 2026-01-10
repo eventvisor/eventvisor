@@ -132,8 +132,7 @@ ${generatedEvents.map(({ entityName, interfaceName }) => `  ${entityName}: ${int
   /**
    * Index
    */
-  let indexContent = `import type { Eventvisor } from "@eventvisor/sdk";
-import type { Value } from "@eventvisor/types";
+  let indexContent = `import type { Eventvisor, Value } from "@eventvisor/sdk";
 
 import type { Events } from "./events";
 import type { Attributes } from "./attributes";

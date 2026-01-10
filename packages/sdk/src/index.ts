@@ -12,3 +12,5 @@ export * from "./effectsManager";
 
 export * from "./murmurhash";
 export * from "./compareVersions";
+
+export type { Value } from "@eventvisor/types";
