@@ -1,6 +1,6 @@
 {
   "name": "@eventvisor/sdk",
-  "version": "0.16.0",
+  "version": "0.17.0",
   "description": "Eventvisor SDK for Node.js and the browser",
   "main": "dist/index.cjs.js",
   "module": "dist/index.mjs",
@@ -39,6 +39,6 @@
   },
   "license": "MIT",
   "dependencies": {
-    "@eventvisor/types": "0.16.0"
+    "@eventvisor/types": "0.17.0"
   }
 }

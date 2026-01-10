@@ -3,6 +3,17 @@
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.17.0](https://github.com/eventvisor/eventvisor/compare/v0.16.0...v0.17.0) (2026-01-10)
+
+
+### Features
+
+* export Value type from SDK ([#36](https://github.com/eventvisor/eventvisor/issues/36)) ([72b7b36](https://github.com/eventvisor/eventvisor/commit/72b7b36b6c4dc10a94be981dd0dee36a4cbab287))
+
+
+
+
+
 # [0.16.0](https://github.com/eventvisor/eventvisor/compare/v0.15.0...v0.16.0) (2025-11-30)
 
 **Note:** Version bump only for package @eventvisor/sdk
