@@ -29,6 +29,7 @@
   },
   "license": "MIT",
   "dependencies": {
+    "@eventvisor/catalog": "0.21.1",
     "@eventvisor/sdk": "0.21.0",
     "@eventvisor/types": "0.21.0",
     "axios": "^1.12.2",
