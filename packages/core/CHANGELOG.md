@@ -3,6 +3,17 @@
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.22.0](https://github.com/eventvisor/eventvisor/compare/v0.21.1...v0.22.0) (2026-02-06)
+
+
+### Features
+
+* catalog as a dependency in core ([#40](https://github.com/eventvisor/eventvisor/issues/40)) ([772b965](https://github.com/eventvisor/eventvisor/commit/772b9651987deba4857d93551ec094c6bed34800))
+
+
+
+
+
 # [0.21.0](https://github.com/eventvisor/eventvisor/compare/v0.18.0...v0.21.0) (2026-02-06)
 
 **Note:** Version bump only for package @eventvisor/core
