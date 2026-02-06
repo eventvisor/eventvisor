@@ -1,6 +1,6 @@
 {
   "name": "@eventvisor/module-localstorage",
-  "version": "0.17.0",
+  "version": "0.18.0",
   "description": "Eventvisor LocalStorage module",
   "main": "dist/index.cjs.js",
   "module": "dist/index.mjs",
@@ -38,7 +38,7 @@
     "url": "https://github.com/eventvisor/eventvisor/issues"
   },
   "devDependencies": {
-    "@eventvisor/sdk": "0.17.0"
+    "@eventvisor/sdk": "0.18.0"
   },
   "license": "MIT"
 }

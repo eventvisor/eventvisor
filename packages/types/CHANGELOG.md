@@ -3,6 +3,19 @@
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.18.0](https://github.com/eventvisor/eventvisor/compare/v0.17.0...v0.18.0) (2026-02-06)
+
+
+### Features
+
+* trigger publish ([e60e220](https://github.com/eventvisor/eventvisor/commit/e60e2209b9edeb8df49817de2d60b07805ab6c5c))
+* trigger publish ([61568d7](https://github.com/eventvisor/eventvisor/commit/61568d781fd40000177f29669ea5c6c074728653))
+* trigger publish ([410ca2b](https://github.com/eventvisor/eventvisor/commit/410ca2bf5bca1c21e60e3a9f4bf2a1fdd56ad82f))
+
+
+
+
+
 # [0.17.0](https://github.com/eventvisor/eventvisor/compare/v0.16.0...v0.17.0) (2026-01-10)
 
 **Note:** Version bump only for package @eventvisor/types
