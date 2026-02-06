@@ -1,5 +1,5 @@
 /**
- * JSON Schema (subset)
+ * JSON Schema (subset here)
  */
 export type PrimitiveValue = string | number | boolean | null | undefined;
 export type ObjectValue = { [key: string]: Value };
