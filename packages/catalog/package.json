@@ -1,6 +1,6 @@
 {
   "name": "@eventvisor/catalog",
-  "version": "0.18.0",
+  "version": "0.21.0",
   "scripts": {
     "build": "vite build",
     "dev": "vite",

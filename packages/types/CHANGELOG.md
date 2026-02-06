@@ -3,6 +3,18 @@
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.21.0](https://github.com/eventvisor/eventvisor/compare/v0.18.0...v0.21.0) (2026-02-06)
+
+
+### Features
+
+* make catalog package public ([2600a3e](https://github.com/eventvisor/eventvisor/commit/2600a3e05cbdca6333871dc6967cb9091def0676))
+* make catalog public ([#39](https://github.com/eventvisor/eventvisor/issues/39)) ([27f5085](https://github.com/eventvisor/eventvisor/commit/27f50858f167ae4a3dba3b2f1981aac3295f0365))
+
+
+
+
+
 # [0.18.0](https://github.com/eventvisor/eventvisor/compare/v0.17.0...v0.18.0) (2026-02-06)
 
 
