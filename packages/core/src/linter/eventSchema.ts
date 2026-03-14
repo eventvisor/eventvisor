@@ -17,6 +17,9 @@ export function getEventSchema(deps: Dependencies) {
       description: z.string(),
       tags: getTagsSchema(deps),
 
+      skipValidation: z
+        .union([z.boolean(), z.object({ conditions: getConditionsSchema(deps) })])
+        .optional(),
       level: z.enum(["fatal", "error", "warning", "log", "info", "debug"]).optional(),
       requiredAttributes: z.array(z.string()).optional(),
       conditions: getConditionsSchema(deps).optional(),

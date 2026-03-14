@@ -241,7 +241,9 @@ export type Event = JSONSchema & {
   tags?: Tag[];
 
   // @TODO: meta
+  // @TODO: conitnueOnValidationFailure?: boolean;
 
+  skipValidation?: boolean | { conditions: Condition | Condition[] };
   level?: EventLevel;
   requiredAttributes?: string[];
   conditions?: Condition | Condition[];
