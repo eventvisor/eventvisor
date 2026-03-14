@@ -1,0 +1,19 @@
+description: Overlay click description here
+tags:
+  - web
+
+type: object
+
+properties:
+  overlayId:
+    type: string
+    description: The ID of the overlay that was clicked
+
+required:
+  - overlayId
+
+skipValidation:
+  conditions:
+    - payload: overlayId
+      operator: equals
+      value: "overlay_1"

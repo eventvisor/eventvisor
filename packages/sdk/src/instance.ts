@@ -331,19 +331,53 @@ export class Eventvisor {
     /**
      * Validate
      */
-    let error: Error | undefined = value instanceof Error ? value : undefined;
-    const validationResult = await this.validator.validate(eventSchema, value);
+    let shouldValidate = true;
 
-    if (!validationResult.valid) {
-      this.logger.warn(`Event validation failed`, {
-        eventName,
-        errors: validationResult.errors,
-      });
+    if (typeof eventSchema.skipValidation !== "undefined") {
+      if (eventSchema.skipValidation === false) {
+        // boolean
+        shouldValidate = false;
+      } else if (
+        typeof eventSchema.skipValidation === "object" &&
+        eventSchema.skipValidation.conditions
+      ) {
+        const isMatched = await this.conditionsChecker.allAreMatched(
+          eventSchema.skipValidation.conditions,
+          {
+            eventName,
+            eventLevel,
+            payload: value,
+          },
+        );
 
-      return null; // @TODO: allow to continue based on schema later
+        if (!isMatched) {
+          shouldValidate = false;
+        }
+      }
     }
 
-    const validatedValue = validationResult.value;
+    let validatedValue: Value | undefined = undefined;
+    let error = value instanceof Error ? value : undefined;
+
+    if (shouldValidate) {
+      const validationResult = await this.validator.validate(eventSchema, value);
+
+      if (!validationResult.valid) {
+        this.logger.warn(`Event validation failed`, {
+          eventName,
+          errors: validationResult.errors,
+        });
+
+        return null; // @TODO: allow to continue based on schema later
+      }
+
+      validatedValue = validationResult.value;
+    } else {
+      this.logger.debug(`Event validation skipped`, {
+        eventName,
+      });
+      validatedValue = value;
+    }
 
     /**
      * Conditions

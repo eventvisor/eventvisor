@@ -10,6 +10,8 @@ export const ALLOWED_LANGUAGES_FOR_CODE_GENERATION = ["typescript"];
 export interface GenerateCodeCLIOptions {
   language: string;
   outDir: string;
+  // @TODO: tag?: string;
+  // @TODO: react?: boolean;
 }
 
 export async function generateCodeForProject(

@@ -1,0 +1,15 @@
+description: Popover click description here
+tags:
+  - web
+
+type: object
+
+properties:
+  popoverId:
+    type: string
+    description: The ID of the popover that was clicked
+
+required:
+  - popoverId
+
+skipValidation: true
