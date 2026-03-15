@@ -42,7 +42,7 @@ export function getEffectSchema(deps: Dependencies) {
       description: z.string(),
       tags: getTagsSchema(deps),
 
-      on: effectOn.optional(),
+      on: effectOn,
       state: z.any().optional(),
       conditions: getConditionsSchema(deps).optional(),
       steps: z.array(step).optional(),

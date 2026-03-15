@@ -296,7 +296,7 @@ export interface Effect {
   description?: string;
   tags?: Tag[];
 
-  on?: EffectOn;
+  on: EffectOn;
   state?: Value;
   conditions?: Condition | Condition[];
   steps?: Step[];

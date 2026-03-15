@@ -1,6 +1,7 @@
 import * as z from "zod";
 import { Dependencies } from "../dependencies";
 
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 export function getTestSchema(deps: Dependencies) {
   const withLookupsSchema = z.record(z.string(), z.any());
 

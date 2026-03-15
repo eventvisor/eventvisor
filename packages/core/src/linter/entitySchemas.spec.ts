@@ -169,13 +169,16 @@ describe("entity lint schemas", () => {
     ).toBe(false);
   });
 
-  it("requires effect metadata, accepts sparse effects, and rejects unknown step fields", () => {
+  it("requires effect metadata and on, and rejects unknown step fields", () => {
     const schema = getEffectSchema(deps);
 
     expect(
       schema.safeParse({
         description: "Inject cookie banner",
         tags: ["web"],
+        on: {
+          event_tracked: ["page_view"],
+        },
         state: {
           injected: false,
         },
@@ -186,6 +189,9 @@ describe("entity lint schemas", () => {
       schema.safeParse({
         description: "Inject cookie banner",
         tags: ["web"],
+        on: {
+          event_tracked: ["page_view"],
+        },
         steps: [
           {
             handler: "pixel",
@@ -197,6 +203,8 @@ describe("entity lint schemas", () => {
 
     expect(
       schema.safeParse({
+        description: "Inject cookie banner",
+        tags: ["web"],
         steps: [],
       }).success,
     ).toBe(false);
