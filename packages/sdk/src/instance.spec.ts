@@ -208,7 +208,7 @@ describe("sdk: instance", function () {
     };
 
     async function createEventvisorWithDatafile(datafile: DatafileContent) {
-      const captured: Record<string, any>[] = [];
+      const captured: any[] = [];
       const eventvisor = createInstance({
         datafile,
         modules: [
@@ -468,6 +468,92 @@ describe("sdk: instance", function () {
       } as any);
       expect(result).not.toBeNull();
       expect(captured.length).toBe(1);
+    });
+  });
+
+  describe("strict object schemas", function () {
+    it("rejects tracked event payloads with unknown object properties", async function () {
+      const captured: any[] = [];
+      const eventvisor = createInstance({
+        datafile: {
+          ...emptyDatafile,
+          events: {
+            strictEvent: {
+              type: "object",
+              properties: {
+                screen: {
+                  type: "object",
+                  properties: {
+                    width: { type: "number" },
+                  },
+                  required: ["width"],
+                },
+              },
+              required: ["screen"],
+            },
+          },
+          destinations: {
+            test: {
+              transport: "test",
+              transforms: [
+                { type: "set", value: {} },
+                { type: "set", source: "payload", target: "payload" },
+              ],
+            },
+          },
+        },
+        modules: [
+          {
+            name: "test",
+            transport: async ({ payload }) => {
+              captured.push(payload);
+            },
+          },
+        ],
+        logLevel: "warn",
+      });
+
+      await eventvisor.onReady();
+
+      const result = await eventvisor.trackAsync("strictEvent", {
+        screen: {
+          width: 100,
+          height: 200,
+        },
+      } as any);
+
+      expect(result).toBeNull();
+      expect(captured).toEqual([]);
+    });
+
+    it("rejects attribute values with unknown object properties", async function () {
+      const eventvisor = createInstance({
+        datafile: {
+          ...emptyDatafile,
+          attributes: {
+            browser: {
+              type: "object",
+              properties: {
+                name: { type: "string" },
+                version: { type: "string" },
+              },
+              required: ["name", "version"],
+            },
+          },
+        },
+        logLevel: "warn",
+      });
+
+      await eventvisor.onReady();
+
+      const result = await eventvisor.setAttributeAsync("browser", {
+        name: "Chrome",
+        version: "123",
+        major: 123,
+      } as any);
+
+      expect(result).toBeNull();
+      expect(eventvisor.getAttributeValue("browser")).toBeNull();
     });
   });
 });
