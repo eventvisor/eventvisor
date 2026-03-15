@@ -36,10 +36,20 @@ function createDeps(testContent: Record<string, any>): Dependencies {
     },
     datasource: {
       listAttributes: jest.fn().mockResolvedValue([]),
-      listEvents: jest.fn().mockResolvedValue([]),
+      listEvents: jest.fn().mockResolvedValue(["page_view"]),
       listDestinations: jest.fn().mockResolvedValue([]),
       listEffects: jest.fn().mockResolvedValue([]),
       listTests: jest.fn().mockResolvedValue(["events/page_view.spec"]),
+      readEvent: jest.fn().mockResolvedValue({
+        description: "Page view",
+        tags: ["all"],
+        type: "object",
+        properties: {
+          url: {
+            type: "string",
+          },
+        },
+      }),
       readTest: jest.fn().mockResolvedValue(testContent),
     } as unknown as Dependencies["datasource"],
     options: {},
