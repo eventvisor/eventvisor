@@ -187,8 +187,12 @@ function validateValue(
           validatedObj[prop] = validatedProp;
         }
       } else {
-        // Allow additional properties by default (JSON Schema behavior)
-        validatedObj[prop] = propValue;
+        errors.push({
+          path: path ? `${path}.${prop}` : prop,
+          message: `Property '${prop}' is not allowed by schema`,
+          schema,
+          value: propValue,
+        });
       }
     }
 

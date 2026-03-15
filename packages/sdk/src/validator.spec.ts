@@ -201,7 +201,7 @@ describe("Validator", () => {
       expect(result.errors![0].message).toContain("Expected type number");
     });
 
-    it("should allow additional properties by default", async () => {
+    it("should reject additional properties", async () => {
       const schema: JSONSchema = {
         type: "object",
         properties: {
@@ -210,8 +210,9 @@ describe("Validator", () => {
       };
       const result = await validate(schema, { name: "John", extra: "value" }, {});
 
-      expect(result.valid).toBe(true);
-      expect(result.value).toEqual({ name: "John", extra: "value" });
+      expect(result.valid).toBe(false);
+      expect(result.errors![0].path).toBe("extra");
+      expect(result.errors![0].message).toContain("not allowed by schema");
     });
   });
 
@@ -340,6 +341,44 @@ describe("Validator", () => {
 
       expect(result.valid).toBe(false);
       expect(result.errors![0].path).toBe("user.profile.age");
+    });
+
+    it("should reject additional properties in nested objects", async () => {
+      const schema: JSONSchema = {
+        type: "object",
+        properties: {
+          user: {
+            type: "object",
+            properties: {
+              profile: {
+                type: "object",
+                properties: {
+                  name: { type: "string" },
+                },
+                required: ["name"],
+              },
+            },
+            required: ["profile"],
+          },
+        },
+      };
+
+      const result = await validate(
+        schema,
+        {
+          user: {
+            profile: {
+              name: "John",
+              age: 30,
+            },
+          },
+        },
+        {},
+      );
+
+      expect(result.valid).toBe(false);
+      expect(result.errors![0].path).toBe("user.profile.age");
+      expect(result.errors![0].message).toContain("not allowed by schema");
     });
 
     it("should validate arrays of objects", async () => {

@@ -34,7 +34,7 @@ export interface TransportOptions {
   destinationName: DestinationName;
   eventName: EventName;
   eventLevel?: EventLevel;
-  payload: Value; // @TODO: rename to body?
+  payload: Value;
   error?: Error;
 }
 
@@ -60,11 +60,11 @@ export interface ModuleDependencies {
 export interface Module {
   name: ModuleName;
 
-  // initialize?
+  // @TODO: initialize?
 
   lookup?: (options: LookupOptions, deps: ModuleDependencies) => Promise<Value>;
 
-  // transform?: (options: TransformOptions, deps: ModuleDependencies) => Promise<Value>;
+  // @TODO: transform?: (options: TransformOptions, deps: ModuleDependencies) => Promise<Value>;
 
   handle?: (options: HandleOptions, deps: ModuleDependencies) => Promise<void>;
 
