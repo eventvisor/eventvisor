@@ -39,6 +39,9 @@ describe("SourceResolver", () => {
       destinations: {},
       effects: {
         effect1: {
+          on: {
+            event_tracked: ["event1"],
+          },
           state: {
             nested: {
               value: "effect1 value",
@@ -46,6 +49,9 @@ describe("SourceResolver", () => {
           },
         },
         effect2: {
+          on: {
+            event_tracked: ["event2"],
+          },
           state: 123,
         },
       },
@@ -165,6 +171,12 @@ describe("SourceResolver", () => {
         },
       ),
     ).toEqual(25);
+
+    expect(
+      await sourceResolver.resolve("payload.screen.width", {
+        payload: {},
+      }),
+    ).toEqual(undefined);
   });
 
   it("should resolve attributes", async () => {

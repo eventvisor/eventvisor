@@ -93,7 +93,7 @@ export class Transformer {
           if (transform.type === "set") {
             if ("value" in transform) {
               result = Transformer.setValueAtPath(result, target, transform.value);
-            } else {
+            } else if (sourceValue !== null && sourceValue !== undefined) {
               result = Transformer.setValueAtPath(result, target, sourceValue);
             }
           }
