@@ -39,11 +39,7 @@ interface SourceValidationOptions {
 
 const conditionStringWildcard = "*";
 
-function pushIssue(
-  state: ValidationState,
-  path: (string | number)[],
-  message: string,
-) {
+function pushIssue(state: ValidationState, path: (string | number)[], message: string) {
   state.issues.push({
     code: "custom",
     path,
@@ -179,11 +175,7 @@ function validateTargetPath(
     options.stateValue !== undefined &&
     !valueHasPath(options.stateValue, targetPath)
   ) {
-    pushIssue(
-      state,
-      issuePath,
-      `Transform target "${target}" is not declared in the effect state`,
-    );
+    pushIssue(state, issuePath, `Transform target "${target}" is not declared in the effect state`);
   }
 }
 
@@ -225,11 +217,7 @@ function validateEntityReference(
           : state.ctx.effects;
 
   if (!collection[entityName]) {
-    pushIssue(
-      state,
-      issuePath,
-      `${label} references missing ${entityType} "${entityName}"`,
-    );
+    pushIssue(state, issuePath, `${label} references missing ${entityType} "${entityName}"`);
   }
 }
 
@@ -267,7 +255,13 @@ function validateSourceString(
 
   if (parsed.origin === "payload") {
     const payloadPath = parsed.name ? [parsed.name, ...parsed.path] : parsed.path;
-    validatePayloadPath(state, options.payloadSchemas, payloadPath, options.path, `Source "${source}"`);
+    validatePayloadPath(
+      state,
+      options.payloadSchemas,
+      payloadPath,
+      options.path,
+      `Source "${source}"`,
+    );
     return;
   }
 
@@ -511,25 +505,31 @@ function validateTransform(
       (Array.isArray(transform.targetMap) && transform.targetMap.length === 0) ||
       (!Array.isArray(transform.targetMap) && Object.keys(transform.targetMap).length === 0))
   ) {
-    pushIssue(state, [...path, "targetMap"], `Transform "${transform.type}" requires a non-empty targetMap`);
+    pushIssue(
+      state,
+      [...path, "targetMap"],
+      `Transform "${transform.type}" requires a non-empty targetMap`,
+    );
   }
 
-  if (["remove", "trim", "toInteger", "toDouble", "toString", "toBoolean"].includes(transform.type)) {
+  if (
+    ["remove", "trim", "toInteger", "toDouble", "toString", "toBoolean"].includes(transform.type)
+  ) {
     if (!transform.target) {
       pushIssue(state, [...path, "target"], `Transform "${transform.type}" requires a target`);
     }
   }
 
   if (transform.type === "set" && !transform.target && typeof transform.value === "undefined") {
-    pushIssue(
-      state,
-      path,
-      `Transform "set" must define either a target or a value`,
-    );
+    pushIssue(state, path, `Transform "set" must define either a target or a value`);
   }
 
   if (transform.type === "rename" && transform.target) {
-    pushIssue(state, [...path, "target"], `Transform "rename" must use targetMap instead of target`);
+    pushIssue(
+      state,
+      [...path, "target"],
+      `Transform "rename" must use targetMap instead of target`,
+    );
   }
 
   if (transform.target) {
@@ -544,8 +544,13 @@ function validateTransform(
     });
   }
 
-  if (transform.targetMap && (options.validateTargetAgainstPayload || options.validateTargetAgainstState)) {
-    const targetMaps = Array.isArray(transform.targetMap) ? transform.targetMap : [transform.targetMap];
+  if (
+    transform.targetMap &&
+    (options.validateTargetAgainstPayload || options.validateTargetAgainstState)
+  ) {
+    const targetMaps = Array.isArray(transform.targetMap)
+      ? transform.targetMap
+      : [transform.targetMap];
     targetMaps.forEach((targetMap, mapIndex) => {
       Object.values(targetMap).forEach((targetPath) => {
         validateTargetPath(
@@ -561,7 +566,9 @@ function validateTransform(
   }
 
   if (transform.targetMap && options.payloadSchemas && options.payloadSchemas.length > 0) {
-    const targetMaps = Array.isArray(transform.targetMap) ? transform.targetMap : [transform.targetMap];
+    const targetMaps = Array.isArray(transform.targetMap)
+      ? transform.targetMap
+      : [transform.targetMap];
     targetMaps.forEach((targetMap, mapIndex) => {
       Object.keys(targetMap).forEach((sourceKey) => {
         validatePayloadPath(
@@ -602,13 +609,18 @@ function validatePersist(
   }
 }
 
-function validateAttributeSemantics(
-  state: ValidationState,
-  attribute: Attribute,
-) {
+function validateAttributeSemantics(state: ValidationState, attribute: Attribute) {
   const options: SourceValidationOptions = {
     path: [],
-    allowedOrigins: new Set(["attributes", "attribute", "effects", "effect", "payload", "lookup", "attributeName"]),
+    allowedOrigins: new Set([
+      "attributes",
+      "attribute",
+      "effects",
+      "effect",
+      "payload",
+      "lookup",
+      "attributeName",
+    ]),
     payloadSchemas: [attribute],
     validateTargetAgainstPayload: true,
   };
@@ -622,10 +634,7 @@ function validateAttributeSemantics(
   }
 }
 
-function validateEventSemantics(
-  state: ValidationState,
-  event: Event,
-) {
+function validateEventSemantics(state: ValidationState, event: Event) {
   const options: SourceValidationOptions = {
     path: [],
     allowedOrigins: new Set([
@@ -664,8 +673,17 @@ function validateEventSemantics(
     validateTransform(state, transform, ["transforms", index], options),
   );
 
-  if (event.skipValidation && typeof event.skipValidation === "object" && event.skipValidation.conditions) {
-    validateCondition(state, event.skipValidation.conditions, ["skipValidation", "conditions"], options);
+  if (
+    event.skipValidation &&
+    typeof event.skipValidation === "object" &&
+    event.skipValidation.conditions
+  ) {
+    validateCondition(
+      state,
+      event.skipValidation.conditions,
+      ["skipValidation", "conditions"],
+      options,
+    );
   }
 
   if (event.destinations) {
@@ -732,10 +750,7 @@ function getEffectPayloadSchemas(state: ValidationState, effect: Effect): JSONSc
   return payloadSchemas.length > 0 ? payloadSchemas : undefined;
 }
 
-function validateEffectSemantics(
-  state: ValidationState,
-  effect: Effect,
-) {
+function validateEffectSemantics(state: ValidationState, effect: Effect) {
   if (!Array.isArray(effect.on)) {
     effect.on.event_tracked?.forEach((eventName, index) => {
       if (!state.ctx.events[eventName]) {
@@ -781,30 +796,30 @@ function validateEffectSemantics(
 
   effect.steps?.forEach((step, stepIndex) => {
     if (step.conditions) {
-      validateCondition(state, step.conditions, ["steps", stepIndex, "conditions"], conditionOptions);
+      validateCondition(
+        state,
+        step.conditions,
+        ["steps", stepIndex, "conditions"],
+        conditionOptions,
+      );
     }
 
     step.transforms?.forEach((transform, transformIndex) =>
-      validateTransform(
-        state,
-        transform,
-        ["steps", stepIndex, "transforms", transformIndex],
-        {
-          path: [],
-          allowedOrigins: new Set([
-            "attributes",
-            "attribute",
-            "effects",
-            "effect",
-            "lookup",
-            "eventName",
-            "attributeName",
-            "state",
-          ]),
-          stateValue: effect.state,
-          validateTargetAgainstState: true,
-        },
-      ),
+      validateTransform(state, transform, ["steps", stepIndex, "transforms", transformIndex], {
+        path: [],
+        allowedOrigins: new Set([
+          "attributes",
+          "attribute",
+          "effects",
+          "effect",
+          "lookup",
+          "eventName",
+          "attributeName",
+          "state",
+        ]),
+        stateValue: effect.state,
+        validateTargetAgainstState: true,
+      }),
     );
   });
 
@@ -813,10 +828,7 @@ function validateEffectSemantics(
   }
 }
 
-function validateDestinationSemantics(
-  state: ValidationState,
-  destination: Destination,
-) {
+function validateDestinationSemantics(state: ValidationState, destination: Destination) {
   const conditionOptions: SourceValidationOptions = {
     path: [],
     allowedOrigins: new Set([
@@ -859,10 +871,7 @@ function validateDestinationSemantics(
   );
 }
 
-function validateTestSemantics(
-  state: ValidationState,
-  test: Test,
-) {
+function validateTestSemantics(state: ValidationState, test: Test) {
   if ("attribute" in test && !state.ctx.attributes[test.attribute]) {
     pushIssue(state, ["attribute"], `Test references missing attribute "${test.attribute}"`);
   }

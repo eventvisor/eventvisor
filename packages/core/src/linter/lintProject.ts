@@ -22,12 +22,16 @@ async function createLintContext(options: Dependencies): Promise<LintContext> {
   ]);
 
   const [attributes, events, destinations, effects] = await Promise.all([
-    Promise.all(attributeNames.map(async (name) => [name, await datasource.readAttribute(name)] as const)),
+    Promise.all(
+      attributeNames.map(async (name) => [name, await datasource.readAttribute(name)] as const),
+    ),
     Promise.all(eventNames.map(async (name) => [name, await datasource.readEvent(name)] as const)),
     Promise.all(
       destinationNames.map(async (name) => [name, await datasource.readDestination(name)] as const),
     ),
-    Promise.all(effectNames.map(async (name) => [name, await datasource.readEffect(name)] as const)),
+    Promise.all(
+      effectNames.map(async (name) => [name, await datasource.readEffect(name)] as const),
+    ),
   ]);
 
   return {
