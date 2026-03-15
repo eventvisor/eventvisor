@@ -3,6 +3,17 @@
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.24.0](https://github.com/eventvisor/eventvisor/compare/v0.23.0...v0.24.0) (2026-03-15)
+
+
+### Features
+
+* lint test specs ([#42](https://github.com/eventvisor/eventvisor/issues/42)) ([1a0d34f](https://github.com/eventvisor/eventvisor/commit/1a0d34ffde02416d5af9e22a3c30e89def5b7b3b))
+
+
+
+
+
 # [0.23.0](https://github.com/eventvisor/eventvisor/compare/v0.22.0...v0.23.0) (2026-03-14)
 
 
