@@ -3,6 +3,17 @@
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.25.0](https://github.com/eventvisor/eventvisor/compare/v0.24.0...v0.25.0) (2026-03-15)
+
+
+### Features
+
+* strict schema ([#43](https://github.com/eventvisor/eventvisor/issues/43)) ([933e1b3](https://github.com/eventvisor/eventvisor/commit/933e1b3a24353efdbe5198e1bedd6e22bfecb1f1))
+
+
+
+
+
 # [0.24.0](https://github.com/eventvisor/eventvisor/compare/v0.23.0...v0.24.0) (2026-03-15)
 
 
