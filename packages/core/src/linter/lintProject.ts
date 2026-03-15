@@ -5,9 +5,10 @@ import { getAttributeSchema } from "./attributeSchema";
 import { getDestinationSchema } from "./destinationSchema";
 import { getEffectSchema } from "./effectSchema";
 import { getEventSchema } from "./eventSchema";
+import { getTestSchema } from "./testSchema";
 import { printError } from "./printError";
 
-async function lintProject(
+export async function lintProject(
   options: Dependencies,
   filterOptions: {
     keyPattern?: string;
@@ -136,7 +137,34 @@ async function lintProject(
     }
   }
 
-  // @TODO: tests
+  // tests
+  console.log("\nLinting tests...");
+
+  const tests = await datasource.listTests();
+  const testSchema = getTestSchema(options);
+
+  for (const testKey of tests) {
+    if (entityType && entityType !== "test") {
+      continue;
+    }
+
+    if (keyPattern && !testKey.includes(keyPattern)) {
+      continue;
+    }
+
+    const testContent = await datasource.readTest(testKey);
+    const result = testSchema.safeParse(testContent);
+
+    if (!result.success) {
+      printError({
+        entityType: "test",
+        entityKey: testKey,
+        error: result.error,
+        projectConfig,
+      });
+      hasErrors = true;
+    }
+  }
 
   if (hasErrors) {
     return false;
