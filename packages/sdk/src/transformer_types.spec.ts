@@ -406,6 +406,25 @@ describe("Transformer types", () => {
         lastName: "Baggins",
       });
     });
+
+    it("does not set target when resolved source is missing", async () => {
+      expect(
+        await transformer.applyAll(
+          {
+            firstName: "Bilbo",
+          },
+          [
+            {
+              type: "set",
+              target: "profile.lastName",
+              lookup: "browser.user.lastName",
+            },
+          ],
+        ),
+      ).toEqual({
+        firstName: "Bilbo",
+      });
+    });
   });
 
   /**

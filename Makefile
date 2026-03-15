@@ -16,6 +16,10 @@ lint:
 	npx eslint .
 	npx lerna run lint
 
+format:
+	npx prettier examples/ packages/ modules/ projects/ --write
+	npx eslint . --fix
+
 ##
 # Misc.
 #

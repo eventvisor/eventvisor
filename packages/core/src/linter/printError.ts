@@ -23,6 +23,9 @@ function getFilePath(options: PrintErrorOptions) {
   } else if (entityType === "attribute") {
     directoryPath = projectConfig.attributesDirectoryPath;
   } else if (entityType === "destination") {
+    directoryPath = projectConfig.destinationsDirectoryPath;
+  } else if (entityType === "effect") {
+    directoryPath = projectConfig.effectsDirectoryPath;
   } else if (entityType === "test") {
     directoryPath = projectConfig.testsDirectoryPath;
   } else {

@@ -5,6 +5,7 @@ coverage
 dist
 dist-ssr
 out
+specs
 
 .DS_Store
 

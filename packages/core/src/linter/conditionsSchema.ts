@@ -52,6 +52,7 @@ export function getConditionsSchema(deps: Dependencies) {
         "notIn",
       ]),
       value: z.any().optional(),
+      regexFlags: z.string().optional(),
     })
     .refine(...getSourceBaseRefine())
     // @TODO: refine "value" type against each "operator"
@@ -66,24 +67,17 @@ export function getConditionsSchema(deps: Dependencies) {
       { message: "Value is required for all operators except exists and notExists" },
     );
 
-  const andConditionSchema = z.object({
-    and: z.array(plainConditionSchema),
-  });
+  const stringConditionSchema = z.string();
 
-  const orConditionSchema = z.object({
-    or: z.array(plainConditionSchema),
-  });
-
-  const notConditionSchema = z.object({
-    not: z.array(plainConditionSchema),
-  });
-
-  const conditionSchema = z.union([
-    plainConditionSchema,
-    andConditionSchema,
-    orConditionSchema,
-    notConditionSchema,
-  ]);
+  const conditionSchema: z.ZodTypeAny = z.lazy(() =>
+    z.union([
+      plainConditionSchema,
+      z.object({ and: z.array(conditionSchema) }).strict(),
+      z.object({ or: z.array(conditionSchema) }).strict(),
+      z.object({ not: z.array(conditionSchema) }).strict(),
+      stringConditionSchema,
+    ]),
+  );
 
   return z.union([conditionSchema, z.array(conditionSchema)]);
 }

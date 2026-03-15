@@ -21,3 +21,5 @@ assertions:
     expectedEvent:
       bannerId: "234"
       screenWidth: 200
+      screen:
+        width: 200

@@ -27,7 +27,13 @@ export type SourceOrigin = SourcePath & {
 };
 
 function findValueAtPath(obj: any, path: string[]): any {
-  return path.reduce((acc, part) => acc[part], obj);
+  return path.reduce((acc, part) => {
+    if (acc === null || acc === undefined) {
+      return undefined;
+    }
+
+    return acc[part];
+  }, obj);
 }
 
 // @TODO: redo it with a better approach
