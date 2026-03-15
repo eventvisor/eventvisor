@@ -14,7 +14,7 @@ export function getSampleSchema(deps: Dependencies) {
 
   const sampleBy = z.union([sampleBySingle, sampleByMultiple, sampleByOr]);
 
-  return z
+  const sampleSchema = z
     .object({
       by: sampleBy,
       conditions: getConditionsSchema(deps).optional(),
@@ -42,4 +42,6 @@ export function getSampleSchema(deps: Dependencies) {
         path: [],
       },
     );
+
+  return z.union([sampleSchema, z.array(sampleSchema)]);
 }

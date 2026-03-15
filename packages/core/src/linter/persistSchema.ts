@@ -8,10 +8,12 @@ export function getPersistSchema(deps: Dependencies) {
 
   const simplePersist = z.string();
 
-  const complexPersist = z.object({
-    storage: z.string(),
-    conditions: conditionsSchema.optional(),
-  });
+  const complexPersist = z
+    .object({
+      storage: z.string(),
+      conditions: conditionsSchema.optional(),
+    })
+    .strict();
 
   return z.union([
     simplePersist,

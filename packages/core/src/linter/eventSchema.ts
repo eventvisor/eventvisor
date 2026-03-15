@@ -18,7 +18,7 @@ export function getEventSchema(deps: Dependencies) {
       tags: getTagsSchema(deps),
 
       skipValidation: z
-        .union([z.boolean(), z.object({ conditions: getConditionsSchema(deps) })])
+        .union([z.boolean(), z.object({ conditions: getConditionsSchema(deps) }).strict()])
         .optional(),
       level: z.enum(["fatal", "error", "warning", "log", "info", "debug"]).optional(),
       requiredAttributes: z.array(z.string()).optional(),
@@ -30,11 +30,13 @@ export function getEventSchema(deps: Dependencies) {
           z.string(), // @TODO: get real destination names here
           z.union([
             z.boolean(),
-            z.object({
-              conditions: getConditionsSchema(deps).optional(),
-              sample: getSampleSchema(deps).optional(),
-              transforms: getTransformsSchema(deps).optional(),
-            }),
+            z
+              .object({
+                conditions: getConditionsSchema(deps).optional(),
+                sample: getSampleSchema(deps).optional(),
+                transforms: getTransformsSchema(deps).optional(),
+              })
+              .strict(),
           ]),
         )
         .optional(),

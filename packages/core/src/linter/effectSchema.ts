@@ -13,6 +13,7 @@ export function getEffectSchema(deps: Dependencies) {
       event_tracked: z.array(z.string()).optional(),
       attribute_set: z.array(z.string()).optional(),
     })
+    .strict()
     .refine(
       (data) => {
         return Object.values(data).some((value) => value !== undefined);
@@ -24,14 +25,16 @@ export function getEffectSchema(deps: Dependencies) {
     );
   const effectOn = z.union([z.array(effectOnType), effectOnRecord]);
 
-  const step = z.object({
-    description: z.string().optional(),
-    handler: z.string().optional(),
-    conditions: getConditionsSchema(deps).optional(),
-    params: z.record(z.string(), z.any()).optional(),
-    transforms: getTransformsSchema(deps).optional(),
-    continueOnError: z.boolean().optional(),
-  });
+  const step = z
+    .object({
+      description: z.string().optional(),
+      handler: z.string().optional(),
+      conditions: getConditionsSchema(deps).optional(),
+      params: z.record(z.string(), z.any()).optional(),
+      transforms: getTransformsSchema(deps).optional(),
+      continueOnError: z.boolean().optional(),
+    })
+    .strict();
 
   return z
     .object({
@@ -39,10 +42,10 @@ export function getEffectSchema(deps: Dependencies) {
       description: z.string(),
       tags: getTagsSchema(deps),
 
-      on: effectOn,
+      on: effectOn.optional(),
       state: z.any().optional(),
       conditions: getConditionsSchema(deps).optional(),
-      steps: z.array(step),
+      steps: z.array(step).optional(),
       persist: getPersistSchema(deps).optional(),
     })
     .strict();
