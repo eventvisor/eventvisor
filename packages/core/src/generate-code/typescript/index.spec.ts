@@ -29,7 +29,9 @@ describe("TypeScript code generation", () => {
     const deps = {
       datasource: {
         listAttributes: jest.fn().mockResolvedValue(["userId", "user/id"]),
-        readAttribute: jest.fn().mockImplementation(async (name: string) => schemas.get(name) ?? null),
+        readAttribute: jest
+          .fn()
+          .mockImplementation(async (name: string) => schemas.get(name) ?? null),
         listEvents: jest.fn().mockResolvedValue(["auth/signup"]),
         readEvent: jest.fn().mockImplementation(async (name: string) => schemas.get(name) ?? null),
       },

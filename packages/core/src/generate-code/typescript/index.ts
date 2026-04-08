@@ -118,7 +118,10 @@ ${code}
  */
 export interface Attributes {
 ${generatedAttributes
-  .map(({ entityName, interfaceName }) => `  ${getTypeScriptPropertyKey(entityName)}: ${interfaceName};`)
+  .map(
+    ({ entityName, interfaceName }) =>
+      `  ${getTypeScriptPropertyKey(entityName)}: ${interfaceName};`,
+  )
   .join("\n")}
 }
 `;
@@ -170,7 +173,10 @@ ${code}
  */
 export interface Events {
 ${generatedEvents
-  .map(({ entityName, interfaceName }) => `  ${getTypeScriptPropertyKey(entityName)}: ${interfaceName};`)
+  .map(
+    ({ entityName, interfaceName }) =>
+      `  ${getTypeScriptPropertyKey(entityName)}: ${interfaceName};`,
+  )
   .join("\n")}
 }
 `;
