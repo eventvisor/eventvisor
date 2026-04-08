@@ -131,6 +131,20 @@ describe("generateInterface", () => {
       expect(result).toContain("active?: boolean;");
       expect(result).toContain("score?: null;");
     });
+
+    it("should quote property keys that are not valid TypeScript identifiers", () => {
+      const schema: JSONSchema = {
+        type: "object",
+        properties: {
+          "user/id": { type: "string" },
+          "page-view": { type: "number" },
+        },
+        required: ["user/id"],
+      };
+      const result = generateInterface(schema, "GeneratedInterface");
+      expect(result).toContain('"user/id": string;');
+      expect(result).toContain('"page-view"?: number;');
+    });
   });
 
   describe("Nested Objects", () => {
@@ -674,8 +688,8 @@ describe("generateInterface", () => {
         },
       };
       const result = generateInterface(schema, "GeneratedInterface");
-      expect(result).toContain("0?: string;");
-      expect(result).toContain("1?: number;");
+      expect(result).toContain('"0"?: string;');
+      expect(result).toContain('"1"?: number;');
     });
 
     it("should handle object with special character property names", () => {
@@ -687,8 +701,8 @@ describe("generateInterface", () => {
         },
       };
       const result = generateInterface(schema, "GeneratedInterface");
-      expect(result).toContain("my-property?: string;");
-      expect(result).toContain("another.property?: number;");
+      expect(result).toContain('"my-property"?: string;');
+      expect(result).toContain('"another.property"?: number;');
     });
 
     it("should handle required array with properties not in properties object", () => {
