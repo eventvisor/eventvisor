@@ -1,5 +1,7 @@
 import { JSONSchema } from "@eventvisor/types";
 
+import { getTypeScriptPropertyKey } from "./index";
+
 export function generateInterface(schema: JSONSchema, interfaceName: string): string {
   function generateType(schema: JSONSchema, indent: number = 0): string {
     const indentStr = "  ".repeat(indent);
@@ -42,7 +44,7 @@ export function generateInterface(schema: JSONSchema, interfaceName: string): st
         const isRequired = required.includes(key);
         const optionalMarker = isRequired ? "" : "?";
         const propType = generateType(propSchema, indent + 1);
-        return `${indentStr}  ${key}${optionalMarker}: ${propType};`;
+        return `${indentStr}  ${getTypeScriptPropertyKey(key)}${optionalMarker}: ${propType};`;
       });
 
       return `{\n${properties.join("\n")}\n${indentStr}}`;

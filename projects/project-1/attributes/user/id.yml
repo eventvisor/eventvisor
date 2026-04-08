@@ -1,0 +1,5 @@
+description: User ID attribute
+tags:
+  - web
+
+type: string

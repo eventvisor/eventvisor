@@ -1,31 +1,75 @@
-import fs from "fs";
-import path from "path";
+import * as fs from "fs";
+import * as path from "path";
 
 import { Dependencies } from "../../dependencies";
 import { generateInterface } from "./generateInterface";
 
-export function getInterfaceName(entityName: string, suffix: string = ""): string {
-  return (
-    entityName
-      .replace(/[^a-zA-Z0-9]+/g, " ") // Replace all special characters with spaces
-      .split(" ")
-      .filter((word) => word.length > 0) // Remove empty strings
-      .map((word) => {
-        // Check if word already has mixed case (camelCase/PascalCase pattern)
-        // This detects if there are both lowercase and uppercase letters in the word
-        const hasLowercase = /[a-z]/.test(word);
-        const hasUppercase = /[A-Z]/.test(word);
-        const hasMixedCase = hasLowercase && hasUppercase;
+const VALID_TYPESCRIPT_IDENTIFIER_REGEX = /^[A-Za-z_$][A-Za-z0-9_$]*$/;
 
-        if (hasMixedCase) {
-          // Preserve existing casing structure, just ensure first letter is uppercase
-          return word.charAt(0).toUpperCase() + word.slice(1);
-        }
-        // Normal PascalCase transformation for words without mixed case
-        return word.charAt(0).toUpperCase() + word.slice(1).toLowerCase();
-      })
-      .join("") + suffix
-  );
+function transformWordToPascalCase(word: string): string {
+  const hasLowercase = /[a-z]/.test(word);
+  const hasUppercase = /[A-Z]/.test(word);
+  const hasMixedCase = hasLowercase && hasUppercase;
+
+  if (hasMixedCase) {
+    return word.charAt(0).toUpperCase() + word.slice(1);
+  }
+
+  return word.charAt(0).toUpperCase() + word.slice(1).toLowerCase();
+}
+
+export function getInterfaceName(entityName: string, suffix: string = ""): string {
+  const segments = entityName
+    .split("/")
+    .filter((segment) => segment.length > 0)
+    .map((segment) =>
+      segment
+        .replace(/[^a-zA-Z0-9]+/g, " ")
+        .split(" ")
+        .filter((word) => word.length > 0)
+        .map(transformWordToPascalCase)
+        .join(""),
+    )
+    .filter((segment) => segment.length > 0);
+
+  if (segments.length === 0) {
+    return suffix;
+  }
+
+  const interfaceName = segments.reduce((result, segment, index) => {
+    if (index === 0) {
+      return segment;
+    }
+
+    return `${result}Namespace${segment}`;
+  }, "");
+
+  return `${interfaceName}${suffix}`;
+}
+
+export function getTypeScriptPropertyKey(name: string): string {
+  return VALID_TYPESCRIPT_IDENTIFIER_REGEX.test(name) ? name : JSON.stringify(name);
+}
+
+function createUniqueInterfaceNames(entityNames: string[], suffix: string): Map<string, string> {
+  const usedInterfaceNames = new Set<string>();
+  const interfaceNames = new Map<string, string>();
+
+  for (const entityName of entityNames) {
+    const baseInterfaceName = getInterfaceName(entityName, suffix);
+    let candidateInterfaceName = baseInterfaceName;
+    let counter = 2;
+
+    while (usedInterfaceNames.has(candidateInterfaceName)) {
+      candidateInterfaceName = `${baseInterfaceName}${counter}`;
+      counter += 1;
+    }
+
+    usedInterfaceNames.add(candidateInterfaceName);
+    interfaceNames.set(entityName, candidateInterfaceName);
+  }
+
+  return interfaceNames;
 }
 
 export async function generateTypeScriptCodeForProject(deps: Dependencies, outputPath: string) {
@@ -41,12 +85,13 @@ export async function generateTypeScriptCodeForProject(deps: Dependencies, outpu
   }[] = [];
 
   const attributes = await datasource.listAttributes();
+  const attributeInterfaceNames = createUniqueInterfaceNames(attributes, "Attribute");
   for (const attribute of attributes) {
     const parsedAttribute = await datasource.readAttribute(attribute);
     if (!parsedAttribute) {
       continue;
     }
-    const interfaceName = getInterfaceName(attribute, "Attribute");
+    const interfaceName = attributeInterfaceNames.get(attribute)!;
     const interfaceCode = generateInterface(parsedAttribute, interfaceName);
 
     generatedAttributes.push({
@@ -72,7 +117,12 @@ ${code}
  * Attributes
  */
 export interface Attributes {
-${generatedAttributes.map(({ entityName, interfaceName }) => `  ${entityName}: ${interfaceName};`).join("\n")}
+${generatedAttributes
+  .map(
+    ({ entityName, interfaceName }) =>
+      `  ${getTypeScriptPropertyKey(entityName)}: ${interfaceName};`,
+  )
+  .join("\n")}
 }
 `;
 
@@ -90,12 +140,13 @@ ${generatedAttributes.map(({ entityName, interfaceName }) => `  ${entityName}: $
   }[] = [];
 
   const events = await datasource.listEvents();
+  const eventInterfaceNames = createUniqueInterfaceNames(events, "Event");
   for (const event of events) {
     const parsedEvent = await datasource.readEvent(event);
     if (!parsedEvent) {
       continue;
     }
-    const interfaceName = getInterfaceName(event, "Event");
+    const interfaceName = eventInterfaceNames.get(event)!;
     const interfaceCode = generateInterface(parsedEvent, interfaceName);
 
     generatedEvents.push({
@@ -121,7 +172,12 @@ ${code}
  * Events
  */
 export interface Events {
-${generatedEvents.map(({ entityName, interfaceName }) => `  ${entityName}: ${interfaceName};`).join("\n")}
+${generatedEvents
+  .map(
+    ({ entityName, interfaceName }) =>
+      `  ${getTypeScriptPropertyKey(entityName)}: ${interfaceName};`,
+  )
+  .join("\n")}
 }
 `;
 
