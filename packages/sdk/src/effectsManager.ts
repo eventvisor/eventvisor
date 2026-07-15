@@ -1,6 +1,6 @@
 import type { EventName, AttributeName, EffectName, Value, EffectOnType } from "@eventvisor/types";
 
-import type { GetDatafileReader } from "./datafileReader";
+import type { InstanceDataProvider } from "./datafile";
 import type { Logger } from "./logger";
 import type { GetTransformer } from "./transformer";
 import type { GetConditionsChecker } from "./conditions";
@@ -17,7 +17,7 @@ export interface DispatchOptions {
 
 export interface EffectsManagerOptions {
   logger: Logger;
-  getDatafileReader: GetDatafileReader;
+  getDataProvider: () => InstanceDataProvider;
   getTransformer: GetTransformer;
   getConditionsChecker: GetConditionsChecker;
   modulesManager: ModulesManager;
@@ -25,7 +25,7 @@ export interface EffectsManagerOptions {
 
 export class EffectsManager {
   private logger: Logger;
-  private getDatafileReader: GetDatafileReader;
+  private getDataProvider: () => InstanceDataProvider;
   private getTransformer: GetTransformer;
   private getConditionsChecker: GetConditionsChecker;
   private modulesManager: ModulesManager;
@@ -34,27 +34,27 @@ export class EffectsManager {
 
   constructor(options: EffectsManagerOptions) {
     this.logger = options.logger;
-    this.getDatafileReader = options.getDatafileReader;
+    this.getDataProvider = options.getDataProvider;
     this.getTransformer = options.getTransformer;
     this.getConditionsChecker = options.getConditionsChecker;
     this.modulesManager = options.modulesManager;
   }
 
   async initialize(): Promise<void> {
-    const datafileReader = this.getDatafileReader();
-    const effects = datafileReader.getEffectNames();
+    const dataProvider = this.getDataProvider();
+    const effects = dataProvider.getEffectNames();
 
     const persistedResult = await initializeFromStorage({
-      datafileReader,
+      dataProvider,
       conditionsChecker: this.getConditionsChecker(),
       modulesManager: this.modulesManager,
       storageKeyPrefix: "effects_",
-      getEntityNames: () => datafileReader.getEffectNames(),
-      getEntity: (entityName: string) => datafileReader.getEffect(entityName),
+      getEntityNames: () => dataProvider.getEffectNames(),
+      getEntity: (entityName: string) => dataProvider.getEffect(entityName),
     });
 
     for (const effectName of effects) {
-      const effect = datafileReader.getEffect(effectName);
+      const effect = dataProvider.getEffect(effectName);
 
       if (!effect) {
         continue;
@@ -83,14 +83,14 @@ export class EffectsManager {
     // @TODO: rename to actionType
     const { eventType, name, value } = dispatchOptions;
 
-    const datafileReader = this.getDatafileReader();
+    const dataProvider = this.getDataProvider();
     const conditionsChecker = this.getConditionsChecker();
     const transformer = this.getTransformer();
 
-    const allEffects = datafileReader.getEffectNames();
+    const allEffects = dataProvider.getEffectNames();
 
     for (const effectName of allEffects) {
-      const effect = datafileReader.getEffect(effectName);
+      const effect = dataProvider.getEffect(effectName);
 
       if (!effect) {
         continue;
@@ -166,7 +166,7 @@ export class EffectsManager {
           }
 
           // continueOnError
-          if (!stepPassed && typeof step.continueOnError === "boolean" && !step.continueOnError) {
+          if (!stepPassed && step.continueOnError !== true) {
             break;
           }
 
@@ -187,7 +187,7 @@ export class EffectsManager {
 
       // persist
       await persistEntity({
-        datafileReader,
+        dataProvider,
         conditionsChecker,
         modulesManager: this.modulesManager,
         storageKeyPrefix: "effects_",
@@ -199,9 +199,12 @@ export class EffectsManager {
   }
 
   // called after datafile refresh
-  refresh() {
-    // @TODO: think
-    this.initialize();
+  async refresh() {
+    const activeNames = new Set(this.getDataProvider().getEffectNames());
+    for (const name of Object.keys(this.statesByEffect)) {
+      if (!activeNames.has(name)) delete this.statesByEffect[name];
+    }
+    await this.initialize();
   }
 
   getAllStates() {

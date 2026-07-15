@@ -8,6 +8,8 @@ import { getDestinationSchema } from "./destinationSchema";
 import { getEffectSchema } from "./effectSchema";
 import { getEventSchema } from "./eventSchema";
 import { getTestSchema } from "./testSchema";
+import { getTargetSchema } from "./targetSchema";
+import { getProjectSetExecutions } from "../sets";
 import { printError } from "./printError";
 import { getSemanticIssues, type LintContext } from "./semanticValidation";
 
@@ -266,6 +268,25 @@ export async function lintProject(
     }
   }
 
+  console.log("\nLinting targets...");
+  const targets = await datasource.listTargets();
+  const targetSchema = getTargetSchema(projectConfig);
+  for (const targetKey of targets) {
+    if (entityType && entityType !== "target") continue;
+    if (keyPattern && !targetKey.includes(keyPattern)) continue;
+
+    const result = await targetSchema.safeParseAsync(await datasource.readTarget(targetKey));
+    if (!result.success) {
+      printError({
+        entityType: "target",
+        entityKey: targetKey,
+        error: result.error,
+        projectConfig,
+      });
+      hasErrors = true;
+    }
+  }
+
   if (hasErrors) {
     return false;
   }
@@ -275,23 +296,29 @@ export async function lintProject(
 
 export const lintPlugin: Plugin = {
   command: "lint",
+  options: {
+    set: { type: "string" },
+    keyPattern: { type: "string" },
+    entityType: { type: "string" },
+  },
   handler: async function (options) {
     const { rootDirectoryPath, projectConfig, datasource, parsed } = options;
 
-    const successfullyLinted = await lintProject(
-      {
-        rootDirectoryPath,
-        projectConfig,
-        datasource,
-        options: parsed,
-      },
-      {
-        keyPattern: parsed.keyPattern,
-        entityType: parsed.entityType,
-      },
-    );
-
-    return successfullyLinted;
+    const executions = await getProjectSetExecutions(projectConfig, datasource, parsed.set);
+    let successful = true;
+    for (const execution of executions) {
+      const result = await lintProject(
+        {
+          rootDirectoryPath,
+          projectConfig: execution.projectConfig,
+          datasource: execution.datasource,
+          options: parsed,
+        },
+        { keyPattern: parsed.keyPattern, entityType: parsed.entityType },
+      );
+      if (!result) successful = false;
+    }
+    return successful;
   },
   examples: [
     {

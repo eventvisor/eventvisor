@@ -1,0 +1,16 @@
+description: Checkout and order events with their runtime dependencies
+tag: checkout
+includeEvents:
+  - add_to_cart
+  - checkout_*
+  - order_*
+includeAttributes:
+  - userId
+  - sessionId
+  - currency
+  - customerTier
+  - consentAnalytics
+includeDestinations:
+  - browserAnalytics
+  - orderWarehouse
+includeEffects: cart_activity

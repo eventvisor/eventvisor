@@ -1,11 +1,11 @@
-import type { Module } from "@eventvisor/sdk";
+import type { EventvisorModule } from "@eventvisor/sdk";
 
 export type GTMModuleOptions = {
   name?: string;
   dataLayer?: Array<Record<string, any>>;
 };
 
-export function createGTMModule(options: GTMModuleOptions = {}): Module {
+export function createGTMModule(options: GTMModuleOptions = {}): EventvisorModule {
   const { name = "gtm", dataLayer = (window as any).dataLayer } = options;
 
   return {

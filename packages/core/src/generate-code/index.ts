@@ -1,16 +1,21 @@
 import * as fs from "fs";
 import * as path from "path";
+import type { DatafileContent } from "@eventvisor/types";
 
 import { generateTypeScriptCodeForProject } from "./typescript";
 import { Dependencies } from "../dependencies";
 import { Plugin } from "../cli";
+import { buildDatafile } from "../builder";
+import { getProjectSetExecutions } from "../sets";
 
 export const ALLOWED_LANGUAGES_FOR_CODE_GENERATION = ["typescript"];
 
 export interface GenerateCodeCLIOptions {
   language: string;
   outDir: string;
-  // @TODO: tag?: string;
+  tag?: string | string[];
+  target?: string | string[];
+  set?: string;
   // @TODO: react?: boolean;
 }
 
@@ -44,7 +49,34 @@ export async function generateCodeForProject(
   }
 
   if (cliOptions.language === "typescript") {
-    return await generateTypeScriptCodeForProject(deps, absolutePath);
+    const selections = [
+      ...(Array.isArray(cliOptions.tag)
+        ? cliOptions.tag
+        : cliOptions.tag
+          ? [cliOptions.tag]
+          : []
+      ).map((tag) => ({ tag })),
+      ...(Array.isArray(cliOptions.target)
+        ? cliOptions.target
+        : cliOptions.target
+          ? [cliOptions.target]
+          : []
+      ).map((target) => ({ target })),
+    ];
+    let selectedDatafile: DatafileContent | undefined;
+    for (const selection of selections) {
+      const datafile = await buildDatafile(deps, selection);
+      selectedDatafile = selectedDatafile
+        ? {
+            ...selectedDatafile,
+            attributes: { ...selectedDatafile.attributes, ...datafile.attributes },
+            events: { ...selectedDatafile.events, ...datafile.events },
+            destinations: { ...selectedDatafile.destinations, ...datafile.destinations },
+            effects: { ...selectedDatafile.effects, ...datafile.effects },
+          }
+        : datafile;
+    }
+    return await generateTypeScriptCodeForProject(deps, absolutePath, selectedDatafile);
   }
 
   throw new Error(`Language ${cliOptions.language} is not supported`);
@@ -52,20 +84,36 @@ export async function generateCodeForProject(
 
 export const generateCodePlugin: Plugin = {
   command: "generate-code",
+  options: {
+    language: { type: "string", demandOption: true },
+    outDir: { type: "string", demandOption: true },
+    tag: { type: "array", description: "include entities matching a tag; repeatable" },
+    target: { type: "array", description: "include entities matching a target; repeatable" },
+    set: { type: "string" },
+  },
   handler: async function ({ rootDirectoryPath, projectConfig, datasource, parsed }) {
     try {
-      await generateCodeForProject(
-        {
-          rootDirectoryPath,
-          projectConfig,
-          datasource,
-          options: parsed,
-        },
-        {
-          language: parsed.language,
-          outDir: parsed.outDir,
-        },
-      );
+      const executions = await getProjectSetExecutions(projectConfig, datasource, parsed.set);
+      for (const execution of executions) {
+        await generateCodeForProject(
+          {
+            rootDirectoryPath,
+            projectConfig: execution.projectConfig,
+            datasource: execution.datasource,
+            options: parsed,
+          },
+          {
+            language: parsed.language,
+            outDir:
+              projectConfig.sets && !parsed.set
+                ? `${parsed.outDir}/${execution.set}`
+                : parsed.outDir,
+            tag: parsed.tag,
+            target: parsed.target,
+            set: parsed.set,
+          },
+        );
+      }
     } catch (error) {
       console.error(error.message);
 

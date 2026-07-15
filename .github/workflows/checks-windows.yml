@@ -1,0 +1,39 @@
+name: Checks (Windows)
+
+on:
+  workflow_dispatch:
+
+jobs:
+  ci:
+    name: Checks
+    runs-on: windows-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: ".nvmrc"
+
+      - name: Cache dependencies
+        uses: actions/cache@v4
+        with:
+          path: ~/.npm
+          key: ${{ runner.os }}-node-${{ hashFiles('**/package-lock.json') }}
+          restore-keys: |
+            ${{ runner.os }}-node-
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build
+        run: npm run build
+
+      - name: Typecheck
+        run: npm run typecheck
+
+      - name: Test project fixture
+        working-directory: projects/project-1
+        run: |
+          npx eventvisor lint
+          npx eventvisor test --onlyFailures

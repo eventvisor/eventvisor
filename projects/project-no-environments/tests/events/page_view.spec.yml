@@ -1,0 +1,21 @@
+event: page_view
+
+assertions:
+  - description: accepts a valid page view
+    withAttributes:
+      userId: user-123
+      country: NL
+    track:
+      url: https://shop.example.com/products
+      title: Products
+    expectedToBeValid: true
+    expectedEvent:
+      url: https://shop.example.com/products
+      title: Products
+    expectedDestinations:
+      - console
+
+  - description: rejects a page view without a URL
+    track:
+      title: Missing URL
+    expectedToBeValid: false

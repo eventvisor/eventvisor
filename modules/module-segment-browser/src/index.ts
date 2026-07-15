@@ -1,11 +1,11 @@
-import type { Module } from "@eventvisor/sdk";
+import type { EventvisorModule } from "@eventvisor/sdk";
 
 export type SegmentBrowserModuleOptions = {
   name?: string;
-  analytics: any; // @TODO: type this later
+  analytics: { track: (eventName: string, payload: unknown) => unknown };
 };
 
-export function createSegmentBrowserModule(options: SegmentBrowserModuleOptions): Module {
+export function createSegmentBrowserModule(options: SegmentBrowserModuleOptions): EventvisorModule {
   const { name = "segment-browser", analytics } = options;
 
   return {

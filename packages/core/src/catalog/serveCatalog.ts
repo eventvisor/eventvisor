@@ -2,59 +2,56 @@ import * as fs from "fs";
 import * as path from "path";
 import * as http from "http";
 
-import { Dependencies } from "../dependencies";
+import type { Dependencies } from "../dependencies";
+
+const contentTypes: Record<string, string> = {
+  ".html": "text/html; charset=utf-8",
+  ".js": "text/javascript; charset=utf-8",
+  ".css": "text/css; charset=utf-8",
+  ".json": "application/json; charset=utf-8",
+  ".png": "image/png",
+  ".svg": "image/svg+xml",
+  ".ico": "image/x-icon",
+};
 
 export function serveCatalog(deps: Dependencies) {
-  const { projectConfig, options } = deps;
+  const root = path.resolve(deps.projectConfig.catalogExportDirectoryPath);
+  const port = Number(deps.options.port || deps.options.p || 3000);
+  if (!Number.isInteger(port) || port < 1 || port > 65535) throw new Error("Invalid catalog port.");
 
-  const port = options.p || 3000;
+  const server = http.createServer((request, response) => {
+    let pathname: string;
+    try {
+      pathname = decodeURIComponent(new URL(request.url || "/", "http://localhost").pathname);
+    } catch {
+      response.writeHead(400).end("Bad Request");
+      return;
+    }
 
-  http
-    .createServer(function (request, response) {
-      const requestedUrl = request.url;
-      const filePath =
-        requestedUrl === "/"
-          ? path.join(projectConfig.catalogExportDirectoryPath, "index.html")
-          : path.join(projectConfig.catalogExportDirectoryPath, requestedUrl as string);
+    const relative = pathname === "/" ? "index.html" : pathname.replace(/^\/+/, "");
+    const filePath = path.resolve(root, relative);
+    if (filePath !== root && !filePath.startsWith(`${root}${path.sep}`)) {
+      response.writeHead(403).end("Forbidden");
+      return;
+    }
 
-      console.log("requesting: " + filePath + "");
-
-      const extname = path.extname(filePath);
-      let contentType = "text/html";
-      switch (extname) {
-        case ".js":
-          contentType = "text/javascript";
-          break;
-        case ".css":
-          contentType = "text/css";
-          break;
-        case ".json":
-          contentType = "application/json";
-          break;
-        case ".png":
-          contentType = "image/png";
-          break;
+    fs.readFile(filePath, (error, content) => {
+      if (error) {
+        response
+          .writeHead(error.code === "ENOENT" ? 404 : 500)
+          .end(error.code === "ENOENT" ? "Not Found" : "Internal Server Error");
+        return;
       }
-
-      fs.readFile(filePath, function (error, content) {
-        if (error) {
-          if (error.code == "ENOENT") {
-            response.writeHead(404, { "Content-Type": "text/html" });
-            response.end("404 Not Found", "utf-8");
-          } else {
-            response.writeHead(500);
-            response.end("Error 500: " + error.code);
-            response.end();
-          }
-        } else {
-          response.writeHead(200, { "Content-Type": contentType });
-          response.end(content, "utf-8");
-        }
+      response.writeHead(200, {
+        "Content-Type": contentTypes[path.extname(filePath)] || "application/octet-stream",
+        "X-Content-Type-Options": "nosniff",
+        "Cache-Control":
+          path.basename(filePath) === "index.html" ? "no-cache" : "public, max-age=3600",
       });
-    })
-    .listen(port);
-
-  console.log(`Server running at http://127.0.0.1:${port}/`);
-
+      response.end(content);
+    });
+  });
+  server.listen(port, "127.0.0.1");
+  console.log(`Catalog available at http://127.0.0.1:${port}/`);
   return true;
 }

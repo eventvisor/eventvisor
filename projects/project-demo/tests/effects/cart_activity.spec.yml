@@ -1,0 +1,27 @@
+effect: cart_activity
+assertions:
+  - description: starts with an empty cart activity count
+    actions:
+      - type: track
+        name: page_view
+        value:
+          url: https://shop.example.com
+    expectedState:
+      itemCount: 0
+
+  - description: counts products added to the cart
+    actions:
+      - type: track
+        name: add_to_cart
+        value:
+          productId: sku-shirt
+          quantity: 1
+          unitPrice: 29.95
+      - type: track
+        name: add_to_cart
+        value:
+          productId: sku-shoes
+          quantity: 1
+          unitPrice: 99.95
+    expectedState:
+      itemCount: 2

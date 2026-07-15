@@ -1,0 +1,13 @@
+description: A customer started checkout
+tags: [all, checkout]
+type: object
+properties:
+  cartId:
+    type: string
+  itemCount:
+    type: integer
+    minimum: 1
+  total:
+    type: number
+    minimum: 0
+required: [cartId, itemCount, total]

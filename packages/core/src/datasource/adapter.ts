@@ -1,8 +1,10 @@
 import type { DatafileContent, EntityType, HistoryEntry, Commit } from "@eventvisor/types";
 
 export interface DatafileOptions {
-  tag: string;
+  tag?: string;
+  target?: string;
   datafilesDir?: string;
+  pretty?: boolean;
 }
 
 export abstract class Adapter {
@@ -12,6 +14,7 @@ export abstract class Adapter {
   abstract readEntity<T>(entityType: EntityType, entityKey: string): Promise<T>;
   abstract writeEntity<T>(entityType: EntityType, entityKey: string, entity: T): Promise<T>;
   abstract deleteEntity(entityType: EntityType, entityKey: string): Promise<void>;
+  abstract listSets(): Promise<string[]>;
 
   // datafile
   abstract readDatafile(options: DatafileOptions): Promise<DatafileContent>;

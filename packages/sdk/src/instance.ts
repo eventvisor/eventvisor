@@ -1,17 +1,23 @@
-import {
-  AttributeName,
-  DatafileContent,
-  EventName,
-  EffectName,
-  Value,
-  Action,
-} from "@eventvisor/types";
+import { AttributeName, DatafileContent, EventName, EffectName, Value } from "@eventvisor/types";
 
-import { DatafileReader, emptyDatafile } from "./datafileReader";
-import { createLogger, Logger, LogLevel } from "./logger";
+import {
+  emptyDatafile,
+  getComplexPersists,
+  mergeDatafiles,
+  parseDatafile,
+  type DatafileInput,
+  type InstanceDataProvider,
+} from "./datafile";
+import {
+  createLogger,
+  Logger,
+  LogLevel,
+  type EventvisorDiagnostic,
+  type EventvisorDiagnosticHandler,
+} from "./logger";
 import { Emitter, EmitType, EventCallback } from "./emitter";
 import { AttributesManager } from "./attributesManager";
-import { Module, ModuleName, ModulesManager } from "./modulesManager";
+import { EventvisorModule, ModuleName, ModulesManager } from "./modulesManager";
 import { SourceResolver } from "./sourceResolver";
 import { ConditionsChecker } from "./conditions";
 import { Bucketer } from "./bucketer";
@@ -19,18 +25,17 @@ import { Transformer } from "./transformer";
 import { Validator } from "./validator";
 import { EffectsManager } from "./effectsManager";
 
-export interface InstanceOptions {
-  datafile?: DatafileContent;
+export interface EventvisorOptions {
+  datafile?: DatafileInput;
   logLevel?: LogLevel;
-  logger?: Logger;
-  modules?: Module[];
-
-  // @TODO
-  // initialAttributes?: Record<AttributeName, Value>;
+  onDiagnostic?: EventvisorDiagnosticHandler;
+  modules?: EventvisorModule[];
+  initialAttributes?: Record<AttributeName, Value>;
 }
 
 export class Eventvisor {
-  private datafileReader: DatafileReader;
+  private datafile: DatafileContent;
+  private regexCache: Record<string, RegExp> = {};
   private logger: Logger;
   private emitter: Emitter;
   private attributesManager: AttributesManager;
@@ -43,35 +48,38 @@ export class Eventvisor {
   private validator: Validator;
 
   private ready: boolean = false;
-  private queue: Action[] = [];
-  private queueProcessing: boolean = false;
+  private readyPromise: Promise<void>;
+  private diagnosticHandlers: EventvisorDiagnosticHandler[] = [];
+  private closed = false;
 
-  constructor(options: InstanceOptions = {}) {
+  constructor(options: EventvisorOptions = {}) {
     /**
      * Core instances without interdependencies
      *
      * @TODO: sort out this dependency mess!!
      */
-    this.logger =
-      options.logger ||
-      createLogger({
-        level: options.logLevel || Logger.defaultLevel,
-      });
-
-    this.datafileReader = new DatafileReader({
-      datafile: options.datafile || emptyDatafile,
-      logger: this.logger,
+    this.emitter = new Emitter();
+    if (options.onDiagnostic) this.diagnosticHandlers.push(options.onDiagnostic);
+    this.logger = createLogger({
+      level: options.logLevel || Logger.defaultLevel,
+      onDiagnostic: (diagnostic) => this.reportDiagnostic(diagnostic),
     });
 
-    this.emitter = new Emitter();
+    try {
+      this.datafile = parseDatafile(options.datafile || emptyDatafile);
+    } catch (error) {
+      this.datafile = emptyDatafile;
+      this.logger.error((error as Error).message, { code: "invalid_datafile", error });
+    }
 
     /**
      * Instances with interdependencies
      */
     this.modulesManager = new ModulesManager({
       logger: this.logger,
-      getDatafileReader: () => this.datafileReader,
-      getSourceResolver: () => this.sourceResolver,
+      getRevision: () => this.getRevision(),
+      onDiagnostic: (handler) => this.onDiagnostic(handler),
+      reportDiagnostic: (diagnostic) => this.reportDiagnostic(diagnostic),
     });
 
     this.validator = new Validator({
@@ -83,7 +91,7 @@ export class Eventvisor {
       logger: this.logger,
       emitter: this.emitter,
       validator: this.validator,
-      getDatafileReader: () => this.datafileReader,
+      getDataProvider: () => this as unknown as InstanceDataProvider,
       getTransformer: () => this.transformer,
       getConditionsChecker: () => this.conditionsChecker,
       modulesManager: this.modulesManager,
@@ -91,7 +99,7 @@ export class Eventvisor {
 
     this.effectsManager = new EffectsManager({
       logger: this.logger,
-      getDatafileReader: () => this.datafileReader,
+      getDataProvider: () => this as unknown as InstanceDataProvider,
       getTransformer: () => this.transformer,
       getConditionsChecker: () => this.conditionsChecker,
       modulesManager: this.modulesManager,
@@ -106,7 +114,7 @@ export class Eventvisor {
 
     this.conditionsChecker = new ConditionsChecker({
       logger: this.logger,
-      getRegex: (regexString, regexFlags) => this.datafileReader.getRegex(regexString, regexFlags),
+      getRegex: (regexString, regexFlags) => this.getRegex(regexString, regexFlags),
       sourceResolver: this.sourceResolver,
     });
 
@@ -120,7 +128,6 @@ export class Eventvisor {
       logger: this.logger,
       sourceResolver: this.sourceResolver,
       conditionsChecker: this.conditionsChecker,
-      transformer: this.transformer,
     });
 
     /**
@@ -128,18 +135,28 @@ export class Eventvisor {
      */
     if (options.modules) {
       for (const module of options.modules) {
-        this.modulesManager.registerModule(module);
+        this.modulesManager.addModule(module);
       }
     }
 
-    Promise.all([this.effectsManager.initialize(), this.attributesManager.initialize()])
-      .then(() => {
+    this.readyPromise = Promise.all([
+      this.effectsManager.initialize(),
+      this.attributesManager.initialize(),
+    ])
+      .then(async () => {
+        for (const [name, value] of Object.entries(options.initialAttributes || {})) {
+          await this.attributesManager.setAttribute(name, value);
+        }
         this.ready = true;
-        this.emitter.trigger("ready");
+        this.emitter.trigger("ready", {});
         this.logger.debug("Eventvisor SDK is ready");
       })
       .catch((error) => {
-        this.logger.error("initialization failed", error);
+        this.logger.error("Eventvisor initialization failed", {
+          code: "initialization_failed",
+          error,
+        });
+        throw error;
       });
 
     this.logger.info("Eventvisor SDK initialized");
@@ -150,100 +167,98 @@ export class Eventvisor {
   }
 
   async onReady(): Promise<void> {
-    if (this.ready) {
-      return;
-    }
+    return this.readyPromise;
+  }
 
-    return new Promise((resolve) => {
-      const unsubscribe = this.emitter.on("ready", () => {
-        unsubscribe();
-        resolve();
-      });
-    });
+  onDiagnostic(handler: EventvisorDiagnosticHandler) {
+    this.diagnosticHandlers.push(handler);
+    let active = true;
+    return () => {
+      if (!active) return;
+      active = false;
+      const index = this.diagnosticHandlers.indexOf(handler);
+      if (index !== -1) this.diagnosticHandlers.splice(index, 1);
+    };
+  }
+
+  private reportDiagnostic(diagnostic: EventvisorDiagnostic) {
+    for (const handler of [...this.diagnosticHandlers]) {
+      try {
+        handler(diagnostic);
+      } catch {
+        // diagnostic handlers must never interrupt SDK behavior
+      }
+    }
+    if (diagnostic.level === "error" || diagnostic.level === "fatal") {
+      this.emitter.trigger("error", { diagnostic });
+    }
   }
 
   getRevision() {
-    return this.datafileReader.getRevision();
+    return this.datafile.revision;
+  }
+
+  getSchemaVersion() {
+    return this.datafile.schemaVersion;
   }
 
   setLogLevel(level: LogLevel) {
     return this.logger.setLevel(level);
   }
 
-  setDatafile(datafile: DatafileContent) {
+  async setDatafile(datafile: DatafileInput, replace = false) {
     try {
-      const newDatafileReader = new DatafileReader({
-        datafile,
-        logger: this.logger,
-      });
-
-      this.datafileReader = newDatafileReader;
-
-      this.effectsManager.refresh();
-
-      this.emitter.trigger("datafile_set");
+      const parsed = parseDatafile(datafile);
+      this.datafile = replace ? parsed : mergeDatafiles(this.datafile, parsed);
+      this.regexCache = {};
+      await Promise.all([this.effectsManager.refresh(), this.attributesManager.refresh()]);
+      this.emitter.trigger("datafile_set", { replaced: replace });
     } catch (error) {
-      this.logger.error("Error setting datafile", {
+      this.logger.error((error as Error).message || "Could not parse datafile", {
+        code: "invalid_datafile",
         error,
       });
     }
   }
 
-  on(emitType: EmitType, callback: EventCallback) {
+  private getAttribute(name: AttributeName) {
+    return this.datafile.attributes[name];
+  }
+  private getAttributeNames() {
+    return Object.keys(this.datafile.attributes);
+  }
+  private getEvent(name: EventName) {
+    return this.datafile.events[name];
+  }
+  private getDestination(name: string) {
+    return this.datafile.destinations[name];
+  }
+  private getDestinationNames() {
+    return Object.keys(this.datafile.destinations);
+  }
+  private getEffect(name: EffectName) {
+    return this.datafile.effects[name];
+  }
+  private getEffectNames() {
+    return Object.keys(this.datafile.effects);
+  }
+  private getRegex(pattern: string, flags = "") {
+    const key = `${pattern}-${flags}`;
+    return this.regexCache[key] || (this.regexCache[key] = new RegExp(pattern, flags));
+  }
+  private getPersists(schema: any) {
+    return schema && schema.persist ? getComplexPersists(schema.persist) : null;
+  }
+
+  on<T extends EmitType>(emitType: T, callback: EventCallback<T>) {
     return this.emitter.on(emitType, callback);
-  }
-
-  /**
-   * Queue
-   */
-  private addToQueue(action: Action) {
-    this.queue.push(action);
-  }
-
-  // @TODO: make it better
-  private async processQueue() {
-    if (this.queue.length === 0) {
-      return;
-    }
-
-    if (this.queueProcessing) {
-      return;
-    }
-
-    this.queueProcessing = true;
-
-    const action = this.queue.shift();
-
-    if (!action) {
-      this.queueProcessing = false;
-
-      return;
-    }
-
-    try {
-      if (action.type === "track") {
-        await this.trackAsync(action.name, action.value);
-      } else if (action.type === "setAttribute") {
-        await this.setAttributeAsync(action.name, action.value);
-      } else if (action.type === "removeAttribute") {
-        await this.removeAttributeAsync(action.name);
-      }
-    } catch (error) {
-      this.logger.error(`Error processing queue`, {
-        error,
-        action,
-      });
-    }
-
-    this.queueProcessing = false;
-
-    await this.processQueue();
   }
 
   /**
    * Attribute
    */
-  async setAttributeAsync(attributeName: AttributeName, value: Value) {
+  async setAttribute(attributeName: AttributeName, value: Value) {
+    await this.onReady();
     const result = await this.attributesManager.setAttribute(attributeName, value);
 
     /**
@@ -258,46 +273,28 @@ export class Eventvisor {
     return result;
   }
 
-  setAttribute(attributeName: AttributeName, value: Value) {
-    this.addToQueue({
-      type: "setAttribute",
-      name: attributeName,
-      value,
-    });
-
-    this.processQueue();
-  }
-
   getAttributeValue(attributeName: AttributeName) {
     return this.attributesManager.getAttributeValue(attributeName);
   }
 
   getAttributes() {
-    return this.attributesManager.getAttributesMap();
+    return { ...this.attributesManager.getAttributesMap() };
   }
 
   isAttributeSet(attributeName: AttributeName) {
     return this.attributesManager.isAttributeSet(attributeName);
   }
 
-  removeAttributeAsync(attributeName: AttributeName) {
+  async removeAttribute(attributeName: AttributeName) {
+    await this.onReady();
     return this.attributesManager.removeAttribute(attributeName);
-  }
-
-  removeAttribute(attributeName: AttributeName) {
-    this.addToQueue({
-      type: "removeAttribute",
-      name: attributeName,
-    });
-
-    this.processQueue();
   }
 
   /**
    * Modules
    */
-  registerModule(module: Module) {
-    return this.modulesManager.registerModule(module);
+  addModule(module: EventvisorModule) {
+    return this.modulesManager.addModule(module);
   }
 
   removeModule(moduleName: ModuleName) {
@@ -307,11 +304,12 @@ export class Eventvisor {
   /**
    * Event
    */
-  async trackAsync(eventName: EventName, value: Value): Promise<Value | null> {
+  async track(eventName: EventName, value: Value): Promise<Value | null> {
+    await this.onReady();
     /**
      * Find
      */
-    const eventSchema = this.datafileReader.getEvent(eventName);
+    const eventSchema = this.getEvent(eventName);
 
     if (!eventSchema) {
       this.logger.error(`Event schema not found in datafile`, { eventName });
@@ -334,7 +332,7 @@ export class Eventvisor {
     let shouldValidate = true;
 
     if (typeof eventSchema.skipValidation !== "undefined") {
-      if (eventSchema.skipValidation === false) {
+      if (eventSchema.skipValidation === true) {
         // boolean
         shouldValidate = false;
       } else if (
@@ -350,9 +348,22 @@ export class Eventvisor {
           },
         );
 
-        if (!isMatched) {
+        if (isMatched) {
           shouldValidate = false;
         }
+      }
+    }
+
+    if (eventSchema.requiredAttributes) {
+      const missingAttributes = eventSchema.requiredAttributes.filter(
+        (attributeName) => !this.attributesManager.isAttributeSet(attributeName),
+      );
+      if (missingAttributes.length > 0) {
+        this.logger.warn("Event required attributes are not set", {
+          eventName,
+          missingAttributes,
+        });
+        return null;
       }
     }
 
@@ -447,10 +458,10 @@ export class Eventvisor {
     /**
      * Destinations
      */
-    const destinationNames = this.datafileReader.getDestinationNames();
+    const destinationNames = this.getDestinationNames();
 
     for (const destinationName of destinationNames) {
-      const destination = this.datafileReader.getDestination(destinationName);
+      const destination = this.getDestination(destinationName);
 
       if (!destination) {
         continue;
@@ -505,41 +516,40 @@ export class Eventvisor {
 
               continue;
             }
+          }
 
-            // sample
-            if (destinationOverride.sample) {
-              const sampleResult = await this.bucketer.isSampled(destinationOverride.sample, {
+          // sample
+          if (destinationOverride.sample) {
+            const sampleResult = await this.bucketer.isSampled(destinationOverride.sample, {
+              eventName,
+              eventLevel,
+              payload: transportBody,
+            });
+
+            if (!sampleResult.isSampled) {
+              this.logger.debug(`Destination sample not matched for event`, {
+                eventName,
+                destinationName,
+                matchedSample: sampleResult.matchedSample,
+                bucketedNumber: sampleResult.bucketedNumber,
+                bucketKey: sampleResult.bucketKey,
+              });
+
+              continue;
+            }
+          }
+
+          // transform
+          if (destinationOverride.transforms) {
+            transportBody = await this.transformer.applyAll(
+              transformedValue,
+              destinationOverride.transforms,
+              {
                 eventName,
                 eventLevel,
                 payload: transportBody,
-              });
-
-              if (!sampleResult.isSampled) {
-                this.logger.debug(`Destination sample not matched for event`, {
-                  eventName,
-                  destinationName,
-                  matchedSample: sampleResult.matchedSample,
-                  bucketedNumber: sampleResult.bucketedNumber,
-                  bucketKey: sampleResult.bucketKey,
-                });
-
-                continue;
-              }
-            }
-
-            // transform
-            if (destinationOverride.transforms) {
-              // @TODO: make sure this transformed value is only affecting the specific desired destination and not others
-              transportBody = await this.transformer.applyAll(
-                transformedValue,
-                destinationOverride.transforms,
-                {
-                  eventName,
-                  eventLevel,
-                  payload: transportBody,
-                },
-              );
-            }
+              },
+            );
           }
         }
       }
@@ -609,17 +619,8 @@ export class Eventvisor {
       );
     }
 
+    this.emitter.trigger("event_tracked", { eventName, value: transformedValue });
     return transformedValue;
-  }
-
-  track(eventName: EventName, value: Value) {
-    this.addToQueue({
-      type: "track",
-      name: eventName,
-      value,
-    });
-
-    this.processQueue();
   }
 
   /**
@@ -629,14 +630,19 @@ export class Eventvisor {
     return this.effectsManager.getStateValue(name);
   }
 
-  /**
-   * @TODO: implement
-   */
-  spawn() {
-    // create child instance here
+  spawn(options: Omit<EventvisorOptions, "datafile"> = {}) {
+    return createEventvisor({ ...options, datafile: this.datafile });
+  }
+
+  async close() {
+    if (this.closed) return;
+    this.closed = true;
+    await this.modulesManager.close();
+    this.emitter.clearAll();
+    this.diagnosticHandlers = [];
   }
 }
 
-export function createInstance(options: InstanceOptions = {}): Eventvisor {
+export function createEventvisor(options: EventvisorOptions = {}): Eventvisor {
   return new Eventvisor(options);
 }

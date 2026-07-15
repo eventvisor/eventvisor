@@ -23,12 +23,15 @@ function createDeps(testContent: Record<string, any>): Dependencies {
       statesDirectoryPath: "/tmp/eventvisor/states",
       effectsDirectoryPath: "/tmp/eventvisor/effects",
       testsDirectoryPath: "/tmp/eventvisor/tests",
+      targetsDirectoryPath: "/tmp/eventvisor/targets",
+      setsDirectoryPath: "/tmp/eventvisor/sets",
       datafilesDirectoryPath: "/tmp/eventvisor/datafiles",
       systemDirectoryPath: "/tmp/eventvisor/.eventvisor",
       catalogExportDirectoryPath: "/tmp/eventvisor/out",
       datafileNamePattern: "eventvisor-%s.json",
       tags: ["all"],
-      adapter: class {},
+      sets: false,
+      adapter: class {} as any,
       plugins: [],
       parser: { extension: "yml", parse: jest.fn(), stringify: jest.fn() },
       prettyDatafile: false,
@@ -40,6 +43,7 @@ function createDeps(testContent: Record<string, any>): Dependencies {
       listDestinations: jest.fn().mockResolvedValue([]),
       listEffects: jest.fn().mockResolvedValue([]),
       listTests: jest.fn().mockResolvedValue(["events/page_view.spec"]),
+      listTargets: jest.fn().mockResolvedValue([]),
       readEvent: jest.fn().mockResolvedValue({
         description: "Page view",
         tags: ["all"],
@@ -67,7 +71,7 @@ describe("lintProject", () => {
     logSpy.mockRestore();
   });
 
-  it("includes test specs in linting", async () => {
+  it("accepts supported destination tag assertions", async () => {
     const deps = createDeps({
       event: "page_view",
       assertions: [
@@ -81,7 +85,7 @@ describe("lintProject", () => {
 
     const result = await lintProject(deps);
 
-    expect(result).toBe(false);
+    expect(result).toBe(true);
     expect(deps.datasource.listTests).toHaveBeenCalled();
     expect(deps.datasource.readTest).toHaveBeenCalledWith("events/page_view.spec");
   });

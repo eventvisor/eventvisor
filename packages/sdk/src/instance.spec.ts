@@ -1,8 +1,8 @@
 import { DatafileContent } from "@eventvisor/types";
 
-import { createInstance } from "./instance";
-import { Module } from "./modulesManager";
-import { emptyDatafile } from "./datafileReader";
+import { createEventvisor } from "./instance";
+import { EventvisorModule } from "./modulesManager";
+import { emptyDatafile } from "./datafile";
 
 function waitFor(durationInMs: number) {
   return new Promise((resolve) => setTimeout(resolve, durationInMs));
@@ -10,7 +10,7 @@ function waitFor(durationInMs: number) {
 
 describe("sdk: instance", function () {
   it("should be a function", function () {
-    expect(createInstance).toBeDefined();
+    expect(createEventvisor).toBeDefined();
   });
 
   it("should be initialized", async function () {
@@ -104,7 +104,7 @@ describe("sdk: instance", function () {
     const capturedEvents: Record<string, any>[] = [];
     const capturedHandles: Record<string, any>[] = [];
 
-    const testModule: Module = {
+    const testModule: EventvisorModule = {
       name: "test",
 
       transport: async ({ destinationName, eventName, payload }) => {
@@ -116,7 +116,7 @@ describe("sdk: instance", function () {
       },
     };
 
-    const eventvisor = createInstance({
+    const eventvisor = createEventvisor({
       datafile,
       modules: [testModule],
       logLevel: "warn",
@@ -209,7 +209,7 @@ describe("sdk: instance", function () {
 
     async function createEventvisorWithDatafile(datafile: DatafileContent) {
       const captured: any[] = [];
-      const eventvisor = createInstance({
+      const eventvisor = createEventvisor({
         datafile,
         modules: [
           {
@@ -228,7 +228,7 @@ describe("sdk: instance", function () {
     it("runs validation when skipValidation is undefined", async function () {
       const { eventvisor, captured } = await createEventvisorWithDatafile(baseDatafile);
 
-      const validResult = await eventvisor.trackAsync("strictEvent", {
+      const validResult = await eventvisor.track("strictEvent", {
         url: "https://example.com",
         count: 1,
       });
@@ -239,7 +239,7 @@ describe("sdk: instance", function () {
         count: 1,
       });
 
-      const invalidResult = await eventvisor.trackAsync("strictEvent", {
+      const invalidResult = await eventvisor.track("strictEvent", {
         url: "https://example.com",
         // missing required "count"
       } as any);
@@ -247,7 +247,7 @@ describe("sdk: instance", function () {
       expect(captured.length).toBe(1); // still 1, not 2
     });
 
-    it("runs validation when skipValidation is true", async function () {
+    it("skips validation when skipValidation is true", async function () {
       const datafile: DatafileContent = {
         ...baseDatafile,
         events: {
@@ -259,14 +259,14 @@ describe("sdk: instance", function () {
       };
       const { eventvisor, captured } = await createEventvisorWithDatafile(datafile);
 
-      const invalidResult = await eventvisor.trackAsync("strictEvent", {
+      const invalidResult = await eventvisor.track("strictEvent", {
         url: "https://example.com",
       } as any);
-      expect(invalidResult).toBeNull();
-      expect(captured.length).toBe(0);
+      expect(invalidResult).not.toBeNull();
+      expect(captured.length).toBe(1);
     });
 
-    it("skips validation when skipValidation is false", async function () {
+    it("runs validation when skipValidation is false", async function () {
       const datafile: DatafileContent = {
         ...baseDatafile,
         events: {
@@ -278,16 +278,15 @@ describe("sdk: instance", function () {
       };
       const { eventvisor, captured } = await createEventvisorWithDatafile(datafile);
 
-      const result = await eventvisor.trackAsync("strictEvent", {
+      const result = await eventvisor.track("strictEvent", {
         url: "https://example.com",
         // missing required "count" - would fail validation
       } as any);
-      expect(result).not.toBeNull();
-      expect(captured.length).toBe(1);
-      expect(captured[0].payload.payload).toEqual({ url: "https://example.com" });
+      expect(result).toBeNull();
+      expect(captured.length).toBe(0);
     });
 
-    it("skips validation when skipValidation.conditions do NOT match", async function () {
+    it("runs validation when skipValidation.conditions do not match", async function () {
       const datafile: DatafileContent = {
         ...baseDatafile,
         events: {
@@ -307,16 +306,15 @@ describe("sdk: instance", function () {
       };
       const { eventvisor, captured } = await createEventvisorWithDatafile(datafile);
 
-      // eventName is "strictEvent", condition expects "otherEvent" -> not matched -> skip validation
-      const result = await eventvisor.trackAsync("strictEvent", {
+      // eventName is "strictEvent", condition expects "otherEvent" -> validation remains enabled
+      const result = await eventvisor.track("strictEvent", {
         url: "https://example.com",
       } as any);
-      expect(result).not.toBeNull();
-      expect(captured.length).toBe(1);
-      expect(captured[0].payload.payload).toEqual({ url: "https://example.com" });
+      expect(result).toBeNull();
+      expect(captured.length).toBe(0);
     });
 
-    it("runs validation when skipValidation.conditions match", async function () {
+    it("skips validation when skipValidation.conditions match", async function () {
       const datafile: DatafileContent = {
         ...baseDatafile,
         events: {
@@ -336,27 +334,27 @@ describe("sdk: instance", function () {
       };
       const { eventvisor, captured } = await createEventvisorWithDatafile(datafile);
 
-      // condition matches -> validate -> invalid payload fails
-      const invalidResult = await eventvisor.trackAsync("strictEvent", {
+      // condition matches -> validation is skipped
+      const invalidResult = await eventvisor.track("strictEvent", {
         url: "https://example.com",
       } as any);
-      expect(invalidResult).toBeNull();
-      expect(captured.length).toBe(0);
+      expect(invalidResult).not.toBeNull();
+      expect(captured.length).toBe(1);
 
       // valid payload still passes
-      const validResult = await eventvisor.trackAsync("strictEvent", {
+      const validResult = await eventvisor.track("strictEvent", {
         url: "https://example.com",
         count: 2,
       });
       expect(validResult).not.toBeNull();
-      expect(captured.length).toBe(1);
-      expect(captured[0].payload.payload).toEqual({
+      expect(captured.length).toBe(2);
+      expect(captured[1].payload.payload).toEqual({
         url: "https://example.com",
         count: 2,
       });
     });
 
-    it("skipValidation.conditions with payload source: skips when condition does not match", async function () {
+    it("skipValidation.conditions with payload source skips only when it matches", async function () {
       const datafile: DatafileContent = {
         ...baseDatafile,
         events: {
@@ -376,23 +374,23 @@ describe("sdk: instance", function () {
       };
       const { eventvisor, captured } = await createEventvisorWithDatafile(datafile);
 
-      // payload.skip !== true -> conditions not matched -> skip validation
-      const result = await eventvisor.trackAsync("strictEvent", {
+      // payload.skip !== true -> conditions not matched -> validation fails
+      const result = await eventvisor.track("strictEvent", {
         url: "https://example.com",
       } as any);
-      expect(result).not.toBeNull();
-      expect(captured.length).toBe(1);
+      expect(result).toBeNull();
+      expect(captured.length).toBe(0);
 
-      // payload.skip === true -> conditions matched -> run validation -> invalid fails
-      const result2 = await eventvisor.trackAsync("strictEvent", {
+      // payload.skip === true -> conditions matched -> validation is skipped
+      const result2 = await eventvisor.track("strictEvent", {
         url: "https://example.com",
         skip: true,
       } as any);
-      expect(result2).toBeNull();
+      expect(result2).not.toBeNull();
       expect(captured.length).toBe(1);
     });
 
-    it("skipValidation.conditions with multiple conditions (and semantics): all must match to run validation", async function () {
+    it("skipValidation.conditions with multiple conditions requires all to match before skipping", async function () {
       const datafile: DatafileContent = {
         ...baseDatafile,
         events: {
@@ -409,20 +407,20 @@ describe("sdk: instance", function () {
       };
       const { eventvisor, captured } = await createEventvisorWithDatafile(datafile);
 
-      // only eventName matches, env !== "prod" -> conditions not all matched -> skip validation
-      const result = await eventvisor.trackAsync("strictEvent", {
+      // only eventName matches, so validation remains enabled
+      const result = await eventvisor.track("strictEvent", {
         url: "https://example.com",
         env: "dev",
       } as any);
-      expect(result).not.toBeNull();
-      expect(captured.length).toBe(1);
+      expect(result).toBeNull();
+      expect(captured.length).toBe(0);
 
-      // both match -> validate -> invalid (missing count) fails
-      const result2 = await eventvisor.trackAsync("strictEvent", {
+      // both match, so validation is skipped
+      const result2 = await eventvisor.track("strictEvent", {
         url: "https://example.com",
         env: "prod",
       } as any);
-      expect(result2).toBeNull();
+      expect(result2).not.toBeNull();
       expect(captured.length).toBe(1);
     });
 
@@ -438,7 +436,7 @@ describe("sdk: instance", function () {
       };
       const { eventvisor, captured } = await createEventvisorWithDatafile(datafile);
 
-      const invalidResult = await eventvisor.trackAsync("strictEvent", {
+      const invalidResult = await eventvisor.track("strictEvent", {
         url: "https://example.com",
       } as any);
       expect(invalidResult).toBeNull();
@@ -463,18 +461,18 @@ describe("sdk: instance", function () {
       };
       const { eventvisor, captured } = await createEventvisorWithDatafile(datafile);
 
-      const result = await eventvisor.trackAsync("strictEvent", {
+      const result = await eventvisor.track("strictEvent", {
         url: "https://example.com",
       } as any);
-      expect(result).not.toBeNull();
-      expect(captured.length).toBe(1);
+      expect(result).toBeNull();
+      expect(captured.length).toBe(0);
     });
   });
 
   describe("strict object schemas", function () {
     it("rejects tracked event payloads with unknown object properties", async function () {
       const captured: any[] = [];
-      const eventvisor = createInstance({
+      const eventvisor = createEventvisor({
         datafile: {
           ...emptyDatafile,
           events: {
@@ -515,7 +513,7 @@ describe("sdk: instance", function () {
 
       await eventvisor.onReady();
 
-      const result = await eventvisor.trackAsync("strictEvent", {
+      const result = await eventvisor.track("strictEvent", {
         screen: {
           width: 100,
           height: 200,
@@ -527,7 +525,7 @@ describe("sdk: instance", function () {
     });
 
     it("rejects attribute values with unknown object properties", async function () {
-      const eventvisor = createInstance({
+      const eventvisor = createEventvisor({
         datafile: {
           ...emptyDatafile,
           attributes: {
@@ -546,7 +544,7 @@ describe("sdk: instance", function () {
 
       await eventvisor.onReady();
 
-      const result = await eventvisor.setAttributeAsync("browser", {
+      const result = await eventvisor.setAttribute("browser", {
         name: "Chrome",
         version: "123",
         major: 123,

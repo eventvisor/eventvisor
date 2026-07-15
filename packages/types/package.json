@@ -5,6 +5,10 @@
   "main": "src/index.js",
   "module": "src/index.js",
   "types": "src/index.d.ts",
+  "files": [
+    "src/index.d.ts",
+    "src/index.js"
+  ],
   "exports": {
     ".": {
       "types": "./src/index.d.ts",
@@ -16,7 +20,9 @@
     "transpile": "echo 'Nothing to transpile'",
     "dist": "echo 'Nothing to dist'",
     "build": "tsc ./src/index.d.ts",
-    "test": "echo 'Nothing to test in types package'"
+    "typecheck": "tsc --noEmit --project tsconfig.json",
+    "test": "npm run typecheck",
+    "lint": "eslint src"
   },
   "author": {
     "name": "Fahad Heylaal",

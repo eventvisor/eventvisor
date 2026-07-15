@@ -53,6 +53,34 @@ Three simple steps to visualize it:
 
 Eventvisor [SDKs](https://eventvisor.org/docs/sdks/javascript) will take care of the rest for you.
 
+## Project boundaries
+
+Use [Targets](https://eventvisor.org/docs/targets) to generate focused datafiles for an application or deployment surface. Targets support tags, exact keys, and glob-like `*` patterns while retaining required dependencies. Use [Sets](https://eventvisor.org/docs/sets) when one repository contains multiple isolated Eventvisor projects.
+
+Explore a project locally with:
+
+```bash
+npx eventvisor catalog
+```
+
+## Reference projects
+
+The [`projects`](./projects) directory contains complete projects that can be read, tested, or used as initial scaffolds:
+
+- [`project-1`](./projects/project-1) is the broad internal conformance project.
+- [`project-demo`](./projects/project-demo) models an e-commerce storefront and checkout flow.
+- [`project-no-environments`](./projects/project-no-environments) is a small standalone starter.
+- [`project-environments`](./projects/project-environments) uses Sets as development, staging, and production environments.
+- [`project-test-environments`](./projects/project-test-environments) demonstrates matrix and environment-specific tests.
+- [`project-yml`](./projects/project-yml) and [`project-json`](./projects/project-json) show both supported file formats.
+- [`project-monorepo`](./projects/project-monorepo) shows independently configured projects in an npm workspace.
+
+For example, initialize a new repository from the e-commerce demo:
+
+```bash
+npx @eventvisor/cli init --project=demo
+```
+
 ## Why should I use Eventvisor?
 
 There are several use cases where Eventvisor can be useful, especially if you are a medium to large product engineering organization:

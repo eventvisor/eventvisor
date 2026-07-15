@@ -42,11 +42,14 @@ jobs:
       - name: Build
         run: make build
 
-      # - name: Lint
-      #   run: make lint
+      - name: Lint
+        run: make lint
 
-      # - name: Test
-      #   run: make test
+      - name: Typecheck
+        run: make typecheck
+
+      - name: Test
+        run: make test
 
       - name: Bump version
         continue-on-error: true

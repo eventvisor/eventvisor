@@ -1,6 +1,7 @@
 import * as fs from "fs";
 import * as path from "path";
 
+import type { DatafileContent } from "@eventvisor/types";
 import { Dependencies } from "../../dependencies";
 import { generateInterface } from "./generateInterface";
 
@@ -72,7 +73,11 @@ function createUniqueInterfaceNames(entityNames: string[], suffix: string): Map<
   return interfaceNames;
 }
 
-export async function generateTypeScriptCodeForProject(deps: Dependencies, outputPath: string) {
+export async function generateTypeScriptCodeForProject(
+  deps: Dependencies,
+  outputPath: string,
+  datafile?: DatafileContent,
+) {
   const { datasource } = deps;
 
   /**
@@ -84,7 +89,9 @@ export async function generateTypeScriptCodeForProject(deps: Dependencies, outpu
     code: string;
   }[] = [];
 
-  const attributes = await datasource.listAttributes();
+  const attributes = datafile
+    ? Object.keys(datafile.attributes)
+    : await datasource.listAttributes();
   const attributeInterfaceNames = createUniqueInterfaceNames(attributes, "Attribute");
   for (const attribute of attributes) {
     const parsedAttribute = await datasource.readAttribute(attribute);
@@ -139,7 +146,7 @@ ${generatedAttributes
     code: string;
   }[] = [];
 
-  const events = await datasource.listEvents();
+  const events = datafile ? Object.keys(datafile.events) : await datasource.listEvents();
   const eventInterfaceNames = createUniqueInterfaceNames(events, "Event");
   for (const event of events) {
     const parsedEvent = await datasource.readEvent(event);
@@ -198,14 +205,14 @@ import type { Attributes } from "./attributes";
  */
 let instance: Eventvisor | null = null;
 
-export function setInstance(instance: Eventvisor) {
-  instance = instance;
+export function setInstance(nextInstance: Eventvisor | null) {
+  instance = nextInstance;
 }
 
 /**
  * Event
  */
-type TrackHandler = (eventName: string, payload: Value) => void;
+type TrackHandler = (eventName: string, payload: Value) => void | Promise<void>;
 
 let trackHandler: TrackHandler | null = null;
 
@@ -213,13 +220,13 @@ export function assignEventHandler(handler: TrackHandler | null) {
   trackHandler = handler;
 }
 
-export function track<K extends keyof Events>(eventName: K, payload: Events[K]): void {
+export async function track<K extends keyof Events>(eventName: K, payload: Events[K]): Promise<void> {
   if (instance) {
-    instance.track(eventName, payload as unknown as Value);
+    await instance.track(eventName, payload as unknown as Value);
   }
 
   if (trackHandler) {
-    trackHandler(eventName, payload as unknown as Value);
+    await trackHandler(eventName, payload as unknown as Value);
   }
 }
 
@@ -227,7 +234,7 @@ export function track<K extends keyof Events>(eventName: K, payload: Events[K]):
  * Attribute
  */
 
-type SetAttributeHandler = (attributeName: string, value: Value) => void;
+type SetAttributeHandler = (attributeName: string, value: Value) => void | Promise<void>;
 
 let setAttributeHandler: SetAttributeHandler | null = null;
 
@@ -235,16 +242,16 @@ export function assignAttributeHandler(handler: SetAttributeHandler | null) {
   setAttributeHandler = handler;
 }
 
-export function setAttribute<K extends keyof Attributes>(
+export async function setAttribute<K extends keyof Attributes>(
   attributeName: K,
   value: Attributes[K],
-): void {
+): Promise<void> {
   if (instance) {
-    instance.setAttribute(attributeName, value as unknown as Value);
+    await instance.setAttribute(attributeName, value as unknown as Value);
   }
 
   if (setAttributeHandler) {
-    setAttributeHandler(attributeName, value as unknown as Value);
+    await setAttributeHandler(attributeName, value as unknown as Value);
   }
 }
 `;

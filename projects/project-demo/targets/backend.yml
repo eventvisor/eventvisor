@@ -1,0 +1,7 @@
+description: Backend order pipeline
+tag: backend
+includeEvents: order_*
+includeAttributes:
+  - userId
+  - currency
+includeDestinations: orderWarehouse

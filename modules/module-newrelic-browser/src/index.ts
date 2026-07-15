@@ -1,11 +1,16 @@
-import type { Module } from "@eventvisor/sdk";
+import type { EventvisorModule } from "@eventvisor/sdk";
 
 export type NewrelicBrowserModuleOptions = {
   name?: string;
-  nr?: any; // @TODO: type this later
+  nr?: {
+    addPageAction: (eventName: string, payload: unknown) => unknown;
+    noticeError: (error: Error, payload: unknown) => unknown;
+  };
 };
 
-export function createNewrelicBrowserModule(options: NewrelicBrowserModuleOptions = {}): Module {
+export function createNewrelicBrowserModule(
+  options: NewrelicBrowserModuleOptions = {},
+): EventvisorModule {
   const { name = "newrelic-browser", nr = (window as any).newrelic } = options;
 
   return {

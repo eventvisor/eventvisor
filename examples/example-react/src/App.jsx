@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 
-import { createInstance } from "@eventvisor/sdk";
+import { createEventvisor } from "@eventvisor/sdk";
 import { createConsoleModule } from "@eventvisor/module-console";
 import { createLocalStorageModule } from "@eventvisor/module-localstorage";
 import { createPixelModule } from "@eventvisor/module-pixel";
@@ -10,7 +10,7 @@ import datafile from "../datafiles/eventvisor-tag-web.json";
 
 import { generateUUID } from "./uuid";
 
-const eventvisor = createInstance({
+const eventvisor = createEventvisor({
   datafile,
   modules: [
     createConsoleModule(),

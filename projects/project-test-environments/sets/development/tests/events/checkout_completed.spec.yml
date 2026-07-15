@@ -1,0 +1,17 @@
+event: checkout_completed
+assertions:
+  - description: accepts development matrix case for ${{ currency }} at ${{ total }}
+    matrix:
+      currency: [EUR, USD]
+      total: [10, 99.95]
+    track:
+      orderId: dev-order
+      currency: ${{ currency }}
+      total: ${{ total }}
+    expectedToBeValid: true
+    expectedEvent:
+      orderId: dev-order
+      currency: ${{ currency }}
+      total: ${{ total }}
+      releaseLane: development
+    expectedDestinations: [analytics]

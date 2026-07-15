@@ -9,7 +9,7 @@ assertions:
     expectedEvent:
       url: "https://example.com"
     expectedDestinations:
-      - console
+      - consoleSimple
 
   # invalid
   - description: "event should be invalid (push)"

@@ -1,9 +1,14 @@
 import * as React from "react";
 import { render, screen, act } from "@testing-library/react";
 
-import { createInstance } from "@eventvisor/sdk";
+import { createEventvisor } from "@eventvisor/sdk";
 
-import { EventvisorProvider, isReady, useEventvisor } from "./index";
+import {
+  EventvisorProvider,
+  useEventvisorInstance,
+  useEventvisorReady,
+  useEventvisor,
+} from "./index";
 
 async function waitFor(ms: number) {
   return new Promise((resolve) => setTimeout(resolve, ms));
@@ -15,10 +20,49 @@ describe("react :: index", function () {
   });
 });
 
+describe("React provider contracts", () => {
+  it("throws a useful error outside the provider", () => {
+    function Consumer() {
+      useEventvisorInstance();
+      return null;
+    }
+    expect(() => render(<Consumer />)).toThrow(
+      "useEventvisorInstance must be used within EventvisorProvider",
+    );
+  });
+
+  it("returns stable bound methods until the instance changes", () => {
+    const first = createEventvisor();
+    const second = createEventvisor();
+    const values: any[] = [];
+    function Consumer() {
+      values.push(useEventvisor());
+      return null;
+    }
+    const view = render(
+      <EventvisorProvider instance={first}>
+        <Consumer />
+      </EventvisorProvider>,
+    );
+    view.rerender(
+      <EventvisorProvider instance={first}>
+        <Consumer />
+      </EventvisorProvider>,
+    );
+    expect(values[0]).toBe(values[1]);
+    view.rerender(
+      <EventvisorProvider instance={second}>
+        <Consumer />
+      </EventvisorProvider>,
+    );
+    expect(values[2]).not.toBe(values[1]);
+  });
+});
+
 describe("react :: index", function () {
   const transportedEvents: Record<string, any>[] = [];
 
-  const eventvisor = createInstance({
+  const eventvisor = createEventvisor({
     datafile: {
       schemaVersion: "1",
       revision: "0",
@@ -67,7 +111,7 @@ describe("react :: index", function () {
 
   it("should run tests", async function () {
     function TestComponent() {
-      const ready = isReady();
+      const ready = useEventvisorReady();
       const { track, setAttribute } = useEventvisor();
 
       // Track page_view when component mounts

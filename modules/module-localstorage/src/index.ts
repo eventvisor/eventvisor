@@ -1,11 +1,13 @@
-import type { Module } from "@eventvisor/sdk";
+import type { EventvisorModule } from "@eventvisor/sdk";
 
 export type LocalStorageModuleOptions = {
   name?: string;
   prefix?: string;
 };
 
-export function createLocalStorageModule(options: LocalStorageModuleOptions = {}): Module {
+export function createLocalStorageModule(
+  options: LocalStorageModuleOptions = {},
+): EventvisorModule {
   const { prefix = "_eventvisor_", name = "localstorage" } = options;
 
   return {

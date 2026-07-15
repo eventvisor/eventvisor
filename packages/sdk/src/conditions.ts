@@ -1,12 +1,12 @@
 import type { PlainCondition, Condition, Inputs } from "@eventvisor/types";
 
-import type { GetRegex } from "./datafileReader";
 import type { SourceResolver } from "./sourceResolver";
 
 import { compareVersions } from "./compareVersions";
 import { Logger } from "./logger";
 
 export type GetConditionsChecker = () => ConditionsChecker;
+export type GetRegex = (regexString: string, regexFlags?: string) => RegExp;
 
 export interface ConditionsCheckerOptions {
   getRegex: GetRegex;
@@ -30,7 +30,11 @@ export class ConditionsChecker {
 
     const sourceValue = await this.sourceResolver.resolve(condition, inputs);
 
-    if (operator === "equals") {
+    if (operator === "exists") {
+      return typeof sourceValue !== "undefined" && sourceValue !== null;
+    } else if (operator === "notExists") {
+      return typeof sourceValue === "undefined" || sourceValue === null;
+    } else if (operator === "equals") {
       return sourceValue === value;
     } else if (operator === "notEquals") {
       return sourceValue !== value;
@@ -83,9 +87,11 @@ export class ConditionsChecker {
         return compareVersions(valueInContext, value) <= 0;
       } else if (operator === "matches") {
         const regex = this.getRegex(value, regexFlags || "");
+        regex.lastIndex = 0;
         return regex.test(valueInContext);
       } else if (operator === "notMatches") {
         const regex = this.getRegex(value, regexFlags || "");
+        regex.lastIndex = 0;
         return !regex.test(valueInContext);
       }
     } else if (typeof sourceValue === "number" && typeof value === "number") {
@@ -101,11 +107,6 @@ export class ConditionsChecker {
       } else if (operator === "lessThanOrEquals") {
         return valueInContext <= value;
       }
-    } else if (operator === "exists") {
-      // @TODO: may require extra care for null values
-      return typeof sourceValue !== "undefined";
-    } else if (operator === "notExists") {
-      return typeof sourceValue === "undefined";
     } else if (Array.isArray(sourceValue) && typeof value === "string") {
       // includes / notIncludes (where context value is an array)
       const valueInContext = sourceValue as string[];
@@ -132,9 +133,11 @@ export class ConditionsChecker {
       return false;
     }
 
+    if (!conditions || typeof conditions !== "object") return false;
+
     if ("operator" in conditions) {
       try {
-        return this.isMatched(conditions, inputs);
+        return await this.isMatched(conditions, inputs);
       } catch (e) {
         this.logger.warn(e.message, {
           error: e,
@@ -148,6 +151,7 @@ export class ConditionsChecker {
     }
 
     if ("and" in conditions && Array.isArray(conditions.and)) {
+      if (conditions.and.length === 0) return false;
       for (const c of conditions.and) {
         if (!(await this._allAreMatched(c, inputs))) {
           return false; // If any condition fails, return false
@@ -166,15 +170,17 @@ export class ConditionsChecker {
     }
 
     if ("not" in conditions && Array.isArray(conditions.not)) {
+      if (conditions.not.length === 0) return false;
       for (const c of conditions.not) {
-        if (await this._allAreMatched(c, inputs)) {
-          return false; // If any condition passes, return false (since this is NOT)
+        if (!(await this._allAreMatched(c, inputs))) {
+          return true;
         }
       }
-      return true; // No conditions passed, which is what we want for NOT
+      return false;
     }
 
     if (Array.isArray(conditions)) {
+      if (conditions.length === 0) return false;
       let result = true;
       for (const c of conditions) {
         if (!(await this._allAreMatched(c, inputs))) {

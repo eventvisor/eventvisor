@@ -1,0 +1,5 @@
+description: ISO 3166-1 alpha-2 country code
+tags: [all, storefront, checkout]
+type: string
+minLength: 2
+maxLength: 2

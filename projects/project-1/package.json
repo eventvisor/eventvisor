@@ -8,7 +8,9 @@
     "build": "eventvisor build && eventvisor catalog export",
     "test": "eventvisor test",
     "show-config": "eventvisor config",
-    "start": "npm run build && eventvisor catalog serve"
+    "start": "npm run build && eventvisor catalog serve",
+    "simulate": "eventvisor simulate page_view --value='{\"url\":\"https://example.com\"}'",
+    "benchmark": "eventvisor benchmark page_view -n 10000 --value='{\"url\":\"https://example.com\"}'"
   },
   "dependencies": {
     "@eventvisor/cli": "0.26.0"

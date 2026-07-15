@@ -1,0 +1,27 @@
+event: order_completed
+assertions:
+  - description: validates, transforms, and routes a completed order
+    withAttributes:
+      userId: user-123
+      currency: EUR
+      consentAnalytics: true
+    track:
+      orderId: order-123
+      total: 129.95
+      itemCount: 3
+    expectedToBeValid: true
+    expectedEvent:
+      orderId: order-123
+      orderTotal: 129.95
+      itemCount: 3
+    expectedDestinations:
+      - browserAnalytics
+      - orderWarehouse
+
+  - description: requires customer and currency attributes
+    track:
+      orderId: order-456
+      total: 25
+      itemCount: 1
+    expectedToBeValid: false
+    expectedDestinations: []

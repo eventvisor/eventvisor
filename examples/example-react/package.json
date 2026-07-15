@@ -6,7 +6,7 @@
     "build:eventvisor": "eventvisor build",
     "build": "npm run build:eventvisor && vite build",
     "dev": "npm run build:eventvisor && vite",
-    "test": "echo 'Nothing to test'",
+    "test": "npm run lint",
     "lint": "eventvisor lint",
     "preview": "vite preview"
   },

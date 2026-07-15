@@ -2,8 +2,11 @@
   "name": "@eventvisor/module-pixel",
   "version": "0.26.0",
   "description": "Eventvisor pixel module",
-  "main": "dist/index.cjs.js",
+  "main": "dist/index.js",
   "module": "dist/index.mjs",
+  "files": [
+    "dist"
+  ],
   "types": "dist/index.d.ts",
   "exports": {
     ".": {
@@ -16,9 +19,12 @@
   "scripts": {
     "transpile": "echo 'Nothing to transpile'",
     "dist": "webpack --config ./webpack.config.js && tsc --project tsconfig.esm.json --declaration --emitDeclarationOnly --declarationDir dist",
-    "build": "npm run transpile && npm run dist",
-    "testJest": "jest --config jest.config.js --verbose --coverage",
-    "test": "echo 'Nothing to test'"
+    "clean": "rimraf dist lib",
+    "build": "npm run clean && npm run dist",
+    "typecheck": "tsc --noEmit --project tsconfig.cjs.json",
+    "test:jest": "jest --config jest.config.js --verbose --coverage",
+    "test": "npm run test:jest",
+    "lint": "eslint src"
   },
   "author": {
     "name": "Fahad Heylaal",
@@ -36,6 +42,9 @@
   },
   "bugs": {
     "url": "https://github.com/eventvisor/eventvisor/issues"
+  },
+  "peerDependencies": {
+    "@eventvisor/sdk": ">=0.26.0"
   },
   "devDependencies": {
     "@eventvisor/sdk": "0.26.0"

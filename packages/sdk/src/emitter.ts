@@ -1,15 +1,26 @@
+import type { AttributeName, EventName, Value } from "@eventvisor/types";
+import type { EventvisorDiagnostic } from "./logger";
+
 export type EmitType =
   | "ready"
   | "datafile_set"
   | "attribute_set"
   | "attribute_removed"
-  | "event_tracked";
+  | "event_tracked"
+  | "error";
 
-export type EventDetails = Record<string, unknown>;
+export interface EventDetailsMap {
+  ready: Record<string, never>;
+  datafile_set: { replaced: boolean };
+  attribute_set: { attributeName: AttributeName };
+  attribute_removed: { attributeName: AttributeName };
+  event_tracked: { eventName: EventName; value: Value };
+  error: { diagnostic: EventvisorDiagnostic };
+}
 
-export type EventCallback = (details: EventDetails) => void;
+export type EventCallback<T extends EmitType = EmitType> = (details: EventDetailsMap[T]) => void;
 
-export type Listeners = Record<EmitType, EventCallback[]> | {}; // eslint-disable-line
+export type Listeners = { [T in EmitType]?: EventCallback<T>[] };
 
 export class Emitter {
   listeners: Listeners;
@@ -18,12 +29,12 @@ export class Emitter {
     this.listeners = {};
   }
 
-  on(emitType: EmitType, callback: EventCallback) {
+  on<T extends EmitType>(emitType: T, callback: EventCallback<T>) {
     if (!this.listeners[emitType]) {
       this.listeners[emitType] = [];
     }
 
-    const listeners = this.listeners[emitType];
+    const listeners = this.listeners[emitType] as EventCallback<T>[];
     listeners.push(callback);
 
     let isActive = true;
@@ -42,8 +53,8 @@ export class Emitter {
     };
   }
 
-  trigger(emitType: EmitType, details: EventDetails = {}) {
-    const listeners = this.listeners[emitType];
+  trigger<T extends EmitType>(emitType: T, details: EventDetailsMap[T]) {
+    const listeners = this.listeners[emitType] as EventCallback<T>[] | undefined;
 
     if (!listeners) {
       return;

@@ -1,6 +1,6 @@
 import * as React from "react";
-import { Eventvisor } from "@eventvisor/sdk";
-import { EventName, AttributeName, Value } from "@eventvisor/types";
+import type { Eventvisor } from "@eventvisor/sdk";
+import type { AttributeName, Value } from "@eventvisor/types";
 
 /**
  * Context
@@ -24,45 +24,56 @@ export function EventvisorProvider(props: EventvisorProviderProps) {
 /**
  * Hooks
  */
-export function useInstance(): Eventvisor {
+export function useEventvisorInstance(): Eventvisor {
   const instance = React.useContext(EventvisorContext);
-
+  if (!instance) throw new Error("useEventvisorInstance must be used within EventvisorProvider");
   return instance;
 }
 
-export function isReady(): boolean {
-  const instance = useInstance();
+export function useEventvisorReady(): boolean {
+  const instance = useEventvisorInstance();
   const [isEventvisorReady, setIsEventvisorReady] = React.useState(instance.isReady());
 
   React.useEffect(() => {
-    instance.onReady().then(() => {
-      if (isEventvisorReady === false) {
-        setIsEventvisorReady(true);
-      }
-    });
-  }, []);
+    let active = true;
+    setIsEventvisorReady(instance.isReady());
+    instance.onReady().then(
+      () => {
+        if (active) setIsEventvisorReady(true);
+      },
+      () => {
+        if (active) setIsEventvisorReady(false);
+      },
+    );
+    return () => {
+      active = false;
+    };
+  }, [instance]);
 
   return isEventvisorReady;
 }
 
 export interface UseEventvisor {
   instance: Eventvisor;
-  track: (eventName: EventName, value: Value) => void;
-  setAttribute: (name: AttributeName, value: Value) => void;
+  track: Eventvisor["track"];
+  setAttribute: Eventvisor["setAttribute"];
   getAttributeValue: (name: AttributeName) => Value | null;
   isAttributeSet: (name: AttributeName) => boolean;
-  removeAttribute: (name: AttributeName) => void;
+  removeAttribute: Eventvisor["removeAttribute"];
 }
 
 export function useEventvisor(): UseEventvisor {
-  const instance = useInstance();
+  const instance = useEventvisorInstance();
 
-  return {
-    instance,
-    track: (eventName, value) => instance.track(eventName, value),
-    setAttribute: (name, value) => instance.setAttribute(name, value),
-    getAttributeValue: (name) => instance.getAttributeValue(name),
-    isAttributeSet: (name) => instance.isAttributeSet(name),
-    removeAttribute: (name) => instance.removeAttribute(name),
-  };
+  return React.useMemo(
+    () => ({
+      instance,
+      track: instance.track.bind(instance),
+      setAttribute: instance.setAttribute.bind(instance),
+      getAttributeValue: instance.getAttributeValue.bind(instance),
+      isAttributeSet: instance.isAttributeSet.bind(instance),
+      removeAttribute: instance.removeAttribute.bind(instance),
+    }),
+    [instance],
+  );
 }

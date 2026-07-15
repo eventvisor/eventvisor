@@ -1,0 +1,31 @@
+event: checkout_completed
+assertions:
+  - description: internal staging sessions are routed
+    withAttributes:
+      team: engineering
+    track:
+      orderId: staging-order-1
+      currency: EUR
+      total: 79
+    expectedToBeValid: true
+    expectedEvent:
+      orderId: staging-order-1
+      currency: EUR
+      total: 79
+      releaseLane: staging
+    expectedDestinations: [analytics]
+
+  - description: external staging sessions are not routed
+    withAttributes:
+      team: merchant
+    track:
+      orderId: staging-order-2
+      currency: USD
+      total: 89
+    expectedToBeValid: true
+    expectedEvent:
+      orderId: staging-order-2
+      currency: USD
+      total: 89
+      releaseLane: staging
+    expectedDestinations: []

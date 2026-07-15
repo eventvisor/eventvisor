@@ -12,9 +12,8 @@ export const catalogPlugin: Plugin = {
     const allowedSubcommands = ["export", "serve"];
     const subcommand = parsed._[1];
 
-    if (!allowedSubcommands.includes(subcommand)) {
-      console.log("Please specify a subcommand: `export` or `serve`");
-      return;
+    if (subcommand && !allowedSubcommands.includes(subcommand)) {
+      throw new Error("Unknown catalog subcommand. Use `export` or `serve`.");
     }
 
     // export
@@ -26,8 +25,16 @@ export const catalogPlugin: Plugin = {
     if (subcommand === "serve") {
       return await serveCatalog(deps);
     }
+
+    await exportCatalog(deps);
+    return await serveCatalog(deps);
   },
+  options: { port: { type: "number", alias: "p", description: "catalog server port" } },
   examples: [
+    {
+      command: "catalog",
+      description: "export and serve the catalog",
+    },
     {
       command: "catalog export",
       description: "export catalog of all entities",

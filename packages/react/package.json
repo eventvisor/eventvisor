@@ -3,13 +3,28 @@
   "version": "0.26.0",
   "description": "React package for Eventvisor",
   "main": "dist/index.js",
-  "module": "lib/index.js",
+  "module": "dist/index.mjs",
   "types": "lib/index.d.ts",
+  "files": [
+    "dist",
+    "lib/index.d.ts"
+  ],
+  "exports": {
+    ".": {
+      "types": "./lib/index.d.ts",
+      "require": "./dist/index.js",
+      "import": "./dist/index.mjs"
+    },
+    "./package.json": "./package.json"
+  },
   "scripts": {
     "transpile": "rimraf lib && tsc --project tsconfig.esm.json",
     "dist": "webpack --config ./webpack.config.js",
-    "build": "npm run transpile && npm run dist",
-    "test": "jest --config jest.config.js"
+    "clean": "rimraf dist lib",
+    "build": "npm run clean && npm run dist",
+    "typecheck": "tsc --noEmit --project tsconfig.json",
+    "test": "jest --config jest.config.js",
+    "lint": "eslint src"
   },
   "author": {
     "name": "Fahad Heylaal",
@@ -28,9 +43,14 @@
   "bugs": {
     "url": "https://github.com/eventvisor/eventvisor/issues"
   },
-  "devDependencies": {
+  "dependencies": {
     "@eventvisor/sdk": "0.26.0",
-    "@eventvisor/types": "0.26.0",
+    "@eventvisor/types": "0.26.0"
+  },
+  "peerDependencies": {
+    "react": ">=16.8.0"
+  },
+  "devDependencies": {
     "@testing-library/jest-dom": "^6.9.1",
     "@testing-library/react": "^16.3.0",
     "jest-environment-jsdom": "^29.5.0",

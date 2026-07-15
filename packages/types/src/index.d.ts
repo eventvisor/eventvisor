@@ -44,6 +44,32 @@ export interface JSONSchema {
 export type Percentage = number; // 0 to 100 (up to 3 decimal places)
 
 export type Tag = string;
+export type NonEmptyArray<T> = [T, ...T[]];
+
+export type TargetKey = string;
+export type TargetPatterns = "*" | string | NonEmptyArray<string>;
+export type TargetTags =
+  | NonEmptyArray<Tag>
+  | { or: NonEmptyArray<Tag> }
+  | { and: NonEmptyArray<Tag> };
+
+export interface Target {
+  key?: TargetKey;
+  description: string;
+  tag?: Tag;
+  tags?: TargetTags;
+  includeEvents?: TargetPatterns;
+  excludeEvents?: TargetPatterns;
+  includeAttributes?: TargetPatterns;
+  excludeAttributes?: TargetPatterns;
+  includeDestinations?: TargetPatterns;
+  excludeDestinations?: TargetPatterns;
+  includeEffects?: TargetPatterns;
+  excludeEffects?: TargetPatterns;
+  pretty?: boolean;
+  stringify?: boolean;
+  revisionFromHash?: boolean;
+}
 
 export type Inputs = Record<string, Value>;
 
@@ -56,7 +82,7 @@ export type SimplePersist = StorageName;
 
 export interface ComplexPersist {
   storage: StorageName;
-  conditions?: Condition | Condition[];
+  conditions?: Conditions;
 }
 
 export type Persist = SimplePersist | ComplexPersist | Persist[];
@@ -129,18 +155,19 @@ export type PlainCondition = SourceBase & {
 };
 
 export interface AndCondition {
-  and: Condition[];
+  and: NonEmptyArray<Condition>;
 }
 
 export interface OrCondition {
-  or: Condition[];
+  or: NonEmptyArray<Condition>;
 }
 
 export interface NotCondition {
-  not: Condition[];
+  not: NonEmptyArray<Condition>;
 }
 
 export type Condition = PlainCondition | AndCondition | OrCondition | NotCondition | string;
+export type Conditions = Condition | NonEmptyArray<Condition>;
 
 /**
  * Sample
@@ -156,7 +183,7 @@ export type SampleRange = [Percentage, Percentage];
 
 export interface Sample {
   by: SampleBy;
-  conditions?: Condition | Condition[];
+  conditions?: Conditions;
 
   // either of them is required
   percentage?: Percentage;
@@ -192,16 +219,22 @@ export type TransformType =
   | "spread"
   | "append";
 
-export type Transform = Partial<SourceBase> & {
+export interface TransformBase {
+  source?: Source | Source[];
+  attribute?: Source | Source[];
+  state?: Source | Source[];
+  effect?: Source | Source[];
+  payload?: Source | Source[];
+  lookup?: Source | Source[];
+  conditions?: Conditions;
+}
+
+export type Transform = TransformBase & {
   type: TransformType;
   target?: string;
   targetMap?: Record<string, string> | Record<string, string>[];
-
   value?: Value;
-
-  // additional params for certain transform types
   separator?: string;
-  [key: string]: any;
 };
 
 /**
@@ -225,7 +258,7 @@ export type AttributeName = string;
 export type PlainDestinationOverride = boolean;
 
 export interface ComplexDestinationOverride {
-  conditions?: Condition | Condition[];
+  conditions?: Conditions;
   sample?: Sample | Sample[];
   transforms?: Transform[];
 }
@@ -243,10 +276,10 @@ export type Event = JSONSchema & {
   // @TODO: meta
   // @TODO: conitnueOnValidationFailure?: boolean;
 
-  skipValidation?: boolean | { conditions: Condition | Condition[] };
+  skipValidation?: boolean | { conditions: Conditions };
   level?: EventLevel;
   requiredAttributes?: string[];
-  conditions?: Condition | Condition[];
+  conditions?: Conditions;
   sample?: Sample | Sample[];
   transforms?: Transform[];
   destinations?: {
@@ -265,7 +298,7 @@ export interface Destination {
   tags?: Tag[];
 
   transport: string;
-  conditions?: Condition | Condition[];
+  conditions?: Conditions;
   sample?: Sample | Sample[];
   transforms?: Transform[];
 }
@@ -285,8 +318,8 @@ export type EffectOn = EffectOnType[] | EffectOnRecord;
 export interface Step {
   description?: string;
   handler?: string;
-  conditions?: Condition | Condition[];
-  params?: Record<string, any>;
+  conditions?: Conditions;
+  params?: Record<string, Value>;
   transforms?: Transform[];
   continueOnError?: boolean;
 }
@@ -298,7 +331,7 @@ export interface Effect {
 
   on: EffectOn;
   state?: Value;
-  conditions?: Condition | Condition[];
+  conditions?: Conditions;
   steps?: Step[];
   persist?: Persist;
 }
@@ -310,6 +343,7 @@ export type EffectName = string;
  */
 export interface DatafileContent {
   schemaVersion: string;
+  eventvisorVersion?: string;
   revision: string;
   attributes: {
     [key: AttributeName]: Attribute;
@@ -328,7 +362,14 @@ export interface DatafileContent {
 /**
  * Others
  */
-export type EntityType = "attribute" | "event" | "destination" | "state" | "effect" | "test";
+export type EntityType =
+  | "attribute"
+  | "event"
+  | "destination"
+  | "state"
+  | "effect"
+  | "target"
+  | "test";
 
 /**
  * Test
@@ -340,9 +381,11 @@ export interface Action {
 }
 
 export type WithLookups = Record<string, Value>; // key is "<moduleName>.<additionalKey>"
+export type AssertionMatrix = Record<string, NonEmptyArray<Value>>;
 
 // Attribute
 export interface AttributeAssertion {
+  matrix?: AssertionMatrix;
   description?: string;
   setAttribute?: Value;
   withLookups?: {
@@ -355,35 +398,37 @@ export interface AttributeAssertion {
 }
 
 export interface AttributeTest {
+  key?: string;
   attribute: AttributeName;
-  assertions: AttributeAssertion[];
+  assertions: NonEmptyArray<AttributeAssertion>;
 }
 
 // Event
 export interface EventAssertion {
+  matrix?: AssertionMatrix;
   description?: string;
   withAttributes?: {
     [key: AttributeName]: Value;
   };
   withLookups?: WithLookups;
-  at?: Percentage; // @TODO: implement
   track?: Value;
   actions?: Action[];
 
   expectedToBeValid?: boolean;
-  expectedToContinue?: boolean;
   expectedEvent?: Value;
   expectedDestinations?: DestinationName[];
   expectedDestinationsByTag?: Record<Tag, DestinationName[]>;
 }
 
 export interface EventTest {
+  key?: string;
   event: EventName;
-  assertions: EventAssertion[];
+  assertions: NonEmptyArray<EventAssertion>;
 }
 
 // Effect
 export interface EffectAssertion {
+  matrix?: AssertionMatrix;
   description?: string;
   withAttributes?: {
     [key: AttributeName]: Value;
@@ -401,12 +446,14 @@ export interface EffectAssertion {
 }
 
 export interface EffectTest {
+  key?: string;
   effect: EffectName;
-  assertions: EffectAssertion[];
+  assertions: NonEmptyArray<EffectAssertion>;
 }
 
 // Destination
 export interface DestinationAssertion {
+  matrix?: AssertionMatrix;
   description?: string;
   withAttributes?: {
     [key: AttributeName]: Value;
@@ -420,15 +467,13 @@ export interface DestinationAssertion {
   expectedToBeTransported?: boolean;
   expectedBody?: Value;
 
-  // @TODO: batch
   expectedBodies?: Value[];
-  expectedToBeBatched?: boolean;
-  expectedBatchedCount?: number;
 }
 
 export interface DestinationTest {
+  key?: string;
   destination: DestinationName;
-  assertions: DestinationAssertion[];
+  assertions: NonEmptyArray<DestinationAssertion>;
 }
 
 // Combined
@@ -448,6 +493,9 @@ export interface LastModified {
 export interface Catalog {
   projectConfig: {
     tags: string[];
+    sets: boolean;
+    set?: string;
+    availableSets?: string[];
   };
 
   links?: {
@@ -455,6 +503,8 @@ export interface Catalog {
     event: string;
     destination: string;
     effect: string;
+    target: string;
+    test: string;
     commit: string;
   };
 
@@ -462,24 +512,31 @@ export interface Catalog {
     attributes: {
       [key: AttributeName]: Attribute & {
         lastModified?: LastModified;
+        targets?: TargetKey[];
       };
     };
     events: {
       [key: EventName]: Event & {
         lastModified?: LastModified;
+        targets?: TargetKey[];
       };
     };
     destinations: {
       [key: DestinationName]: Destination & {
         lastModified?: LastModified;
+        targets?: TargetKey[];
       };
     };
     effects: {
       [key: EffectName]: Effect & {
         lastModified?: LastModified;
+        targets?: TargetKey[];
       };
     };
+    targets: Record<TargetKey, Target & { lastModified?: LastModified }>;
+    tests: Record<TestName, Test>;
   };
+  usages: Record<string, { type: EntityType; key: string }[]>;
 }
 
 export interface HistoryEntity {

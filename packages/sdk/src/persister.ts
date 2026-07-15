@@ -1,12 +1,12 @@
 import type { Attribute, Effect, Value, ComplexPersist } from "@eventvisor/types";
-import type { DatafileReader } from "./datafileReader";
+import type { InstanceDataProvider } from "./datafile";
 import type { ConditionsChecker } from "./conditions";
 import type { ModulesManager } from "./modulesManager";
 
 export type EntityMap = Record<string, Value>;
 
 export interface InitializeFromStorageOptions {
-  datafileReader: DatafileReader;
+  dataProvider: InstanceDataProvider;
   conditionsChecker: ConditionsChecker;
   modulesManager: ModulesManager;
   storageKeyPrefix: string;
@@ -44,7 +44,7 @@ export async function findPersist(
 }
 
 export async function initializeFromStorage({
-  datafileReader,
+  dataProvider,
   conditionsChecker,
   modulesManager,
   storageKeyPrefix,
@@ -61,7 +61,7 @@ export async function initializeFromStorage({
       continue;
     }
 
-    const persists = datafileReader.getPersists(schema);
+    const persists = dataProvider.getPersists(schema);
 
     if (!persists) {
       continue;
@@ -88,7 +88,7 @@ export async function initializeFromStorage({
 }
 
 export interface PersistEntityOptions {
-  datafileReader: DatafileReader;
+  dataProvider: InstanceDataProvider;
   conditionsChecker: ConditionsChecker;
   modulesManager: ModulesManager;
   storageKeyPrefix: string;
@@ -98,7 +98,7 @@ export interface PersistEntityOptions {
 }
 
 export async function persistEntity({
-  datafileReader,
+  dataProvider,
   conditionsChecker,
   modulesManager,
   storageKeyPrefix,
@@ -110,7 +110,7 @@ export async function persistEntity({
     return;
   }
 
-  const persists = datafileReader.getPersists(entity);
+  const persists = dataProvider.getPersists(entity);
 
   if (!persists) {
     return;
@@ -126,7 +126,7 @@ export async function persistEntity({
 }
 
 export interface RemoveEntityOptions {
-  datafileReader: DatafileReader;
+  dataProvider: InstanceDataProvider;
   conditionsChecker: ConditionsChecker;
   modulesManager: ModulesManager;
   storageKeyPrefix: string;
@@ -135,7 +135,7 @@ export interface RemoveEntityOptions {
 }
 
 export async function removeEntity({
-  datafileReader,
+  dataProvider,
   conditionsChecker,
   modulesManager,
   storageKeyPrefix,
@@ -146,7 +146,7 @@ export async function removeEntity({
     return;
   }
 
-  const persists = datafileReader.getPersists(entity);
+  const persists = dataProvider.getPersists(entity);
 
   if (!persists) {
     return;

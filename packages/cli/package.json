@@ -4,6 +4,10 @@
   "description": "CLI package of Eventvisor",
   "main": "bin.js",
   "types": "lib/index.d.ts",
+  "files": [
+    "bin.js",
+    "lib"
+  ],
   "bin": {
     "eventvisor": "./bin.js"
   },
@@ -11,7 +15,9 @@
     "transpile": "rimraf lib && tsc --project tsconfig.cjs.json",
     "dist": "echo 'Nothing to dist here'",
     "build": "npm run transpile",
-    "test": "echo 'Nothing to test in this package'"
+    "typecheck": "tsc --project tsconfig.typecheck.json",
+    "test": "jest --config jest.config.js --runInBand",
+    "lint": "eslint src"
   },
   "homepage": "https://eventvisor.org",
   "keywords": [],

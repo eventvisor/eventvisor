@@ -6,6 +6,7 @@ import { buildDatafile } from "../builder";
 import { prettyDuration } from "../utils";
 import { printTestResult } from "./printTestResult";
 import { executeTest } from "./executeTest";
+import { getProjectSetExecutions } from "../sets";
 
 export interface TestProjectOptions {
   keyPattern?: string;
@@ -14,16 +15,19 @@ export interface TestProjectOptions {
   onlyFailures?: boolean;
   quiet?: boolean;
   verbose?: boolean;
+  tag?: string;
+  target?: string;
+  set?: string;
 }
 
-export async function testProject(
+async function testSingleProject(
   deps: Dependencies,
   options: TestProjectOptions,
 ): Promise<boolean> {
   const beforeDatafileBuild = new Date();
   console.log("Building datafile...");
 
-  const datafileContent = await buildDatafile(deps);
+  const datafileContent = await buildDatafile(deps, { tag: options.tag, target: options.target });
   const afterDatafileBuild = new Date();
   console.log(
     `Datafile built in ${afterDatafileBuild.getTime() - beforeDatafileBuild.getTime()}ms`,
@@ -112,8 +116,38 @@ export async function testProject(
   return true;
 }
 
+export async function testProject(
+  deps: Dependencies,
+  options: TestProjectOptions,
+): Promise<boolean> {
+  const executions = await getProjectSetExecutions(
+    deps.projectConfig,
+    deps.datasource,
+    options.set,
+  );
+  let passed = true;
+  for (const execution of executions) {
+    const result = await testSingleProject(
+      { ...deps, projectConfig: execution.projectConfig, datasource: execution.datasource },
+      options,
+    );
+    if (!result) passed = false;
+  }
+  return passed;
+}
+
 export const testPlugin: Plugin = {
   command: "test",
+  options: {
+    set: { type: "string" },
+    tag: { type: "string" },
+    target: { type: "string" },
+    keyPattern: { type: "string" },
+    assertionPattern: { type: "string" },
+    onlyFailures: { type: "boolean" },
+    quiet: { type: "boolean" },
+    verbose: { type: "boolean" },
+  },
   handler: async function ({ rootDirectoryPath, projectConfig, datasource, parsed }) {
     return testProject(
       {

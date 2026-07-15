@@ -1,5 +1,6 @@
 import { Transformer } from "./transformer";
-import { emptyDatafile, DatafileReader } from "./datafileReader";
+import { emptyDatafile } from "./datafile";
+import { createTestDataProvider } from "./datafile.test-fixtures";
 import { createLogger } from "./logger";
 import { ModulesManager } from "./modulesManager";
 import { EffectsManager } from "./effectsManager";
@@ -15,26 +16,24 @@ describe("Transformer types", () => {
 
   const logger = createLogger({ level: "fatal" });
 
-  const datafileReader = new DatafileReader({
-    datafile: {
-      ...emptyDatafile,
-      attributes: {
-        ...emptyDatafile.attributes,
-        browserName: {
-          type: "string",
-        },
-        browserVersion: {
-          type: "string",
-        },
+  const datafileReader = createTestDataProvider({
+    ...emptyDatafile,
+    attributes: {
+      ...emptyDatafile.attributes,
+      browserName: {
+        type: "string",
+      },
+      browserVersion: {
+        type: "string",
       },
     },
-    logger,
   });
 
   const modulesManager = new ModulesManager({
     logger,
-    getDatafileReader: () => datafileReader,
-    getSourceResolver: () => sourceResolver,
+    getRevision: () => datafileReader.getRevision(),
+    onDiagnostic: () => () => {},
+    reportDiagnostic: () => {},
   });
 
   const validator = new Validator({
@@ -46,7 +45,7 @@ describe("Transformer types", () => {
     logger,
     emitter,
     validator,
-    getDatafileReader: () => datafileReader,
+    getDataProvider: () => datafileReader,
     getTransformer: () => transformer,
     getConditionsChecker: () => conditionsChecker,
     modulesManager,
@@ -54,7 +53,7 @@ describe("Transformer types", () => {
 
   const effectsManager = new EffectsManager({
     logger,
-    getDatafileReader: () => datafileReader,
+    getDataProvider: () => datafileReader,
     getTransformer: () => transformer,
     getConditionsChecker: () => conditionsChecker,
     modulesManager: modulesManager,

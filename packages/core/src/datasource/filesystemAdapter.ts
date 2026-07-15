@@ -1,6 +1,6 @@
 import * as fs from "fs";
 import * as path from "path";
-import { execSync, spawn } from "child_process";
+import { execFile, execFileSync } from "child_process";
 
 import type {
   DatafileContent,
@@ -12,7 +12,7 @@ import type {
 
 import { Adapter, DatafileOptions } from "./adapter";
 import { ProjectConfig, CustomParser } from "../config";
-import { getCommit } from "../utils/git";
+import { getCommit, getEntityFromFilePath } from "../utils/git";
 
 export function getRevisionFilePath(projectConfig: ProjectConfig): string {
   return path.join(projectConfig.systemDirectoryPath, `REVISION`);
@@ -66,6 +66,8 @@ export class FilesystemAdapter extends Adapter {
       return this.config.effectsDirectoryPath;
     } else if (entityType === "test") {
       return this.config.testsDirectoryPath;
+    } else if (entityType === "target") {
+      return this.config.targetsDirectoryPath;
     }
 
     throw new Error(`Unknown entity type: ${entityType}`);
@@ -77,7 +79,12 @@ export class FilesystemAdapter extends Adapter {
     // taking care of windows paths
     const relativeEntityPath = entityKey.replace(/\//g, path.sep);
 
-    return path.join(basePath, `${relativeEntityPath}.${this.parser.extension}`);
+    const entityPath = path.resolve(basePath, `${relativeEntityPath}.${this.parser.extension}`);
+    const resolvedBase = path.resolve(basePath);
+    if (!entityPath.startsWith(`${resolvedBase}${path.sep}`)) {
+      throw new Error(`Invalid ${entityType} key: ${entityKey}`);
+    }
+    return entityPath;
   }
 
   async listEntities(entityType: EntityType): Promise<string[]> {
@@ -100,6 +107,18 @@ export class FilesystemAdapter extends Adapter {
     );
   }
 
+  async listSets(): Promise<string[]> {
+    if (!fs.existsSync(this.config.setsDirectoryPath)) {
+      return [];
+    }
+
+    return fs
+      .readdirSync(this.config.setsDirectoryPath, { withFileTypes: true })
+      .filter((entry) => entry.isDirectory())
+      .map((entry) => entry.name)
+      .sort();
+  }
+
   async entityExists(entityType: EntityType, entityKey: string): Promise<boolean> {
     const entityPath = this.getEntityPath(entityType, entityKey);
 
@@ -116,9 +135,7 @@ export class FilesystemAdapter extends Adapter {
   async writeEntity<T>(entityType: EntityType, entityKey: string, entity: T): Promise<T> {
     const filePath = this.getEntityPath(entityType, entityKey);
 
-    if (!fs.existsSync(this.getEntityDirectoryPath(entityType))) {
-      fs.mkdirSync(this.getEntityDirectoryPath(entityType), { recursive: true });
-    }
+    fs.mkdirSync(path.dirname(filePath), { recursive: true });
 
     fs.writeFileSync(filePath, this.parser.stringify(entity));
 
@@ -177,7 +194,10 @@ export class FilesystemAdapter extends Adapter {
   getDatafilePath(options: DatafileOptions): string {
     const pattern = this.config.datafileNamePattern || "eventvisor-%s.json";
 
-    const fileName = pattern.replace("%s", `tag-${options.tag}`);
+    const suffix = options.target
+      ? `target-${encodeURIComponent(options.target)}`
+      : `tag-${options.tag || "all"}`;
+    const fileName = pattern.replace("%s", suffix);
     const dir = options.datafilesDir || this.config.datafilesDirectoryPath;
 
     return path.join(dir, fileName);
@@ -201,7 +221,7 @@ export class FilesystemAdapter extends Adapter {
 
     fs.writeFileSync(
       outputFilePath,
-      this.config.prettyDatafile
+      (options.pretty ?? this.config.prettyDatafile)
         ? JSON.stringify(datafileContent, null, 2)
         : JSON.stringify(datafileContent),
     );
@@ -216,30 +236,28 @@ export class FilesystemAdapter extends Adapter {
    * History
    */
   async getRawHistory(pathPatterns: string[]): Promise<string> {
-    const gitPaths = pathPatterns.join(" ");
-
-    const logCommand = `git log --name-only --pretty=format:"%h|%an|%aI" --relative --no-merges -- ${gitPaths}`;
-    const fullCommand = `(cd ${this.rootDirectoryPath} && ${logCommand})`;
-
-    return new Promise(function (resolve, reject) {
-      const child = spawn(fullCommand, { shell: true });
-      let result = "";
-
-      child.stdout.on("data", function (data) {
-        result += data.toString();
-      });
-
-      child.stderr.on("data", function (data) {
-        console.error(data.toString());
-      });
-
-      child.on("close", function (code) {
-        if (code === 0) {
-          resolve(result);
-        } else {
-          reject(code);
-        }
-      });
+    return new Promise((resolve, reject) => {
+      execFile(
+        "git",
+        [
+          "log",
+          "--name-only",
+          "--pretty=format:%h|%an|%aI",
+          "--relative",
+          "--no-merges",
+          "--",
+          ...pathPatterns,
+        ],
+        { cwd: this.rootDirectoryPath, encoding: "utf8", maxBuffer: 20 * 1024 * 1024 },
+        (error, stdout, stderr) => {
+          if (error) {
+            reject(error);
+            return;
+          }
+          if (stderr) console.error(stderr);
+          resolve(stdout);
+        },
+      );
     });
   }
 
@@ -259,6 +277,8 @@ export class FilesystemAdapter extends Adapter {
         pathPatterns = [this.config.effectsDirectoryPath];
       } else if (entityType === "test") {
         pathPatterns = [this.config.testsDirectoryPath];
+      } else if (entityType === "target") {
+        pathPatterns = [this.config.targetsDirectoryPath];
       }
     } else {
       pathPatterns = [
@@ -267,6 +287,7 @@ export class FilesystemAdapter extends Adapter {
         this.config.destinationsDirectoryPath,
         this.config.effectsDirectoryPath,
         this.config.testsDirectoryPath,
+        this.config.targetsDirectoryPath,
       ];
     }
 
@@ -298,30 +319,8 @@ export class FilesystemAdapter extends Adapter {
       for (let j = 0; j < filePathLines.length; j++) {
         const relativePath = filePathLines[j];
         const absolutePath = path.join(this.rootDirectoryPath as string, relativePath);
-        const fileName = absolutePath.split(path.sep).pop() as string;
-        const relativeDir = path.dirname(absolutePath);
-
-        const key = fileName.replace("." + this.parser.extension, "");
-
-        let type: EntityType = "attribute";
-        if (relativeDir === this.config.attributesDirectoryPath) {
-          type = "attribute";
-        } else if (relativeDir === this.config.eventsDirectoryPath) {
-          type = "event";
-        } else if (relativeDir === this.config.destinationsDirectoryPath) {
-          type = "destination";
-        } else if (relativeDir === this.config.effectsDirectoryPath) {
-          type = "effect";
-        } else if (relativeDir === this.config.testsDirectoryPath) {
-          type = "test";
-        } else {
-          continue;
-        }
-
-        entities.push({
-          type,
-          key,
-        });
+        const entity = getEntityFromFilePath(absolutePath, this.config);
+        if (entity) entities.push(entity);
       }
 
       if (entities.length === 0) {
@@ -345,11 +344,12 @@ export class FilesystemAdapter extends Adapter {
     entityKey?: string,
   ): Promise<Commit> {
     const pathPatterns = this.getPathPatterns(entityType, entityKey);
-    const gitPaths = pathPatterns.join(" ");
-    const logCommand = `git show ${commitHash} --relative -- ${gitPaths}`;
-    const fullCommand = `(cd ${this.rootDirectoryPath} && ${logCommand})`;
-
-    const gitShowOutput = execSync(fullCommand, { encoding: "utf8" }).toString();
+    if (!/^[a-f0-9]{4,40}$/i.test(commitHash)) throw new Error("Invalid commit hash.");
+    const gitShowOutput = execFileSync(
+      "git",
+      ["show", commitHash, "--relative", "--", ...pathPatterns],
+      { cwd: this.rootDirectoryPath, encoding: "utf8", maxBuffer: 20 * 1024 * 1024 },
+    ).toString();
     const commit = getCommit(gitShowOutput, {
       rootDirectoryPath: this.rootDirectoryPath as string,
       projectConfig: this.config,

@@ -1,5 +1,6 @@
 import { Transformer } from "./transformer";
-import { emptyDatafile, DatafileReader } from "./datafileReader";
+import { emptyDatafile } from "./datafile";
+import { createTestDataProvider } from "./datafile.test-fixtures";
 import { createLogger } from "./logger";
 import { ModulesManager } from "./modulesManager";
 import { EffectsManager } from "./effectsManager";
@@ -16,26 +17,24 @@ describe("Bucketer", () => {
 
   const logger = createLogger({ level: "fatal" });
 
-  const datafileReader = new DatafileReader({
-    datafile: {
-      ...emptyDatafile,
-      attributes: {
-        ...emptyDatafile.attributes,
-        userId: {
-          type: "string",
-        },
-        deviceId: {
-          type: "string",
-        },
+  const datafileReader = createTestDataProvider({
+    ...emptyDatafile,
+    attributes: {
+      ...emptyDatafile.attributes,
+      userId: {
+        type: "string",
+      },
+      deviceId: {
+        type: "string",
       },
     },
-    logger,
   });
 
   const modulesManager = new ModulesManager({
     logger,
-    getDatafileReader: () => datafileReader,
-    getSourceResolver: () => sourceResolver,
+    getRevision: () => datafileReader.getRevision(),
+    onDiagnostic: () => () => {},
+    reportDiagnostic: () => {},
   });
 
   const validator = new Validator({
@@ -47,7 +46,7 @@ describe("Bucketer", () => {
     logger,
     emitter,
     validator,
-    getDatafileReader: () => datafileReader,
+    getDataProvider: () => datafileReader,
     getTransformer: () => transformer,
     getConditionsChecker: () => conditionsChecker,
     modulesManager,
@@ -55,7 +54,7 @@ describe("Bucketer", () => {
 
   const effectsManager = new EffectsManager({
     logger,
-    getDatafileReader: () => datafileReader,
+    getDataProvider: () => datafileReader,
     getTransformer: () => transformer,
     getConditionsChecker: () => conditionsChecker,
     modulesManager: modulesManager,
@@ -84,7 +83,6 @@ describe("Bucketer", () => {
     logger,
     sourceResolver,
     conditionsChecker,
-    transformer,
   });
 
   /**
@@ -151,6 +149,79 @@ describe("Bucketer", () => {
           {},
         ),
       ).toEqual("user-123");
+    });
+  });
+
+  describe("isSampled", () => {
+    it("uses the first matching sample in authored order", async () => {
+      const result = await bucketer.isSampled(
+        [
+          {
+            by: { payload: "id" },
+            conditions: { payload: "kind", operator: "equals", value: "web" },
+            percentage: 0,
+          },
+          { by: { payload: "id" }, percentage: 100 },
+        ],
+        { payload: { id: "123", kind: "web" } },
+      );
+      expect(result.matchedSample?.percentage).toBe(0);
+      expect(result.isSampled).toBe(false);
+    });
+
+    it("treats percentages and ranges as precise 0 to 100 thresholds", async () => {
+      expect(
+        (
+          await bucketer.isSampled(
+            { by: { payload: "id" }, percentage: 0 },
+            { payload: { id: "a" } },
+          )
+        ).isSampled,
+      ).toBe(false);
+      expect(
+        (
+          await bucketer.isSampled(
+            { by: { payload: "id" }, percentage: 100 },
+            { payload: { id: "a" } },
+          )
+        ).isSampled,
+      ).toBe(true);
+      expect(
+        (
+          await bucketer.isSampled(
+            { by: { payload: "id" }, range: [0, 100] },
+            { payload: { id: "a" } },
+          )
+        ).isSampled,
+      ).toBe(true);
+      expect(
+        (
+          await bucketer.isSampled(
+            { by: { payload: "id" }, range: [0, 0] },
+            { payload: { id: "a" } },
+          )
+        ).isSampled,
+      ).toBe(false);
+    });
+
+    it("does not sample when no bucket source resolves", async () => {
+      const result = await bucketer.isSampled(
+        { by: { payload: "missing" }, percentage: 100 },
+        { payload: {} },
+      );
+      expect(result).toMatchObject({ isSampled: false, bucketKey: "" });
+    });
+
+    it("falls through when no conditional sample matches", async () => {
+      const result = await bucketer.isSampled(
+        {
+          by: "id",
+          conditions: { payload: "kind", operator: "equals", value: "mobile" },
+          percentage: 0,
+        },
+        { payload: { kind: "web" } },
+      );
+      expect(result).toEqual({ isSampled: true });
     });
   });
 });

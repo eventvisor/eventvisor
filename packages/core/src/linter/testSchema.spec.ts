@@ -11,12 +11,15 @@ function createDeps(): Dependencies {
       statesDirectoryPath: "/tmp/eventvisor/states",
       effectsDirectoryPath: "/tmp/eventvisor/effects",
       testsDirectoryPath: "/tmp/eventvisor/tests",
+      targetsDirectoryPath: "/tmp/eventvisor/targets",
+      setsDirectoryPath: "/tmp/eventvisor/sets",
       datafilesDirectoryPath: "/tmp/eventvisor/datafiles",
       systemDirectoryPath: "/tmp/eventvisor/.eventvisor",
       catalogExportDirectoryPath: "/tmp/eventvisor/out",
       datafileNamePattern: "eventvisor-%s.json",
       tags: ["all"],
-      adapter: class {},
+      sets: false,
+      adapter: class {} as any,
       plugins: [],
       parser: { extension: "yml", parse: jest.fn(), stringify: jest.fn() },
       prettyDatafile: false,
@@ -182,6 +185,25 @@ describe("getTestSchema", () => {
     expect(result.success).toBe(false);
   });
 
+  it("rejects specs without assertions", () => {
+    expect(schema.safeParse({ event: "page_view", assertions: [] }).success).toBe(false);
+  });
+
+  it("rejects empty matrices and matrix entries", () => {
+    expect(
+      schema.safeParse({
+        event: "page_view",
+        assertions: [{ matrix: {} }],
+      }).success,
+    ).toBe(false);
+    expect(
+      schema.safeParse({
+        event: "page_view",
+        assertions: [{ matrix: { country: [] } }],
+      }).success,
+    ).toBe(false);
+  });
+
   it("rejects unknown assertion fields", () => {
     const result = schema.safeParse({
       attribute: "testRequired",
@@ -196,7 +218,7 @@ describe("getTestSchema", () => {
     expect(result.success).toBe(false);
   });
 
-  it("rejects unsupported action types", () => {
+  it("accepts removeAttribute actions", () => {
     const result = schema.safeParse({
       event: "page_view",
       assertions: [
@@ -211,7 +233,7 @@ describe("getTestSchema", () => {
       ],
     });
 
-    expect(result.success).toBe(false);
+    expect(result.success).toBe(true);
   });
 
   it("rejects malformed expectedToBeCalled entries", () => {
@@ -232,8 +254,8 @@ describe("getTestSchema", () => {
     expect(result.success).toBe(false);
   });
 
-  it("rejects runtime-unsupported fields", () => {
-    const unsupportedSpecs = [
+  it("accepts all runtime-supported assertion fields", () => {
+    const supportedSpecs = [
       {
         event: "page_view",
         assertions: [
@@ -272,8 +294,8 @@ describe("getTestSchema", () => {
       },
     ];
 
-    for (const spec of unsupportedSpecs) {
-      expect(schema.safeParse(spec).success).toBe(false);
+    for (const spec of supportedSpecs) {
+      expect(schema.safeParse(spec).success).toBe(true);
     }
   });
 });

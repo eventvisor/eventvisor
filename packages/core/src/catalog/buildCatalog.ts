@@ -1,9 +1,11 @@
 import type { HistoryEntry, Catalog } from "@eventvisor/types";
+import * as path from "path";
 
 import { getRelativePaths } from "./getRelativePaths";
 import { getLastModifiedFromHistory } from "./getLastModifiedFromHistory";
 import { RepoDetails } from "./getRepoDetails";
 import { Dependencies } from "../dependencies";
+import { buildDatafile } from "../builder/buildProject";
 
 export async function buildCatalog(
   deps: Dependencies,
@@ -16,13 +18,17 @@ export async function buildCatalog(
     links: undefined,
     projectConfig: {
       tags: projectConfig.tags,
+      sets: projectConfig.sets,
     },
     entities: {
       attributes: {},
       events: {},
       destinations: {},
       effects: {},
+      targets: {},
+      tests: {},
     },
+    usages: {},
   };
 
   /**
@@ -57,6 +63,20 @@ export async function buildCatalog(
       effect: repoDetails.blobUrl.replace(
         "{{blobPath}}",
         prefix + relativeEffectsPath + "/{{name}}." + datasource.getExtension(),
+      ),
+      target: repoDetails.blobUrl.replace(
+        "{{blobPath}}",
+        prefix +
+          path.relative(rootDirectoryPath, projectConfig.targetsDirectoryPath) +
+          "/{{name}}." +
+          datasource.getExtension(),
+      ),
+      test: repoDetails.blobUrl.replace(
+        "{{blobPath}}",
+        prefix +
+          path.relative(rootDirectoryPath, projectConfig.testsDirectoryPath) +
+          "/{{name}}." +
+          datasource.getExtension(),
       ),
       commit: repoDetails.commitUrl,
     };
@@ -108,6 +128,57 @@ export async function buildCatalog(
       ...parsed,
       lastModified: getLastModifiedFromHistory(fullHistory, "attribute", entityName),
     };
+  }
+
+  for (const entityName of await datasource.listTargets()) {
+    result.entities.targets[entityName] = {
+      ...(await datasource.readTarget(entityName)),
+      lastModified: getLastModifiedFromHistory(fullHistory, "target", entityName),
+    };
+  }
+
+  for (const targetName of Object.keys(result.entities.targets)) {
+    const datafile = await buildDatafile(deps, { target: targetName });
+    for (const type of ["attributes", "events", "destinations", "effects"] as const) {
+      for (const key of Object.keys(datafile[type])) {
+        const entity = result.entities[type][key];
+        if (entity) entity.targets = [...(entity.targets || []), targetName];
+      }
+    }
+  }
+
+  for (const entityName of await datasource.listTests()) {
+    result.entities.tests[entityName] = {
+      ...(await datasource.readTest(entityName)),
+      key: entityName,
+    };
+  }
+
+  const collections = [
+    "attributes",
+    "events",
+    "destinations",
+    "effects",
+    "targets",
+    "tests",
+  ] as const;
+  for (const type of collections) {
+    for (const key of Object.keys(result.entities[type])) {
+      const needle = JSON.stringify(key);
+      const usageKey = `${type}:${key}`;
+      result.usages[usageKey] = [];
+      for (const candidateType of collections) {
+        for (const [candidateKey, candidate] of Object.entries(result.entities[candidateType])) {
+          if (type === candidateType && key === candidateKey) continue;
+          if (JSON.stringify(candidate).includes(needle)) {
+            result.usages[usageKey].push({
+              type: candidateType.slice(0, -1) as any,
+              key: candidateKey,
+            });
+          }
+        }
+      }
+    }
   }
 
   return result;

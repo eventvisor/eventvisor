@@ -1,0 +1,19 @@
+description: Consented storefront analytics
+tags: [all, storefront, checkout]
+transport: console
+conditions:
+  - attribute: consentAnalytics
+    operator: equals
+    value: true
+transforms:
+  - type: set
+    value: {}
+  - source: eventName
+    type: set
+    target: name
+  - source: payload
+    type: set
+    target: properties
+  - source: attributes
+    type: set
+    target: context

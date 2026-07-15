@@ -11,7 +11,10 @@
   ],
   "scripts": {
     "build": "lerna run build",
-    "test": "lerna run test"
+    "test": "lerna run test",
+    "lint": "prettier examples/ packages/ modules/ projects/ --check && eslint . && lerna run lint",
+    "typecheck": "lerna run typecheck",
+    "check": "npm run build && npm test && npm run lint && npm run typecheck"
   },
   "author": {
     "name": "Fahad Heylaal",

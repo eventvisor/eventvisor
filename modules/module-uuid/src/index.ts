@@ -1,4 +1,4 @@
-import type { Module } from "@eventvisor/sdk";
+import type { EventvisorModule } from "@eventvisor/sdk";
 
 export type UUIDModuleOptions = {
   name?: string;
@@ -30,26 +30,14 @@ function generateCustomUUID(): string {
 }
 
 export function generateUUID(): string {
-  if (typeof crypto !== "undefined") {
+  if (typeof crypto !== "undefined" && typeof crypto.randomUUID === "function") {
     return crypto.randomUUID();
-  }
-
-  if (typeof require !== "undefined") {
-    try {
-      const uuid = require("crypto").randomUUID();
-
-      return uuid;
-
-      // eslint-disable-next-line
-    } catch (e) {
-      // do nothing
-    }
   }
 
   return generateCustomUUID();
 }
 
-export function createUUIDModule(options: UUIDModuleOptions = {}): Module {
+export function createUUIDModule(options: UUIDModuleOptions = {}): EventvisorModule {
   const { name = "uuid" } = options;
 
   return {

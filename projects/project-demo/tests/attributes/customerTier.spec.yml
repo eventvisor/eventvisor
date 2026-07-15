@@ -1,0 +1,12 @@
+attribute: customerTier
+assertions:
+  - description: accepts a supported loyalty tier
+    setAttribute: premium
+    expectedToBeValid: true
+    expectedToBeSet: true
+    expectedAttribute: premium
+
+  - description: rejects an unknown loyalty tier
+    setAttribute: platinum
+    expectedToBeValid: false
+    expectedToBeSet: false

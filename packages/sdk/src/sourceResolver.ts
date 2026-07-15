@@ -36,7 +36,6 @@ function findValueAtPath(obj: any, path: string[]): any {
   }, obj);
 }
 
-// @TODO: redo it with a better approach
 export class SourceResolver {
   private logger: Logger;
 
@@ -72,61 +71,28 @@ export class SourceResolver {
 
       return {
         originType,
-        name: parts[1],
+        name: parts[1] || "",
         path: parts.slice(2),
         fullKey: source,
       };
     }
 
-    // @TODO: fix it better
-    if ("source" in source) {
-      return this.getOrigin(source.source as string);
-    }
-
-    if ("source" in source) {
-      return this.getOrigin(source.source as string);
-    }
-
-    if ("attribute" in source) {
-      return {
-        originType: "attribute",
-        ...this.getPath(source.attribute as string), // @TODO: consider array of strings here
-      };
-    }
-
-    if ("effect" in source) {
-      return {
-        originType: "effect",
-        ...this.getPath(source.effect as string),
-      };
-    }
-
-    if ("payload" in source) {
-      if (Array.isArray(source.payload)) {
-        return source.payload.map((p) => ({
-          originType: "payload",
-          ...this.getPath(p as string),
-        }));
-      } else {
-        return {
-          originType: "payload",
-          ...this.getPath(source.payload as string),
-        };
-      }
-    }
-
-    if ("lookup" in source) {
-      return {
-        originType: "lookup",
-        ...this.getPath(source.lookup as string),
-      };
-    }
-
-    if ("state" in source) {
-      return {
-        originType: "state",
-        ...this.getPath(source.state as string),
-      };
+    for (const originType of [
+      "source",
+      "attribute",
+      "state",
+      "effect",
+      "payload",
+      "lookup",
+    ] as const) {
+      const value = source[originType];
+      if (typeof value === "undefined") continue;
+      const values = Array.isArray(value) ? value : [value];
+      const origins = values.map((entry) => {
+        if (originType === "source") return this.getOrigin(entry) as SourceOrigin;
+        return { originType, ...this.getPath(entry) } as SourceOrigin;
+      });
+      return Array.isArray(value) ? origins : origins[0];
     }
 
     return null;

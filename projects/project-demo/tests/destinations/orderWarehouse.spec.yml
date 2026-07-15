@@ -1,0 +1,24 @@
+destination: orderWarehouse
+assertions:
+  - description: creates the warehouse order body
+    actions:
+      - type: setAttribute
+        name: userId
+        value: user-123
+      - type: setAttribute
+        name: currency
+        value: EUR
+      - type: track
+        name: order_completed
+        value:
+          orderId: order-123
+          total: 129.95
+          itemCount: 3
+    expectedToBeTransported: true
+    expectedBody:
+      order:
+        id: order-123
+        total: 129.95
+        currency: EUR
+      customer:
+        id: user-123

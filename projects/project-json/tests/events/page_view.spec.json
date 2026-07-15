@@ -10,7 +10,7 @@
       "expectedEvent": {
         "url": "https://example.com"
       },
-      "expectedDestinations": ["console"]
+      "expectedDestinations": ["browser"]
     },
     {
       "description": "event should be invalid",

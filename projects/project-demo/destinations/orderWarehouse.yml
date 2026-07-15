@@ -1,0 +1,22 @@
+description: Completed orders for the warehouse pipeline
+tags: [all, checkout, backend]
+transport: console
+conditions:
+  - source: eventName
+    operator: equals
+    value: order_completed
+transforms:
+  - type: set
+    value: {}
+  - source: payload.orderId
+    type: set
+    target: order.id
+  - source: payload.orderTotal
+    type: set
+    target: order.total
+  - attribute: currency
+    type: set
+    target: order.currency
+  - attribute: userId
+    type: set
+    target: customer.id

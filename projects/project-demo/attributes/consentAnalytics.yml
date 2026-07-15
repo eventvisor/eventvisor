@@ -1,0 +1,4 @@
+description: Whether analytics consent was granted
+tags: [all, storefront, checkout]
+type: boolean
+default: false

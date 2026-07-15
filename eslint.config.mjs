@@ -59,6 +59,7 @@ export default [
       parser: tsParser,
       parserOptions: {
         project: "./tsconfig.eslint.json",
+        tsconfigRootDir: import.meta.dirname,
       },
       globals: globals.browser,
     },

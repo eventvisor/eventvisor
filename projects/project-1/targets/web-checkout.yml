@@ -1,0 +1,8 @@
+description: Events and dependencies used by the web experience
+tag: web
+includeEvents:
+  - page_view
+  - banner_*
+includeAttributes: user*
+includeDestinations: console*
+includeEffects: inject_*

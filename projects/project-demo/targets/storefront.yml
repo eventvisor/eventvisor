@@ -1,0 +1,13 @@
+description: Browser storefront events and their runtime dependencies
+tag: storefront
+includeEvents:
+  - page_view
+  - product_viewed
+  - add_to_cart
+includeAttributes:
+  - sessionId
+  - country
+  - customerTier
+  - consentAnalytics
+includeDestinations: browserAnalytics
+includeEffects: cart_activity

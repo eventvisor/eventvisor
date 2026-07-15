@@ -1,4 +1,4 @@
-import type { Module } from "@eventvisor/sdk";
+import type { EventvisorModule } from "@eventvisor/sdk";
 
 export type GA4ModuleOptions = {
   name?: string;
@@ -12,7 +12,7 @@ function underscore(str: string): string {
     .toLowerCase();
 }
 
-export function createGA4Module(options: GA4ModuleOptions = {}): Module {
+export function createGA4Module(options: GA4ModuleOptions = {}): EventvisorModule {
   const { name = "ga4" } = options;
 
   return {

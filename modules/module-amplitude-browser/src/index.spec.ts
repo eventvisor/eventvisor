@@ -1,7 +1,12 @@
 import { createAmplitudeBrowserModule } from "./index";
 
 describe("createAmplitudeBrowserModule", () => {
-  it("should be a function", async () => {
-    expect(createAmplitudeBrowserModule).toBeDefined();
+  it("tracks the event and payload", async () => {
+    const amplitude = { track: jest.fn() };
+    await createAmplitudeBrowserModule({ amplitude }).transport!(
+      { destinationName: "amplitude", eventName: "viewed", payload: { id: 1 } },
+      {} as any,
+    );
+    expect(amplitude.track).toHaveBeenCalledWith("viewed", { id: 1 });
   });
 });

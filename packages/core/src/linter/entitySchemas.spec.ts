@@ -16,12 +16,15 @@ function createDeps(): Dependencies {
       statesDirectoryPath: "/tmp/eventvisor/states",
       effectsDirectoryPath: "/tmp/eventvisor/effects",
       testsDirectoryPath: "/tmp/eventvisor/tests",
+      targetsDirectoryPath: "/tmp/eventvisor/targets",
+      setsDirectoryPath: "/tmp/eventvisor/sets",
       datafilesDirectoryPath: "/tmp/eventvisor/datafiles",
       systemDirectoryPath: "/tmp/eventvisor/.eventvisor",
       catalogExportDirectoryPath: "/tmp/eventvisor/out",
       datafileNamePattern: "eventvisor-%s.json",
       tags: ["all", "web"],
-      adapter: class {},
+      sets: false,
+      adapter: class {} as any,
       plugins: [],
       parser: { extension: "yml", parse: jest.fn(), stringify: jest.fn() },
       prettyDatafile: false,
@@ -56,6 +59,21 @@ describe("entity lint schemas", () => {
         ],
       }).success,
     ).toBe(true);
+  });
+
+  it("validates stringified conditions", () => {
+    const schema = getConditionsSchema(deps);
+    const condition = JSON.stringify({
+      payload: "country",
+      operator: "equals",
+      value: "NL",
+    });
+
+    expect(schema.safeParse(condition).success).toBe(true);
+    expect(schema.safeParse("not-json").success).toBe(false);
+    expect(schema.safeParse("null").success).toBe(false);
+    expect(schema.safeParse("[]").success).toBe(false);
+    expect(schema.safeParse('{"and":[]}').success).toBe(false);
   });
 
   it("accepts arrays of samples", () => {

@@ -46,6 +46,10 @@ export class Transformer {
        */
       let sourceValue = await this.sourceResolver.resolve(transform, inputs);
 
+      if ((sourceValue === null || sourceValue === undefined) && "value" in transform) {
+        sourceValue = transform.value;
+      }
+
       // when Transform has no source, but only target
       if (sourceValue === null || sourceValue === undefined) {
         if (transform.target) {
@@ -143,6 +147,21 @@ export class Transformer {
             ...((result as object) || {}),
             ...((sourceValue as object) || {}),
           };
+        }
+      }
+
+      if (transform.type === "append") {
+        if (transform.target) {
+          const current = Transformer.getValueAtPath(result, transform.target);
+          const values = Array.isArray(current) ? current : [];
+          result = Transformer.setValueAtPath(
+            result,
+            transform.target,
+            values.concat([sourceValue]),
+          );
+        } else {
+          const values = Array.isArray(result) ? result : [];
+          result = values.concat([sourceValue]);
         }
       }
 

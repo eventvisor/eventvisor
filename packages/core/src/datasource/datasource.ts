@@ -11,9 +11,11 @@ import type {
   TestName,
   DatafileContent,
   EntityType,
+  Target,
+  TargetKey,
 } from "@eventvisor/types";
 
-import { ProjectConfig, CustomParser } from "../config";
+import { ProjectConfig, CustomParser, getProjectConfigForSet } from "../config";
 
 import { Adapter, DatafileOptions } from "./adapter";
 
@@ -25,6 +27,18 @@ export class Datasource {
     private rootDirectoryPath?: string,
   ) {
     this.adapter = new config.adapter(config, rootDirectoryPath);
+  }
+
+  getConfig() {
+    return this.config;
+  }
+
+  forSet(set: string) {
+    return new Datasource(getProjectConfigForSet(this.config, set), this.rootDirectoryPath);
+  }
+
+  listSets() {
+    return this.adapter.listSets();
   }
 
   // @NOTE: only site generator needs it, find a way to get it out of here later
@@ -161,6 +175,19 @@ export class Datasource {
 
   getTestSpecName(testName: TestName) {
     return `${testName}.${this.getExtension()}`;
+  }
+
+  // targets
+  listTargets() {
+    return this.adapter.listEntities("target");
+  }
+
+  targetExists(targetKey: TargetKey) {
+    return this.adapter.entityExists("target", targetKey);
+  }
+
+  readTarget(targetKey: TargetKey) {
+    return this.adapter.readEntity<Target>("target", targetKey);
   }
 
   // history

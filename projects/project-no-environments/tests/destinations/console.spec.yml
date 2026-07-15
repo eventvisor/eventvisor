@@ -1,0 +1,23 @@
+destination: console
+
+assertions:
+  - description: creates a conventional analytics body
+    actions:
+      - type: setAttribute
+        name: userId
+        value: user-123
+      - type: setAttribute
+        name: country
+        value: NL
+      - type: track
+        name: page_view
+        value:
+          url: https://shop.example.com
+    expectedToBeTransported: true
+    expectedBody:
+      name: page_view
+      properties:
+        url: https://shop.example.com
+      context:
+        userId: user-123
+        country: NL

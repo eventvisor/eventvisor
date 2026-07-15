@@ -4,7 +4,7 @@ import { createLogger } from "./logger";
 import { ModulesManager } from "./modulesManager";
 import { AttributesManager } from "./attributesManager";
 import { EffectsManager } from "./effectsManager";
-import { DatafileReader } from "./datafileReader";
+import { createTestDataProvider } from "./datafile.test-fixtures";
 import { Validator } from "./validator";
 import { ConditionsChecker } from "./conditions";
 import { Transformer } from "./transformer";
@@ -15,57 +15,55 @@ describe("SourceResolver", () => {
 
   const logger = createLogger({ level: "fatal" });
 
-  const datafileReader = new DatafileReader({
-    datafile: {
-      schemaVersion: "1",
-      revision: "0",
-      attributes: {
-        attribute1: {
-          type: "string",
-        },
-        attribute2: {
-          type: "number",
-        },
-        attribute3: {
-          type: "object",
-          properties: {
-            name: {
-              type: "string",
-            },
-          },
-        },
+  const datafileReader = createTestDataProvider({
+    schemaVersion: "1",
+    revision: "0",
+    attributes: {
+      attribute1: {
+        type: "string",
       },
-      events: {},
-      destinations: {},
-      effects: {
-        effect1: {
-          on: {
-            event_tracked: ["event1"],
+      attribute2: {
+        type: "number",
+      },
+      attribute3: {
+        type: "object",
+        properties: {
+          name: {
+            type: "string",
           },
-          state: {
-            nested: {
-              value: "effect1 value",
-            },
-          },
-        },
-        effect2: {
-          on: {
-            event_tracked: ["event2"],
-          },
-          state: 123,
         },
       },
     },
-    logger,
+    events: {},
+    destinations: {},
+    effects: {
+      effect1: {
+        on: {
+          event_tracked: ["event1"],
+        },
+        state: {
+          nested: {
+            value: "effect1 value",
+          },
+        },
+      },
+      effect2: {
+        on: {
+          event_tracked: ["event2"],
+        },
+        state: 123,
+      },
+    },
   });
 
   const modulesManager = new ModulesManager({
     logger,
-    getDatafileReader: () => datafileReader,
-    getSourceResolver: () => sourceResolver,
+    getRevision: () => datafileReader.getRevision(),
+    onDiagnostic: () => () => {},
+    reportDiagnostic: () => {},
   });
 
-  modulesManager.registerModule({
+  modulesManager.addModule({
     name: "module1",
     lookup: async ({ key }) => {
       if (!key) {
@@ -85,7 +83,7 @@ describe("SourceResolver", () => {
     logger,
     emitter,
     validator,
-    getDatafileReader: () => datafileReader,
+    getDataProvider: () => datafileReader,
     getTransformer: () => transformer,
     getConditionsChecker: () => conditionsChecker,
     modulesManager,
@@ -97,7 +95,7 @@ describe("SourceResolver", () => {
 
   const effectsManager = new EffectsManager({
     logger,
-    getDatafileReader: () => datafileReader,
+    getDataProvider: () => datafileReader,
     getTransformer: () => transformer,
     getConditionsChecker: () => conditionsChecker,
     modulesManager: modulesManager,

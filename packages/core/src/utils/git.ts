@@ -4,6 +4,33 @@ import type { Commit, EntityDiff, EntityType } from "@eventvisor/types";
 
 import { CustomParser, ProjectConfig } from "../config";
 
+export function getEntityFromFilePath(
+  absolutePath: string,
+  projectConfig: ProjectConfig,
+): { type: EntityType; key: string } | undefined {
+  const extension = `.${(projectConfig.parser as CustomParser).extension}`;
+  if (!absolutePath.endsWith(extension)) return;
+  const directories: [EntityType, string][] = [
+    ["attribute", projectConfig.attributesDirectoryPath],
+    ["event", projectConfig.eventsDirectoryPath],
+    ["destination", projectConfig.destinationsDirectoryPath],
+    ["effect", projectConfig.effectsDirectoryPath],
+    ["test", projectConfig.testsDirectoryPath],
+    ["target", projectConfig.targetsDirectoryPath],
+  ];
+  for (const [type, directory] of directories) {
+    const relative = path.relative(directory, absolutePath);
+    if (
+      relative &&
+      !relative.startsWith(`..${path.sep}`) &&
+      relative !== ".." &&
+      !path.isAbsolute(relative)
+    ) {
+      return { type, key: relative.slice(0, -extension.length).split(path.sep).join("/") };
+    }
+  }
+}
+
 function parseGitCommitShowOutput(gitShowOutput: string) {
   const result = {
     hash: "",
@@ -78,39 +105,12 @@ export function getCommit(
     const status = analyzeFileChange(diff);
 
     const absolutePath = path.join(rootDirectoryPath, file);
-    const relativeDir = path.dirname(absolutePath);
-
-    // get entity type
-    let type: EntityType = "attribute";
-    if (relativeDir === projectConfig.attributesDirectoryPath) {
-      type = "attribute";
-    } else if (relativeDir === projectConfig.eventsDirectoryPath) {
-      type = "event";
-    } else if (relativeDir === projectConfig.destinationsDirectoryPath) {
-      type = "destination";
-    } else if (relativeDir === projectConfig.effectsDirectoryPath) {
-      type = "effect";
-    } else if (relativeDir === projectConfig.testsDirectoryPath) {
-      type = "test";
-    } else {
-      // unknown type
-      return;
-    }
-
-    // get entity key
-    const fileName = absolutePath.split(path.sep).pop() as string;
-    const extensionWithDot = "." + (projectConfig.parser as CustomParser).extension;
-
-    if (!fileName.endsWith(extensionWithDot)) {
-      // unknown extension
-      return;
-    }
-
-    const key = fileName.replace(extensionWithDot, "");
+    const entity = getEntityFromFilePath(absolutePath, projectConfig);
+    if (!entity) return;
 
     const entityDiff: EntityDiff = {
-      type,
-      key,
+      type: entity.type,
+      key: entity.key,
       content: diff,
     };
 

@@ -11,23 +11,26 @@ build:
 test:
 	npm test
 
+typecheck:
+	npm run typecheck
+
 lint:
-	npx prettier examples/ packages/ modules/ projects/ --check
-	npx eslint .
-	npx lerna run lint
+	npm run lint
 
 format:
 	npx prettier examples/ packages/ modules/ projects/ --write
 	npx eslint . --fix
+
+check: build test lint typecheck
 
 ##
 # Misc.
 #
 print-size:
 	@echo 'SDK package size:'
-	@gzip -c packages/sdk/dist/index.mjs > packages/sdk/dist/index.mjs.gz
-	@ls -alh packages/sdk/dist | grep index.mjs | awk '{print $$9 "\t" $$5}'
+	@ls -alh packages/sdk/dist/index.mjs | awk '{print $$9 "\t" $$5}'
+	@gzip -c packages/sdk/dist/index.mjs | wc -c | awk '{print "index.mjs.gz\t" $$1 " bytes"}'
 
 	@echo 'LocalStorage module size:'
-	@gzip -c modules/module-localstorage/dist/index.mjs > modules/module-localstorage/dist/index.mjs.gz
-	@ls -alh modules/module-localstorage/dist | grep index.mjs | awk '{print $$9 "\t" $$5}'
+	@ls -alh modules/module-localstorage/dist/index.mjs | awk '{print $$9 "\t" $$5}'
+	@gzip -c modules/module-localstorage/dist/index.mjs | wc -c | awk '{print "index.mjs.gz\t" $$1 " bytes"}'

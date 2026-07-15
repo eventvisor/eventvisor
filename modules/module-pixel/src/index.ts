@@ -1,51 +1,54 @@
-import type { Module } from "@eventvisor/sdk";
+import type { EventvisorModule } from "@eventvisor/sdk";
 
 export type PixelModuleOptions = {
   name?: string;
 };
 
-export function createPixelModule(options: PixelModuleOptions = {}): Module {
+export function createPixelModule(options: PixelModuleOptions = {}): EventvisorModule {
   const { name = "pixel" } = options;
 
   return {
     name,
 
-    handle: async ({ step, payload }, { logger, sourceResolver }) => {
+    handle: async ({ step, payload }, api) => {
+      const report = (code: string, message: string, details: Record<string, unknown>) =>
+        api.reportDiagnostic({ level: "error", code, message, details });
       const { params } = step;
 
       if (!params) {
-        logger.error("[module-pixel] No params found in step", { step });
+        report("pixel_missing_params", "Pixel step has no params", { step });
 
         return;
       }
 
-      if (!params.snippet) {
-        logger.error("[module-pixel] No snippet found in params", { params });
+      if (typeof params.snippet !== "string" || !params.snippet) {
+        report("pixel_missing_snippet", "Pixel step has no snippet", { params });
 
         return;
       }
 
-      const selector = params.selector || "body";
+      const selector = typeof params.selector === "string" ? params.selector : "body";
 
       const el = document.querySelector(selector);
 
       if (!el) {
-        logger.error("[module-pixel] No element found with selector", { selector });
+        report("pixel_element_not_found", "Pixel target element was not found", { selector });
 
         return;
       }
 
       let snippet = params.snippet;
 
-      let variableKeys: [replace: string, source: string][] = [];
+      const variableKeys: [replace: string, source: string][] = [];
 
       try {
-        variableKeys = Array.from(
-          snippet.matchAll(/\{\{\s*([^}]+)\s*\}\}/g),
-          (match: any) => match,
-        );
+        const pattern = /\{\{\s*([^}]+)\s*\}\}/g;
+        let match: RegExpExecArray | null;
+        while ((match = pattern.exec(snippet)) !== null) {
+          variableKeys.push([match[0], match[1]]);
+        }
       } catch (e) {
-        logger.error("[module-pixel] Error parsing snippet for variable keys", {
+        report("pixel_invalid_snippet", "Could not parse pixel snippet variables", {
           snippet,
           error: e,
         });
@@ -53,10 +56,12 @@ export function createPixelModule(options: PixelModuleOptions = {}): Module {
 
       if (variableKeys.length > 0) {
         for (const [replace, variableKey] of variableKeys) {
-          const source = variableKey.trim();
-          const variableValue = await sourceResolver.resolve(source, { payload });
+          const source = variableKey.trim().replace(/^payload\.?/, "");
+          const variableValue = source
+            ? source.split(".").reduce<any>((value, key) => value?.[key], payload)
+            : payload;
 
-          snippet = snippet.replace(replace, variableValue); // @TODO: /g?
+          snippet = snippet.replace(replace, String(variableValue ?? ""));
         }
       }
 

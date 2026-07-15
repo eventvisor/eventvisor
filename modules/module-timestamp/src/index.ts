@@ -1,4 +1,4 @@
-import type { Module } from "@eventvisor/sdk";
+import type { EventvisorModule } from "@eventvisor/sdk";
 
 export type TimestampModuleOptions = {
   name?: string;
@@ -18,7 +18,7 @@ export function toLocalIsoOffset(d = new Date()) {
   );
 }
 
-export function createTimestampModule(options: TimestampModuleOptions = {}): Module {
+export function createTimestampModule(options: TimestampModuleOptions = {}): EventvisorModule {
   const { name = "timestamp" } = options;
 
   return {

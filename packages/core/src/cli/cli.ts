@@ -22,6 +22,15 @@ export interface Plugin {
     command: string; // full command usage
     description: string;
   }[];
+  options?: Record<
+    string,
+    {
+      type: "string" | "boolean" | "number" | "array";
+      description?: string;
+      alias?: string;
+      demandOption?: boolean;
+    }
+  >;
 }
 
 export interface RunnerOptions {
@@ -32,13 +41,15 @@ export interface RunnerOptions {
   datasource?: Datasource;
 }
 
-export async function runCLI(runnerOptions: RunnerOptions) {
+export async function runCLI(runnerOptions: RunnerOptions): Promise<number> {
   const yargs = require("yargs");
 
   let y = yargs(process.argv.slice(2)).usage("Usage: <command> [options]");
   const registeredSubcommands: string[] = [];
 
   const { rootDirectoryPath, projectConfig, datasource } = runnerOptions;
+
+  let exitCode = 0;
 
   function registerPlugin(plugin: Plugin) {
     const subcommand = plugin.command.split(" ")[0];
@@ -50,12 +61,8 @@ export async function runCLI(runnerOptions: RunnerOptions) {
 
     y = y.command({
       command: plugin.command,
+      builder: plugin.options || {},
       handler: async function (parsed: ParsedOptions) {
-        // @NOTE: in future, allow yargs options to be defined via plugins
-        if (parsed.schemaVersion && typeof parsed.schemaVersion !== "string") {
-          parsed.schemaVersion = parsed.schemaVersion.toString();
-        }
-
         try {
           const result = await plugin.handler({
             rootDirectoryPath,
@@ -65,11 +72,11 @@ export async function runCLI(runnerOptions: RunnerOptions) {
           } as PluginHandlerOptions);
 
           if (result === false) {
-            process.exit(1);
+            exitCode = 1;
           }
         } catch (error) {
           console.error(error);
-          process.exit(1);
+          exitCode = 1;
         }
       },
     });
@@ -106,5 +113,8 @@ export async function runCLI(runnerOptions: RunnerOptions) {
     handler() {
       y.showHelp();
     },
-  }).argv;
+  });
+
+  await y.parseAsync();
+  return exitCode;
 }

@@ -1,0 +1,4 @@
+description: Active ISO 4217 currency
+tags: [all, storefront, checkout, backend]
+type: string
+enum: [EUR, GBP, USD]
