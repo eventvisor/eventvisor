@@ -48,7 +48,7 @@ The project model includes reusable Schemas under `schemas/`, Targets for focuse
 
 Direct `source`, `attribute`, `state`, `effect`, `payload`, and `lookup` properties accept one source or a nonempty ordered array. Transform `value` remains the operand for increment and decrement when a target is present, and the current target value is the numeric input.
 
-Catalog exports require a dedicated output directory. Core rejects filesystem roots, home directories, project roots, and directories containing the project. Use `--base-path` for deployments below an origin path. Catalog matrix cases are expanded by the core tester implementation before being written for the UI.
+Catalog exports require a dedicated output directory. Core rejects filesystem roots, home directories, project roots, and directories containing the project. Use `--base-path` for deployments below an origin path. Catalog matrix cases are expanded by the core tester implementation before being written for the UI. The plain `eventvisor catalog` command exports, serves, watches project inputs, and reloads connected browser pages. The explicit `catalog export` and `catalog serve` subcommands remain one-shot operations.
 
 ## Examples
 

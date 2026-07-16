@@ -1,0 +1,13 @@
+description: A user completed sign-up
+tags: [all, web]
+type: object
+properties:
+  plan:
+    type: string
+    enum: [free, pro, team]
+required: [plan]
+requiredAttributes: [userId]
+transforms:
+  - type: set
+    target: signupChannel
+    value: web

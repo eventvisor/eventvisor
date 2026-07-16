@@ -1,0 +1,25 @@
+# tests/effects/<name>.spec.yml
+effect: marketing_pixel
+assertions:
+  - description: untriggering events leave state alone
+    actions:
+      - type: track
+        name: some_other_event
+        value: { foo: bar }
+    expectedState:
+      injected: false
+
+  - description: fires once across repeated triggers
+    actions:
+      - type: track
+        name: page_view
+        value: { url: "https://example.com" }
+      - type: track
+        name: page_view
+        value: { url: "https://example.com/about" }
+    expectedState:
+      injected: true
+    expectedToBeHandled: true
+    expectedToBeCalled:
+      - handler: pixel
+        times: 1

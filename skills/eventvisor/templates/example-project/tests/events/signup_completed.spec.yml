@@ -1,0 +1,29 @@
+event: signup_completed
+assertions:
+  - description: validates, transforms, and routes with a signed-in user
+    withAttributes:
+      userId: user-123
+      consentAnalytics: true
+    track:
+      plan: pro
+    expectedToBeValid: true
+    expectedEvent:
+      plan: pro
+      signupChannel: web
+    expectedDestinations: [browserConsole]
+
+  - description: requires the userId attribute
+    withAttributes:
+      consentAnalytics: true
+    track:
+      plan: pro
+    expectedToBeValid: false
+    expectedDestinations: []
+
+  - description: rejects an unknown plan
+    withAttributes:
+      userId: user-123
+    track:
+      plan: platinum
+    expectedToBeValid: false
+    expectedDestinations: []

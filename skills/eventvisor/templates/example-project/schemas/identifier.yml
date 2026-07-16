@@ -1,0 +1,3 @@
+description: A non-empty identifier
+type: string
+minLength: 1

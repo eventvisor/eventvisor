@@ -16,6 +16,37 @@ const contentTypes: Record<string, string> = {
   ".ico": "image/x-icon",
 };
 
+const CATALOG_LIVE_RELOAD_PATH = "/__eventvisor_catalog_reload";
+
+export interface CatalogServerHandle {
+  close: () => Promise<void>;
+  triggerReload: () => void;
+}
+
+interface CatalogLiveReloadOptions {
+  clients: Set<http.ServerResponse>;
+}
+
+function injectLiveReload(html: string, basePath: string) {
+  const endpoint = `${basePath}${CATALOG_LIVE_RELOAD_PATH}`;
+  const script = [
+    "<script>",
+    "(() => {",
+    `  const source = new EventSource(${JSON.stringify(endpoint)});`,
+    '  source.addEventListener("reload", () => window.location.reload());',
+    "  source.onerror = () => {",
+    "    source.close();",
+    "    setTimeout(() => window.location.reload(), 1000);",
+    "  };",
+    "})();",
+    "</script>",
+  ].join("");
+
+  return html.includes("</body>")
+    ? html.replace("</body>", `${script}</body>`)
+    : `${html}${script}`;
+}
+
 export function shouldServeCatalogIndex(pathname: string, browserRouter: boolean) {
   if (!browserRouter) return false;
   if (pathname === "/favicon.ico") return false;
@@ -23,7 +54,12 @@ export function shouldServeCatalogIndex(pathname: string, browserRouter: boolean
   return !["/assets/", "/data/", "/img/"].some((prefix) => pathname.startsWith(prefix));
 }
 
-export function createCatalogServer(root: string, browserRouter: boolean, basePath = "") {
+export function createCatalogServer(
+  root: string,
+  browserRouter: boolean,
+  basePath = "",
+  liveReload?: CatalogLiveReloadOptions,
+) {
   return http.createServer((request, response) => {
     let pathname: string;
     try {
@@ -41,6 +77,18 @@ export function createCatalogServer(root: string, browserRouter: boolean, basePa
       pathname = pathname.slice(basePath.length) || "/";
     }
 
+    if (liveReload && pathname === CATALOG_LIVE_RELOAD_PATH) {
+      response.writeHead(200, {
+        "Content-Type": "text/event-stream",
+        "Cache-Control": "no-cache, no-transform",
+        Connection: "keep-alive",
+      });
+      response.write("\n");
+      liveReload.clients.add(response);
+      request.on("close", () => liveReload.clients.delete(response));
+      return;
+    }
+
     const relative =
       pathname === "/"
         ? "index.html"
@@ -52,6 +100,18 @@ export function createCatalogServer(root: string, browserRouter: boolean, basePa
       response.writeHead(403).end("Forbidden");
       return;
     }
+
+    const sendContent = (servedFilePath: string, content: Buffer) => {
+      const isIndex = path.basename(servedFilePath) === "index.html";
+      response.writeHead(200, {
+        "Content-Type": contentTypes[path.extname(servedFilePath)] || "application/octet-stream",
+        "X-Content-Type-Options": "nosniff",
+        "Cache-Control": liveReload || isIndex ? "no-cache" : "public, max-age=3600",
+      });
+      response.end(
+        liveReload && isIndex ? injectLiveReload(content.toString("utf8"), basePath) : content,
+      );
+    };
 
     fs.readFile(filePath, (error, content) => {
       if (error) {
@@ -68,27 +128,19 @@ export function createCatalogServer(root: string, browserRouter: boolean, basePa
             response.writeHead(500).end("Catalog index.html not found");
             return;
           }
-          response.writeHead(200, {
-            "Content-Type": contentTypes[".html"],
-            "X-Content-Type-Options": "nosniff",
-            "Cache-Control": "no-cache",
-          });
-          response.end(indexContent);
+          sendContent(path.join(root, "index.html"), indexContent);
         });
         return;
       }
-      response.writeHead(200, {
-        "Content-Type": contentTypes[path.extname(filePath)] || "application/octet-stream",
-        "X-Content-Type-Options": "nosniff",
-        "Cache-Control":
-          path.basename(filePath) === "index.html" ? "no-cache" : "public, max-age=3600",
-      });
-      response.end(content);
+      sendContent(filePath, content);
     });
   });
 }
 
-export function serveCatalog(deps: Dependencies): Promise<http.Server> {
+export function serveCatalog(
+  deps: Dependencies,
+  options: { liveReload?: boolean } = {},
+): Promise<CatalogServerHandle> {
   const root = deps.options.outDir
     ? path.resolve(deps.rootDirectoryPath, deps.options.outDir)
     : path.resolve(deps.projectConfig.catalogExportDirectoryPath);
@@ -98,7 +150,13 @@ export function serveCatalog(deps: Dependencies): Promise<http.Server> {
   const basePath = normalizeCatalogBasePath(configuredBasePath);
   if (!Number.isInteger(port) || port < 1 || port > 65535) throw new Error("Invalid catalog port.");
 
-  const server = createCatalogServer(root, browserRouter, basePath);
+  const liveReloadClients = new Set<http.ServerResponse>();
+  const server = createCatalogServer(
+    root,
+    browserRouter,
+    basePath,
+    options.liveReload ? { clients: liveReloadClients } : undefined,
+  );
   return new Promise((resolve, reject) => {
     const onError = (error: Error) => reject(error);
     server.once("error", onError);
@@ -109,7 +167,20 @@ export function serveCatalog(deps: Dependencies): Promise<http.Server> {
       console.log(CLI_FORMAT_GREEN, "Eventvisor catalog is available");
       console.log(`  ${colorize("URL", CLI_COLOR_CYAN)}: http://127.0.0.1:${port}${basePath}/`);
       console.log("");
-      resolve(server);
+      resolve({
+        close: () =>
+          new Promise<void>((closeResolve, closeReject) => {
+            for (const client of liveReloadClients) client.end();
+            liveReloadClients.clear();
+            server.close((error) => (error ? closeReject(error) : closeResolve()));
+          }),
+        triggerReload: () => {
+          for (const client of liveReloadClients) {
+            client.write("event: reload\n");
+            client.write("data: reload\n\n");
+          }
+        },
+      });
     });
   });
 }

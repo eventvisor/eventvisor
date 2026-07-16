@@ -74,4 +74,34 @@ describe("Catalog HTTP server", () => {
       );
     }
   });
+
+  it("injects live reload without allowing stale generated data", async () => {
+    const root = fs.mkdtempSync(path.join(os.tmpdir(), "eventvisor-catalog-live-server-"));
+    fs.mkdirSync(path.join(root, "data"), { recursive: true });
+    fs.writeFileSync(path.join(root, "index.html"), "<body><main>Catalog</main></body>");
+    fs.writeFileSync(path.join(root, "data/manifest.json"), '{"schemaVersion":"1"}');
+    const clients = new Set<any>();
+    const server = createCatalogServer(root, true, "/catalog", { clients });
+    await new Promise<void>((resolve, reject) => {
+      server.once("error", reject);
+      server.listen(0, "127.0.0.1", resolve);
+    });
+    const address = server.address();
+    if (!address || typeof address === "string") throw new Error("Server address unavailable");
+    try {
+      const index = await fetch(`http://127.0.0.1:${address.port}/catalog/`);
+      expect(index.headers.get("cache-control")).toBe("no-cache");
+      expect(await index.text()).toContain(
+        'new EventSource("/catalog/__eventvisor_catalog_reload")',
+      );
+
+      const manifest = await fetch(`http://127.0.0.1:${address.port}/catalog/data/manifest.json`);
+      expect(manifest.headers.get("cache-control")).toBe("no-cache");
+    } finally {
+      for (const client of clients) client.end();
+      await new Promise<void>((resolve, reject) =>
+        server.close((error) => (error ? reject(error) : resolve())),
+      );
+    }
+  });
 });

@@ -1,0 +1,18 @@
+# schemas/<key>.yml — reusable Schema; reference with `schema: <key>`
+# from events, attributes, object properties, or array items.
+description: A non-empty identifier
+type: string
+minLength: 1
+
+# Schemas can be any type and can reference other Schemas:
+#
+# type: object
+# properties:
+#   id:
+#     schema: identifier
+#   name:
+#     type: string
+#   price:
+#     type: number
+#     minimum: 0
+# required: [id, name]

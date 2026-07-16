@@ -1,0 +1,30 @@
+destination: browserConsole
+assertions:
+  - description: builds the console envelope
+    actions:
+      - type: setAttribute
+        name: consentAnalytics
+        value: true
+      - type: setAttribute
+        name: deviceId
+        value: device-123
+      - type: track
+        name: page_view
+        value:
+          url: https://example.com/home
+    expectedToBeTransported: true
+    expectedBody:
+      name: page_view
+      properties:
+        url: https://example.com/home
+      context:
+        consentAnalytics: true
+        deviceId: device-123
+
+  - description: transports nothing without consent
+    actions:
+      - type: track
+        name: page_view
+        value:
+          url: https://example.com/home
+    expectedToBeTransported: false

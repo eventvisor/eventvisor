@@ -1,0 +1,23 @@
+# tests/attributes/<name>.spec.yml
+attribute: customerTier
+assertions:
+  - description: accepts a supported value
+    setAttribute: premium # the value to set (any JSON value)
+    expectedToBeValid: true
+    expectedToBeSet: true
+    expectedAttribute: premium # stored value AFTER transforms + defaults
+
+  - description: rejects an unsupported value
+    setAttribute: platinum
+    expectedToBeValid: false
+    expectedToBeSet: false
+    # expectedAttribute: null          # asserts nothing was stored
+
+  # object attributes: assert the full stored object incl. filled-in defaults
+  # - description: fills defaults
+  #   setAttribute: { id: "123", country: NL }
+  #   expectedToBeValid: true
+  #   expectedAttribute:
+  #     id: "123"
+  #     country: NL
+  #     isHuman: true                  # from `default: true` in the schema

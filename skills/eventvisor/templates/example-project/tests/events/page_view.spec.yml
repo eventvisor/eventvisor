@@ -1,0 +1,38 @@
+event: page_view
+assertions:
+  - description: valid and routed when consent is granted
+    withAttributes:
+      consentAnalytics: true
+    track:
+      url: https://example.com/home
+      title: Home
+    expectedToBeValid: true
+    expectedEvent:
+      url: https://example.com/home
+      title: Home
+    expectedDestinations: [browserConsole]
+
+  - description: valid but not routed without consent
+    withAttributes:
+      consentAnalytics: false
+    track:
+      url: https://example.com/home
+    expectedToBeValid: true
+    expectedDestinations: []
+
+  - description: rejects a payload without url
+    track:
+      title: Home
+    expectedToBeValid: false
+    expectedDestinations: []
+
+  - description: tracks for ${{ country }}
+    matrix:
+      country: [NL, DE]
+    withAttributes:
+      consentAnalytics: true
+      country: ${{ country }}
+    track:
+      url: https://example.com/pricing
+    expectedToBeValid: true
+    expectedDestinations: [browserConsole]

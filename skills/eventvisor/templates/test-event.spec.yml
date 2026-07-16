@@ -1,0 +1,42 @@
+# tests/events/<key>.spec.yml
+event: order_completed
+assertions:
+  - description: validates, transforms, and routes the happy path
+    withAttributes: # pre-set attributes
+      userId: user-123
+      consentAnalytics: true
+    # withLookups:                       # simulate module lookups
+    #   localstorage.sessionSeen: true
+    track: # the payload to track
+      orderId: order-123
+      total: 129.95
+      itemCount: 3
+    expectedToBeValid: true
+    expectedEvent: # the TRANSFORMED payload
+      orderId: order-123
+      total: 129.95
+      itemCount: 3
+    expectedDestinations: [browserAnalytics]
+    # expectedDestinationsByTag:         # group assertion by destination tag
+    #   web: [browserAnalytics]
+
+  - description: rejects an invalid payload
+    track:
+      total: 5
+    expectedToBeValid: false
+    expectedDestinations: []
+
+  # matrix expansion — Cartesian product, ${{ key }} substitutes anywhere
+  - description: tracks ${{ productId }} in ${{ country }}
+    matrix:
+      productId: [sku-1, sku-2]
+      country: [NL, DE]
+    withAttributes:
+      userId: user-123
+      consentAnalytics: true
+      country: ${{ country }}
+    track:
+      orderId: ${{ productId }}
+      total: 10
+      itemCount: 1
+    expectedToBeValid: true

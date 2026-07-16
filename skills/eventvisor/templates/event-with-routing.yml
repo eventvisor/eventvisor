@@ -1,0 +1,34 @@
+# events/<key>.yml — per-destination routing overrides
+description: Order completed, routed differently per destination
+tags: [web, backend]
+
+type: object
+properties:
+  orderId:
+    schema: identifier # reusable Schema reference (schemas/identifier.yml)
+  total:
+    type: number
+    minimum: 0
+  itemCount:
+    type: integer
+    minimum: 1
+required: [orderId, total, itemCount]
+
+requiredAttributes: [userId]
+
+destinations:
+  # never send this event there (default for unlisted destinations is true)
+  browserConsole: false
+
+  # extra gates for this event -> this destination only
+  warehouse:
+    conditions:
+      - attribute: consentAnalytics
+        operator: equals
+        value: true
+    sample:
+      by: attributes.userId
+      percentage: 25
+    transforms:
+      - type: remove
+        target: internalNotes
