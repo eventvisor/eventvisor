@@ -12,8 +12,11 @@ import type {
 import { SCHEMA_VERSION } from "../config/projectConfig";
 import type { Dependencies } from "../dependencies";
 import type { Plugin } from "../cli";
-import { assertProjectSetJsonSelection, getProjectSetExecutions } from "../sets";
+import { assertProjectSetJsonSelection, getProjectSetExecutions, printSetHeader } from "../sets";
 import { generateHashForDatafile } from "./hashes";
+import { CLI_COLOR_CYAN, CLI_FORMAT_BOLD, CLI_FORMAT_GREEN, colorize } from "../tester/cliFormat";
+import * as path from "path";
+import { loadSchemas, resolveEntitySchema } from "../schemas";
 
 export interface BuildCLIOptions {
   tag?: string;
@@ -118,6 +121,13 @@ function collectReferences(value: unknown, references: Record<string, Set<string
         }
       });
     }
+
+    // These fields contain user data or JSON Schema declarations. Keys such as
+    // `attribute`, `effect`, and `source` inside them are literals, not runtime
+    // references.
+    if (["value", "default", "examples", "const", "enum", "properties", "state"].includes(key)) {
+      continue;
+    }
     collectReferences(child, references);
   }
 }
@@ -196,6 +206,7 @@ export async function buildDatafile(
     throw new Error(`Unknown target "${options.target}".`);
   }
   const entities = await readEntities(deps);
+  const schemas = await loadSchemas(datasource);
   const target = options.target ? await datasource.readTarget(options.target) : undefined;
 
   const selectedKeys: Record<keyof Entities, Set<string>> = {
@@ -311,7 +322,12 @@ export async function buildDatafile(
   };
   for (const type of Object.keys(entities) as (keyof Entities)[]) {
     selectedKeys[type].forEach((key) => {
-      const entity = stripMetadata(entities[type][key]);
+      const authoredEntity = entities[type][key];
+      const resolvedEntity =
+        type === "attributes" || type === "events"
+          ? resolveEntitySchema(authoredEntity, schemas)
+          : authoredEntity;
+      const entity = stripMetadata(resolvedEntity);
       (datafile[type] as Record<string, unknown>)[key] =
         (target?.stringify ?? deps.projectConfig.stringify) ? stringifyConditions(entity) : entity;
     });
@@ -341,7 +357,9 @@ async function buildExecution(deps: Dependencies, options: BuildCLIOptions) {
     return;
   }
 
-  console.log("\nCurrent revision:", currentRevision);
+  console.log("");
+  console.log(CLI_FORMAT_BOLD, "Building Eventvisor datafiles");
+  console.log(`  Current revision: ${currentRevision}`);
   const selectedTargets = Array.isArray(options.target)
     ? options.target
     : options.target
@@ -351,7 +369,8 @@ async function buildExecution(deps: Dependencies, options: BuildCLIOptions) {
   for (const tag of tags) {
     const datafile = await buildDatafile(deps, { tag, revision: nextRevision });
     if (options.revisionFromHash) datafile.revision = generateHashForDatafile(datafile);
-    console.log(`\n  => Tag: ${tag}`);
+    console.log("");
+    console.log(`  ${colorize("Tag", CLI_COLOR_CYAN)}: ${tag}`);
     await datasource.writeDatafile(datafile, {
       tag,
       datafilesDir: options.datafilesDir,
@@ -373,7 +392,8 @@ async function buildExecution(deps: Dependencies, options: BuildCLIOptions) {
     if (options.revisionFromHash || definition.revisionFromHash) {
       datafile.revision = generateHashForDatafile(datafile);
     }
-    console.log(`\n  => Target: ${target}`);
+    console.log("");
+    console.log(`  ${colorize("Target", CLI_COLOR_CYAN)}: ${target}`);
     await datasource.writeDatafile(datafile, {
       target,
       datafilesDir: options.datafilesDir,
@@ -381,7 +401,9 @@ async function buildExecution(deps: Dependencies, options: BuildCLIOptions) {
     });
   }
   await datasource.writeRevision(nextRevision);
-  console.log("\nLatest revision:", nextRevision, "\n");
+  console.log("");
+  console.log(CLI_FORMAT_GREEN, "Datafiles built");
+  console.log(CLI_FORMAT_BOLD, `Latest revision: ${nextRevision}`);
 }
 
 export async function buildProject(deps: Dependencies, options: BuildCLIOptions = {}) {
@@ -391,11 +413,33 @@ export async function buildProject(deps: Dependencies, options: BuildCLIOptions 
     deps.datasource,
     options.set,
   );
+  const currentRevision = await deps.datasource.readRevision();
+  const nextRevision = options.revision?.toString() || getNextRevision(currentRevision);
+
+  if (deps.projectConfig.sets && !options.json) {
+    console.log("");
+    console.log(CLI_FORMAT_BOLD, "Building Eventvisor sets");
+    console.log(`  Sets: ${executions.map((execution) => execution.set).join(", ")}`);
+    console.log(`  Current project revision: ${currentRevision}`);
+  }
+
   for (const execution of executions) {
+    printSetHeader(deps.projectConfig, execution.set, options.json);
+    const executionOptions =
+      deps.projectConfig.sets && options.datafilesDir
+        ? { ...options, datafilesDir: path.join(options.datafilesDir, execution.set) }
+        : options;
     await buildExecution(
       { ...deps, projectConfig: execution.projectConfig, datasource: execution.datasource },
-      options,
+      { ...executionOptions, revision: deps.projectConfig.sets ? nextRevision : options.revision },
     );
+  }
+
+  if (deps.projectConfig.sets && !options.json && !options.revision) {
+    await deps.datasource.writeRevision(nextRevision);
+    console.log("");
+    console.log(CLI_FORMAT_GREEN, "Eventvisor sets built");
+    console.log(CLI_FORMAT_BOLD, `Latest project revision: ${nextRevision}`);
   }
 }
 

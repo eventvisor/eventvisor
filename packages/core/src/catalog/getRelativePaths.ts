@@ -13,11 +13,13 @@ export function getRelativePaths(rootDirectoryPath, projectConfig: ProjectConfig
     projectConfig.attributesDirectoryPath,
   );
   const relativeEffectsPath = path.relative(rootDirectoryPath, projectConfig.effectsDirectoryPath);
+  const relativeSchemasPath = path.relative(rootDirectoryPath, projectConfig.schemasDirectoryPath);
 
   return {
     relativeEventsPath,
     relativeDestinationsPath,
     relativeAttributesPath,
     relativeEffectsPath,
+    relativeSchemasPath,
   };
 }

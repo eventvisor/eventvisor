@@ -9,7 +9,7 @@ export function getSampleSchema(deps: Dependencies) {
   const sampleBySource = getSourceBaseSchema(deps).refine(...getSourceBaseRefine());
 
   const sampleBySingle = z.union([sampleByString, sampleBySource]);
-  const sampleByMultiple = z.array(sampleBySingle);
+  const sampleByMultiple = z.array(sampleBySingle).min(1);
   const sampleByOr = z.object({ or: sampleByMultiple });
 
   const sampleBy = z.union([sampleBySingle, sampleByMultiple, sampleByOr]);

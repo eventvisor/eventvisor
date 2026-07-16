@@ -1,12 +1,17 @@
-import chalk from "chalk";
-
 import { Dependencies } from "../dependencies";
 import { Plugin } from "../cli";
 import { buildDatafile } from "../builder";
 import { prettyDuration } from "../utils";
 import { printTestResult } from "./printTestResult";
 import { executeTest } from "./executeTest";
-import { getProjectSetExecutions } from "../sets";
+import { getProjectSetExecutions, printSetHeader } from "../sets";
+import {
+  CLI_COLOR_CYAN,
+  CLI_FORMAT_BOLD,
+  CLI_FORMAT_GREEN,
+  CLI_FORMAT_RED,
+  colorize,
+} from "./cliFormat";
 
 export interface TestProjectOptions {
   keyPattern?: string;
@@ -25,12 +30,14 @@ async function testSingleProject(
   options: TestProjectOptions,
 ): Promise<boolean> {
   const beforeDatafileBuild = new Date();
-  console.log("Building datafile...");
+  console.log("");
+  console.log(CLI_FORMAT_BOLD, "Testing Eventvisor project");
+  console.log(`  ${colorize("•", CLI_COLOR_CYAN)} Building test datafile`);
 
   const datafileContent = await buildDatafile(deps, { tag: options.tag, target: options.target });
   const afterDatafileBuild = new Date();
   console.log(
-    `Datafile built in ${afterDatafileBuild.getTime() - beforeDatafileBuild.getTime()}ms`,
+    `  ${colorize("✔", 32)} Datafile built in ${afterDatafileBuild.getTime() - beforeDatafileBuild.getTime()}ms`,
   );
 
   const tests = await deps.datasource.listTests();
@@ -86,28 +93,31 @@ async function testSingleProject(
     }
   }
 
-  console.log(`\n\n`);
+  console.log("");
 
   if (hasFailures) {
     console.log(
-      chalk.red(`Test specs: ${totals.specsPassed} passed, ${totals.specsFailed} failed`),
+      CLI_FORMAT_RED,
+      `Test specs: ${totals.specsPassed} passed, ${totals.specsFailed} failed`,
     );
     console.log(
-      chalk.red(`Assertions: ${totals.assertionsPassed} passed, ${totals.assertionsFailed} failed`),
+      CLI_FORMAT_RED,
+      `Assertions: ${totals.assertionsPassed} passed, ${totals.assertionsFailed} failed`,
     );
   } else {
     console.log(
-      chalk.green(`Test specs: ${totals.specsPassed} passed, ${totals.specsFailed} failed`),
+      CLI_FORMAT_GREEN,
+      `Test specs: ${totals.specsPassed} passed, ${totals.specsFailed} failed`,
     );
     console.log(
-      chalk.green(
-        `Assertions: ${totals.assertionsPassed} passed, ${totals.assertionsFailed} failed`,
-      ),
+      CLI_FORMAT_GREEN,
+      `Assertions: ${totals.assertionsPassed} passed, ${totals.assertionsFailed} failed`,
     );
   }
 
   const end = new Date();
-  console.log(`Time:       ${prettyDuration(end.getTime() - start.getTime())}`);
+  console.log(CLI_FORMAT_BOLD, `Time:       ${prettyDuration(end.getTime() - start.getTime())}`);
+  console.log("");
 
   if (hasFailures) {
     return false;
@@ -127,6 +137,7 @@ export async function testProject(
   );
   let passed = true;
   for (const execution of executions) {
+    printSetHeader(deps.projectConfig, execution.set);
     const result = await testSingleProject(
       { ...deps, projectConfig: execution.projectConfig, datasource: execution.datasource },
       options,

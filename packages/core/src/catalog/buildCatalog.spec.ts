@@ -16,10 +16,16 @@ describe("buildCatalog", () => {
     const root = fs.mkdtempSync(path.join(os.tmpdir(), "eventvisor-catalog-"));
     write(root, "eventvisor.config.js", 'module.exports = { tags: ["web", "internal"] };');
     write(root, "attributes/userId.yml", "description: User\ntags: [internal]\ntype: string\n");
+    write(root, "schemas/identifier.yml", "type: string\nminLength: 1\n");
+    write(
+      root,
+      "schemas/customer.yml",
+      "type: object\nproperties:\n  id:\n    schema: identifier\n",
+    );
     write(
       root,
       "events/checkout.yml",
-      "description: Checkout\ntags: [web]\ntype: object\nconditions:\n  attribute: userId\n  operator: exists\n",
+      "description: Checkout\ntags: [web]\ntype: object\nproperties:\n  customer:\n    schema: customer\nconditions:\n  attribute: userId\n  operator: exists\n",
     );
     write(root, "targets/web.yml", "description: Web\ntag: web\nincludeAttributes: none\n");
     write(root, "tests/events/checkout.spec.yml", "event: checkout\nassertions:\n  - track: {}\n");
@@ -35,6 +41,13 @@ describe("buildCatalog", () => {
     expect(catalog.entities.tests["events/checkout.spec"].key).toBe("events/checkout.spec");
     expect(catalog.entities.events.checkout.targets).toEqual(["web"]);
     expect(catalog.entities.attributes.userId.targets).toEqual(["web"]);
+    expect(catalog.entities.schemas.customer.targets).toEqual(["web"]);
+    expect(catalog.entities.schemas.identifier.targets).toEqual(["web"]);
     expect(catalog.usages["attributes:userId"]).toContainEqual({ type: "event", key: "checkout" });
+    expect(catalog.usages["schemas:customer"]).toContainEqual({ type: "event", key: "checkout" });
+    expect(catalog.usages["schemas:identifier"]).toContainEqual({
+      type: "schema",
+      key: "customer",
+    });
   });
 });

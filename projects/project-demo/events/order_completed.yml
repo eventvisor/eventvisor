@@ -3,10 +3,9 @@ tags: [all, checkout, backend]
 type: object
 properties:
   orderId:
-    type: string
+    schema: identifier
   total:
-    type: number
-    minimum: 0
+    schema: money
   orderTotal:
     type: number
   itemCount:

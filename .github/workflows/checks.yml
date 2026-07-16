@@ -13,7 +13,7 @@ jobs:
   ci:
     name: Checks
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
 
@@ -43,3 +43,12 @@ jobs:
 
       - name: Test
         run: make test
+
+      - name: Install browser
+        run: npx playwright install --with-deps chromium
+
+      - name: Test Catalog in browser
+        run: npm run test:browser
+
+      - name: Verify packages
+        run: npm run release-check

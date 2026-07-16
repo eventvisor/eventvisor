@@ -1,0 +1,6 @@
+description: Browser screen dimensions
+type: object
+properties:
+  width:
+    type: number
+    description: The width of the screen

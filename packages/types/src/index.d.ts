@@ -6,6 +6,9 @@ export type ObjectValue = { [key: string]: Value };
 export type Value = PrimitiveValue | ObjectValue | Value[];
 
 export interface JSONSchema {
+  // Reference a reusable project Schema by key.
+  schema?: SchemaKey;
+
   // Basic metadata
   description?: string;
 
@@ -37,6 +40,9 @@ export interface JSONSchema {
   default?: Value;
   examples?: Value[];
 }
+
+export type SchemaKey = string;
+export type Schema = JSONSchema;
 
 /**
  * Common aliases
@@ -94,14 +100,14 @@ export type Source = string;
 
 export type SourceBase =
   // longer dotted path
-  | { source: Source | Source[] }
+  | { source: Source | NonEmptyArray<Source> }
 
   // more specific sources
-  | { attribute: Source | Source[] } // can be dot-separated path
-  | { state: Source | Source[] } // internally in Effect's own transforms
-  | { effect: Source | Source[] }
-  | { payload: Source | Source[] } // @TODO: or more specific eventValue and attributeValue?
-  | { lookup: Source | Source[] };
+  | { attribute: Source | NonEmptyArray<Source> } // can be dot-separated path
+  | { state: Source | NonEmptyArray<Source> } // internally in Effect's own transforms
+  | { effect: Source | NonEmptyArray<Source> }
+  | { payload: Source | NonEmptyArray<Source> } // @TODO: or more specific eventValue and attributeValue?
+  | { lookup: Source | NonEmptyArray<Source> };
 
 /**
  * Conditions
@@ -173,7 +179,7 @@ export type Conditions = Condition | NonEmptyArray<Condition>;
  * Sample
  */
 export type SampleBySingle = Source | SourceBase;
-export type SampleByMultiple = SampleBySingle[];
+export type SampleByMultiple = NonEmptyArray<SampleBySingle>;
 export interface SampleByOr {
   or: SampleByMultiple;
 }
@@ -220,12 +226,12 @@ export type TransformType =
   | "append";
 
 export interface TransformBase {
-  source?: Source | Source[];
-  attribute?: Source | Source[];
-  state?: Source | Source[];
-  effect?: Source | Source[];
-  payload?: Source | Source[];
-  lookup?: Source | Source[];
+  source?: Source | NonEmptyArray<Source>;
+  attribute?: Source | NonEmptyArray<Source>;
+  state?: Source | NonEmptyArray<Source>;
+  effect?: Source | NonEmptyArray<Source>;
+  payload?: Source | NonEmptyArray<Source>;
+  lookup?: Source | NonEmptyArray<Source>;
   conditions?: Conditions;
 }
 
@@ -368,6 +374,7 @@ export type EntityType =
   | "destination"
   | "state"
   | "effect"
+  | "schema"
   | "target"
   | "test";
 
@@ -503,12 +510,14 @@ export interface Catalog {
     event: string;
     destination: string;
     effect: string;
+    schema: string;
     target: string;
     test: string;
     commit: string;
   };
 
   entities: {
+    schemas: Record<SchemaKey, Schema & { lastModified?: LastModified; targets?: TargetKey[] }>;
     attributes: {
       [key: AttributeName]: Attribute & {
         lastModified?: LastModified;

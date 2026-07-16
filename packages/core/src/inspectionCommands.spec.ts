@@ -49,6 +49,7 @@ describe("inspection command output", () => {
       listAttributes: async () => ["userId"],
       listDestinations: empty,
       listEffects: empty,
+      listSchemas: empty,
       listTargets: empty,
       listTests: empty,
       readAttribute: async () => ({ event: "page" }),
@@ -69,5 +70,37 @@ describe("inspection command output", () => {
     expect(log).toHaveBeenCalledWith(
       '[\n  {\n    "entityType": "attribute",\n    "key": "userId"\n  }\n]',
     );
+  });
+
+  it("does not report partial string matches as usages", async () => {
+    const empty = async () => [];
+    const datasource = {
+      listEvents: empty,
+      listAttributes: async () => ["userIdLong"],
+      listDestinations: empty,
+      listEffects: empty,
+      listSchemas: empty,
+      listTargets: empty,
+      listTests: empty,
+      readAttribute: async () => ({ source: "userIdLong" }),
+    };
+
+    await findUsagePlugin.handler({
+      projectConfig,
+      datasource,
+      parsed: { _: ["find-usage"], entityType: "attribute", key: "userId", json: true },
+    } as any);
+
+    expect(log).toHaveBeenLastCalledWith("[]");
+  });
+
+  it("reports invalid list key patterns clearly", async () => {
+    await expect(
+      listPlugin.handler({
+        projectConfig,
+        datasource: { listEvents: async () => ["page"] },
+        parsed: { _: ["list"], entityType: "event", keyPattern: "[" },
+      } as any),
+    ).rejects.toThrow('Invalid key pattern "[".');
   });
 });

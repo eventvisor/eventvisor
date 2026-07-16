@@ -15,6 +15,7 @@ export function getEntityFromFilePath(
     ["event", projectConfig.eventsDirectoryPath],
     ["destination", projectConfig.destinationsDirectoryPath],
     ["effect", projectConfig.effectsDirectoryPath],
+    ["schema", projectConfig.schemasDirectoryPath],
     ["test", projectConfig.testsDirectoryPath],
     ["target", projectConfig.targetsDirectoryPath],
   ];

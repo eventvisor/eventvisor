@@ -23,13 +23,21 @@ export const catalogPlugin: Plugin = {
 
     // serve
     if (subcommand === "serve") {
-      return await serveCatalog(deps);
+      await serveCatalog(deps);
+      return true;
     }
 
     await exportCatalog(deps);
-    return await serveCatalog(deps);
+    await serveCatalog(deps);
+    return true;
   },
-  options: { port: { type: "number", alias: "p", description: "catalog server port" } },
+  options: {
+    port: { type: "number", alias: "p", description: "catalog server port" },
+    "out-dir": { type: "string", description: "catalog output directory" },
+    assets: { type: "boolean", description: "copy the Catalog UI assets" },
+    "hash-router": { type: "boolean", description: "use hash-based Catalog URLs" },
+    "base-path": { type: "string", description: "URL path where the Catalog is hosted" },
+  },
   examples: [
     {
       command: "catalog",

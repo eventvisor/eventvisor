@@ -29,22 +29,22 @@
     "Segoe UI",
     sans-serif;
   color-scheme: light;
-  --catalog-background: #e4e4e7;
+  --catalog-background: #e5e7eb;
   --catalog-surface: #ffffff;
-  --catalog-elevated: #f4f4f5;
-  --catalog-border: #e4e4e7;
-  --catalog-text: #18181b;
-  --catalog-muted: #52525b;
-  --catalog-faint: #a1a1aa;
-  --catalog-primary: #334155;
-  --catalog-header: #18181b;
-  --catalog-header-active: #3f3f46;
-  --catalog-header-text: #ffffff;
-  --catalog-pill: #e4e4e7;
-  --catalog-danger: #b91c1c;
-  --catalog-danger-surface: #fef2f2;
-  --catalog-warning-surface: #fff7ed;
-  --catalog-success-surface: #f0fdf4;
+  --catalog-elevated: #f8fafc;
+  --catalog-border: #e5e7eb;
+  --catalog-text: #374151;
+  --catalog-muted: #6b7280;
+  --catalog-faint: #9ca3af;
+  --catalog-primary: #475569;
+  --catalog-header: #1f2937;
+  --catalog-header-active: #374151;
+  --catalog-header-text: #f9fafb;
+  --catalog-pill: #cbd5e1;
+  --catalog-danger: #dc2626;
+  --catalog-danger-surface: #fee2e2;
+  --catalog-warning-surface: #fed7aa;
+  --catalog-success-surface: #bbf7d0;
 }
 * {
   box-sizing: border-box;

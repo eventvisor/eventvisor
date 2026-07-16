@@ -1,6 +1,12 @@
 name: Checks (Windows)
 
 on:
+  pull_request:
+    types:
+      - opened
+      - synchronize
+      - reopened
+      - ready_for_review
   workflow_dispatch:
 
 jobs:
@@ -32,8 +38,11 @@ jobs:
       - name: Typecheck
         run: npm run typecheck
 
-      - name: Test project fixture
-        working-directory: projects/project-1
-        run: |
-          npx eventvisor lint
-          npx eventvisor test --onlyFailures
+      - name: Lint
+        run: npm run lint
+
+      - name: Test
+        run: npm test
+
+      - name: Verify packages
+        run: npm run release-check

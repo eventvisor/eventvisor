@@ -5,6 +5,7 @@ export const entityPaths: EntityPath[] = [
   "attributes",
   "destinations",
   "effects",
+  "schemas",
   "targets",
 ];
 export const entityPathToType: Record<EntityPath, CatalogEntityType> = {
@@ -12,6 +13,7 @@ export const entityPathToType: Record<EntityPath, CatalogEntityType> = {
   attributes: "attribute",
   destinations: "destination",
   effects: "effect",
+  schemas: "schema",
   targets: "target",
 };
 export const entityTypeToPath: Record<CatalogEntityType, EntityPath> = {
@@ -19,6 +21,7 @@ export const entityTypeToPath: Record<CatalogEntityType, EntityPath> = {
   attribute: "attributes",
   destination: "destinations",
   effect: "effects",
+  schema: "schemas",
   target: "targets",
 };
 export const entityLabels: Record<CatalogEntityType, { singular: string; plural: string }> = {
@@ -26,6 +29,7 @@ export const entityLabels: Record<CatalogEntityType, { singular: string; plural:
   attribute: { singular: "Attribute", plural: "Attributes" },
   destination: { singular: "Destination", plural: "Destinations" },
   effect: { singular: "Effect", plural: "Effects" },
+  schema: { singular: "Schema", plural: "Schemas" },
   target: { singular: "Target", plural: "Targets" },
 };
 export function encodeRouteSegment(value: string) {
@@ -48,7 +52,7 @@ export function getEntityRoute(type: CatalogEntityType, key: string, set?: strin
   return `${getBasePath(set)}/${entityTypeToPath[type]}/${encodeRouteSegment(key)}`;
 }
 export function getDataBasePath(set?: string) {
-  return set ? `/data/sets/${encodeURIComponent(set)}` : "/data/root";
+  return set ? `data/sets/${encodeURIComponent(set)}` : "data/root";
 }
 export function sortSetKeys(keys: string[]) {
   const rank = (key: string) =>

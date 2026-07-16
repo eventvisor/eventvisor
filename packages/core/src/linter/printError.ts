@@ -26,8 +26,12 @@ function getFilePath(options: PrintErrorOptions) {
     directoryPath = projectConfig.destinationsDirectoryPath;
   } else if (entityType === "effect") {
     directoryPath = projectConfig.effectsDirectoryPath;
+  } else if (entityType === "schema") {
+    directoryPath = projectConfig.schemasDirectoryPath;
   } else if (entityType === "test") {
     directoryPath = projectConfig.testsDirectoryPath;
+  } else if (entityType === "target") {
+    directoryPath = projectConfig.targetsDirectoryPath;
   } else {
     throw new Error(`Unknown entity type: ${entityType}`);
   }

@@ -13,6 +13,7 @@ import type {
 import { Adapter, DatafileOptions } from "./adapter";
 import { ProjectConfig, CustomParser } from "../config";
 import { getCommit, getEntityFromFilePath } from "../utils/git";
+import { CLI_COLOR_CYAN, CLI_COLOR_GREEN, colorize } from "../tester/cliFormat";
 
 export function getRevisionFilePath(projectConfig: ProjectConfig): string {
   return path.join(projectConfig.systemDirectoryPath, `REVISION`);
@@ -64,6 +65,8 @@ export class FilesystemAdapter extends Adapter {
       return this.config.statesDirectoryPath;
     } else if (entityType === "effect") {
       return this.config.effectsDirectoryPath;
+    } else if (entityType === "schema") {
+      return this.config.schemasDirectoryPath;
     } else if (entityType === "test") {
       return this.config.testsDirectoryPath;
     } else if (entityType === "target") {
@@ -229,7 +232,7 @@ export class FilesystemAdapter extends Adapter {
     const root = path.resolve(dir, "..");
 
     const shortPath = outputFilePath.replace(root + path.sep, "");
-    console.log(`     Datafile generated: ${shortPath}`);
+    console.log(`    ${colorize("✔", CLI_COLOR_GREEN)} ${colorize(shortPath, CLI_COLOR_CYAN)}`);
   }
 
   /**
@@ -275,6 +278,8 @@ export class FilesystemAdapter extends Adapter {
         pathPatterns = [this.config.destinationsDirectoryPath];
       } else if (entityType === "effect") {
         pathPatterns = [this.config.effectsDirectoryPath];
+      } else if (entityType === "schema") {
+        pathPatterns = [this.config.schemasDirectoryPath];
       } else if (entityType === "test") {
         pathPatterns = [this.config.testsDirectoryPath];
       } else if (entityType === "target") {
@@ -286,6 +291,7 @@ export class FilesystemAdapter extends Adapter {
         this.config.attributesDirectoryPath,
         this.config.destinationsDirectoryPath,
         this.config.effectsDirectoryPath,
+        this.config.schemasDirectoryPath,
         this.config.testsDirectoryPath,
         this.config.targetsDirectoryPath,
       ];

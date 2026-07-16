@@ -13,6 +13,8 @@ import type {
   EntityType,
   Target,
   TargetKey,
+  Schema,
+  SchemaKey,
 } from "@eventvisor/types";
 
 import { ProjectConfig, CustomParser, getProjectConfigForSet } from "../config";
@@ -154,6 +156,27 @@ export class Datasource {
 
   deleteEffect(effectName: EffectName) {
     return this.adapter.deleteEntity("effect", effectName);
+  }
+
+  // reusable schemas
+  listSchemas() {
+    return this.adapter.listEntities("schema");
+  }
+
+  schemaExists(schemaKey: SchemaKey) {
+    return this.adapter.entityExists("schema", schemaKey);
+  }
+
+  readSchema(schemaKey: SchemaKey) {
+    return this.adapter.readEntity<Schema>("schema", schemaKey);
+  }
+
+  writeSchema(schemaKey: SchemaKey, schema: Schema) {
+    return this.adapter.writeEntity<Schema>("schema", schemaKey, schema);
+  }
+
+  deleteSchema(schemaKey: SchemaKey) {
+    return this.adapter.deleteEntity("schema", schemaKey);
   }
 
   // tests

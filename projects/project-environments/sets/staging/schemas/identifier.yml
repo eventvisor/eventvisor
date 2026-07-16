@@ -1,0 +1,3 @@
+description: Staging identifier
+type: string
+minLength: 1

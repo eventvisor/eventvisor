@@ -135,6 +135,14 @@ describe("Transformer types", () => {
         ),
       ).toEqual(6);
     });
+
+    it("increments the current target by the configured value", async () => {
+      expect(
+        await transformer.applyAll({ count: 10 }, [
+          { type: "increment", target: "count", value: 5 },
+        ]),
+      ).toEqual({ count: 15 });
+    });
   });
 
   /**
@@ -193,6 +201,14 @@ describe("Transformer types", () => {
           ],
         ),
       ).toEqual(-4);
+    });
+
+    it("decrements the current target by the configured value", async () => {
+      expect(
+        await transformer.applyAll({ count: 10 }, [
+          { type: "decrement", target: "count", value: 5 },
+        ]),
+      ).toEqual({ count: 5 });
     });
   });
 

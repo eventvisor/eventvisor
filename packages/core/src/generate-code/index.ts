@@ -7,6 +7,8 @@ import { Dependencies } from "../dependencies";
 import { Plugin } from "../cli";
 import { buildDatafile } from "../builder";
 import { getProjectSetExecutions } from "../sets";
+import { printSetHeader } from "../sets";
+import { CLI_COLOR_CYAN, CLI_FORMAT_BOLD, colorize } from "../tester/cliFormat";
 
 export const ALLOWED_LANGUAGES_FOR_CODE_GENERATION = ["typescript"];
 
@@ -36,7 +38,7 @@ export async function generateCodeForProject(
   const absolutePath = path.resolve(rootDirectoryPath, cliOptions.outDir);
 
   if (!fs.existsSync(absolutePath)) {
-    console.log(`Creating output directory: ${absolutePath}`);
+    console.log(`Creating output directory: ${colorize(absolutePath, CLI_COLOR_CYAN)}`);
     fs.mkdirSync(absolutePath, { recursive: true });
   }
 
@@ -95,6 +97,8 @@ export const generateCodePlugin: Plugin = {
     try {
       const executions = await getProjectSetExecutions(projectConfig, datasource, parsed.set);
       for (const execution of executions) {
+        printSetHeader(projectConfig, execution.set);
+        console.log(CLI_FORMAT_BOLD, "Generating Eventvisor code");
         await generateCodeForProject(
           {
             rootDirectoryPath,

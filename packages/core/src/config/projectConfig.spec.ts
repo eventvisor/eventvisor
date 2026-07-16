@@ -22,6 +22,7 @@ describe("project configuration", () => {
     const { root, read } = config('{ sets: true, tags: ["all"] }');
     const set = getProjectConfigForSet(read(), "admin");
     expect(set.eventsDirectoryPath).toBe(path.join(root, "sets/admin/events"));
+    expect(set.schemasDirectoryPath).toBe(path.join(root, "sets/admin/schemas"));
     expect(set.systemDirectoryPath).toBe(path.join(root, ".eventvisor/sets/admin"));
     expect(set.datafilesDirectoryPath).toBe(path.join(root, "datafiles/sets/admin"));
     expect(set.catalogExportDirectoryPath).toBe(path.join(root, "out/sets/admin"));

@@ -1,0 +1,3 @@
+description: Development identifier
+type: string
+minLength: 1

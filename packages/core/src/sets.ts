@@ -1,5 +1,6 @@
 import type { ProjectConfig } from "./config";
 import type { Datasource } from "./datasource";
+import { CLI_FORMAT_BOLD } from "./tester/cliFormat";
 
 export interface ProjectSetExecution {
   set: string;
@@ -55,4 +56,10 @@ export function assertProjectSetJsonSelection(
   if (projectConfig.sets && json && !selectedSet) {
     throw new Error("Pass --set=<set> when using --json in a project with sets enabled.");
   }
+}
+
+export function printSetHeader(projectConfig: ProjectConfig, set: string, json = false) {
+  if (!projectConfig.sets || json) return;
+  console.log("");
+  console.log(CLI_FORMAT_BOLD, `Set "${set}"`);
 }

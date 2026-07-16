@@ -1,0 +1,139 @@
+description: A deliberately rich transformation pipeline for exploring transforms in the Catalog
+tags:
+  - web
+
+type: object
+
+properties:
+  channel:
+    type: string
+
+  customer:
+    type: object
+    properties:
+      id:
+        type: string
+      externalId:
+        type: string
+      firstName:
+        type: string
+      lastName:
+        type: string
+      fullName:
+        type: string
+
+  metrics:
+    type: object
+    properties:
+      itemCount:
+        type: integer
+      stockRemaining:
+        type: integer
+      total:
+        type: number
+
+  marketingConsent:
+    type: boolean
+
+  labels:
+    type: array
+    items:
+      type: string
+
+  metadata:
+    type: object
+    properties:
+      event:
+        type: string
+      country:
+        type: string
+      campaign:
+        type: string
+      priority:
+        type: string
+      processedBy:
+        type: string
+      pipelineVersion:
+        type: integer
+
+  legacy:
+    type: object
+    properties:
+      campaign:
+        type: string
+
+transforms:
+  # Clean values already present in the event payload.
+  - type: trim
+    target: customer.firstName
+
+  - type: trim
+    target: customer.lastName
+
+  - payload:
+      - customer.firstName
+      - customer.lastName
+    type: concat
+    separator: " "
+    target: customer.fullName
+
+  # Normalize primitive types before applying numeric operations.
+  - type: toInteger
+    target: metrics.itemCount
+
+  - type: toDouble
+    target: metrics.total
+
+  - type: toBoolean
+    target: marketingConsent
+
+  - type: increment
+    target: metrics.itemCount
+    value: 2
+
+  - type: decrement
+    target: metrics.stockRemaining
+
+  # Enrich the evolving value from literals and other Eventvisor sources.
+  - type: append
+    target: labels
+    value: catalog-showcase
+
+  - type: spread
+    target: metadata
+    value:
+      processedBy: eventvisor
+      pipelineVersion: 1
+
+  - source: eventName
+    type: set
+    target: metadata.event
+
+  - attribute: country
+    type: set
+    target: metadata.country
+
+  # This step only runs for valuable checkout activity.
+  - type: set
+    target: metadata.priority
+    value: high
+    conditions:
+      and:
+        - payload: channel
+          operator: equals
+          value: checkout
+        - payload: metrics.total
+          operator: greaterThan
+          value: 100
+
+  # Ordered mappings make the sequence explicit when paths depend on earlier renames.
+  - type: rename
+    targetMap:
+      - customer.id: customer.externalId
+      - legacy.campaign: metadata.campaign
+
+  - type: remove
+    target: customer.lastName
+
+  - type: remove
+    target: legacy

@@ -6,18 +6,26 @@ import { HomePage } from "./pages/HomePage";
 import { ListPage } from "./pages/ListPage";
 import { HistoryPage } from "./pages/HistoryPage";
 import {
-  DefinitionTab,
+  BehaviorTab,
+  DestinationsTab,
   EntityDetailPage,
   HistoryTab,
   OverviewTab,
+  SelectionTab,
+  StepsTab,
   TestsTab,
+  TransformsTab,
   UsageTab,
 } from "./pages/EntityDetailPage";
 function EntityRoutes({ prefix = "" }: { prefix?: string } = {}) {
   return (
     <Route path={`${prefix}:entityPath/:entityKey`} element={<EntityDetailPage />}>
       <Route index element={<OverviewTab />} />
-      <Route path="definition" element={<DefinitionTab />} />
+      <Route path="behavior" element={<BehaviorTab />} />
+      <Route path="transforms" element={<TransformsTab />} />
+      <Route path="destinations" element={<DestinationsTab />} />
+      <Route path="steps" element={<StepsTab />} />
+      <Route path="selection" element={<SelectionTab />} />
       <Route path="tests" element={<TestsTab />} />
       <Route path="usage" element={<UsageTab />} />
       <Route path="history" element={<HistoryTab />} />

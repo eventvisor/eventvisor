@@ -3,4 +3,4 @@ tags:
   - all
   - web
 
-type: string
+schema: identifier

@@ -219,6 +219,40 @@ describe("buildProject targets and sets", () => {
     expect(Object.keys(datafile.effects).sort()).toEqual(["audit", "session"]);
   });
 
+  it("does not treat keys inside literal values or schemas as dependencies", async () => {
+    const root = project();
+    write(root, "attributes/real.yml", "description: Real\ntype: string\n");
+    write(root, "attributes/literal.yml", "description: Literal\ntype: string\n");
+    write(
+      root,
+      "events/page.yml",
+      [
+        "description: Page",
+        "type: object",
+        "properties:",
+        "  attribute:",
+        "    type: string",
+        "transforms:",
+        "  - type: set",
+        "    target: metadata",
+        "    value:",
+        "      attribute: literal",
+        "  - type: set",
+        "    attribute: real",
+        "    target: user",
+        "",
+      ].join("\n"),
+    );
+    write(
+      root,
+      "targets/web.yml",
+      "description: Web\nincludeEvents: page\nincludeAttributes: none\n",
+    );
+
+    const datafile = await buildDatafile(deps(root), { target: "web" });
+    expect(Object.keys(datafile.attributes)).toEqual(["real"]);
+  });
+
   it("combines CLI tag and target selections using AND semantics", async () => {
     const root = project();
     write(root, "events/web.yml", "description: Web\ntags: [web]\ntype: object\n");
@@ -254,6 +288,87 @@ describe("buildProject targets and sets", () => {
       operator: "equals",
       value: "NL",
     });
+  });
+
+  it("inlines reusable schemas in attributes and events", async () => {
+    const root = project();
+    write(root, "schemas/identifier.yml", "type: string\nminLength: 1\n");
+    write(
+      root,
+      "schemas/customer.yml",
+      ["type: object", "required: [id]", "properties:", "  id:", "    schema: identifier", ""].join(
+        "\n",
+      ),
+    );
+    write(
+      root,
+      "attributes/customer.yml",
+      "description: Customer\nschema: customer\npersist: session\n",
+    );
+    write(
+      root,
+      "events/customer.updated.yml",
+      [
+        "description: Customer updated",
+        "type: object",
+        "properties:",
+        "  customer:",
+        "    schema: customer",
+        "",
+      ].join("\n"),
+    );
+
+    const datafile = await buildDatafile(deps(root));
+    expect(datafile.attributes.customer).toEqual({
+      type: "object",
+      required: ["id"],
+      properties: { id: { type: "string", minLength: 1 } },
+      persist: "session",
+    });
+    expect(datafile.events["customer.updated"]).toEqual({
+      type: "object",
+      properties: {
+        customer: {
+          type: "object",
+          required: ["id"],
+          properties: { id: { type: "string", minLength: 1 } },
+        },
+      },
+    });
+    expect(JSON.stringify(datafile)).not.toContain('"schema"');
+    expect((datafile as any).schemas).toBeUndefined();
+  });
+
+  it("inlines schemas for entities selected through a target", async () => {
+    const root = project();
+    write(root, "schemas/path.yml", "type: string\npattern: '^/'\n");
+    write(
+      root,
+      "events/page.yml",
+      "description: Page\ntags: [web]\ntype: object\nproperties:\n  path:\n    schema: path\n",
+    );
+    write(root, "events/internal.yml", "description: Internal\ntype: object\n");
+    write(root, "targets/web.yml", "description: Web\nincludeEvents: page\n");
+
+    const datafile = await buildDatafile(deps(root), { target: "web" });
+    expect(Object.keys(datafile.events)).toEqual(["page"]);
+    expect(datafile.events.page.properties?.path).toEqual({ type: "string", pattern: "^/" });
+  });
+
+  it("rejects missing and circular reusable schemas during build", async () => {
+    const missingRoot = project();
+    write(missingRoot, "events/page.yml", "description: Page\nschema: missing\n");
+    await expect(buildDatafile(deps(missingRoot))).rejects.toThrow(
+      'Reusable schema "missing" does not exist.',
+    );
+
+    const circularRoot = project();
+    write(circularRoot, "schemas/a.yml", "schema: b\n");
+    write(circularRoot, "schemas/b.yml", "schema: a\n");
+    write(circularRoot, "events/page.yml", "description: Page\nschema: a\n");
+    await expect(buildDatafile(deps(circularRoot))).rejects.toThrow(
+      "Circular reusable schema reference: a -> b -> a.",
+    );
   });
 
   it("builds every enabled set in isolated output directories", async () => {

@@ -4,6 +4,7 @@ A practical Eventvisor project for an e-commerce application. It demonstrates:
 
 - shared customer and session attributes;
 - storefront and checkout event schemas;
+- reusable Schemas shared by attributes and events;
 - destination conditions and payload transforms;
 - an effect with state;
 - dependency-aware Targets;

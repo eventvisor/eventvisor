@@ -10,6 +10,7 @@ describe("Git entity path mapping", () => {
     eventsDirectoryPath: path.join(root, "events"),
     destinationsDirectoryPath: path.join(root, "destinations"),
     effectsDirectoryPath: path.join(root, "effects"),
+    schemasDirectoryPath: path.join(root, "schemas"),
     testsDirectoryPath: path.join(root, "tests"),
     targetsDirectoryPath: path.join(root, "targets"),
   } as ProjectConfig;
@@ -22,6 +23,10 @@ describe("Git entity path mapping", () => {
     expect(getEntityFromFilePath(path.join(root, "targets/apps/web.yml"), config)).toEqual({
       type: "target",
       key: "apps/web",
+    });
+    expect(getEntityFromFilePath(path.join(root, "schemas/customer/address.yml"), config)).toEqual({
+      type: "schema",
+      key: "customer/address",
     });
   });
 

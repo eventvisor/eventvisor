@@ -2,16 +2,16 @@ import type { Value } from "@eventvisor/types";
 import { buildDatafile } from "../builder";
 import type { BuildDatafileOptions } from "../builder";
 import type { Plugin } from "../cli";
-import { createCliInstance } from "../utils";
+import { createCliInstance, parseJsonOption } from "../utils";
 import { getSelectedProjectExecution } from "../sets";
+import { CLI_COLOR_CYAN, CLI_FORMAT_BOLD, CLI_FORMAT_GREEN, colorize } from "../tester/cliFormat";
 
-function parseValue(input: unknown, fallback: Value): Value {
-  if (typeof input !== "string") return fallback;
-  try {
-    return JSON.parse(input);
-  } catch {
-    throw new Error("Values must be valid JSON.");
+export function parseAttributesOption(input: unknown): Record<string, Value> {
+  const attributes = parseJsonOption<unknown>(input, {}, "Attributes");
+  if (!attributes || typeof attributes !== "object" || Array.isArray(attributes)) {
+    throw new Error("Attributes must be a JSON object.");
   }
+  return attributes as Record<string, Value>;
 }
 
 export const simulatePlugin: Plugin = {
@@ -34,11 +34,23 @@ export const simulatePlugin: Plugin = {
     };
     const instance = createCliInstance(await buildDatafile(deps, parsed as BuildDatafileOptions));
     try {
-      const attributes = parseValue(parsed.attributes, {}) as Record<string, Value>;
+      const attributes = parseAttributesOption(parsed.attributes);
       for (const [name, value] of Object.entries(attributes))
         await instance.setAttribute(name, value);
-      const result = await instance.track(parsed.event, parseValue(parsed.value, {}));
-      console.log(parsed.json ? JSON.stringify(result) : JSON.stringify(result, null, 2));
+      const result = await instance.track(
+        parsed.event,
+        parseJsonOption<Value>(parsed.value, {}, "Event value"),
+      );
+      if (parsed.json) console.log(JSON.stringify(result));
+      else {
+        console.log("");
+        console.log(CLI_FORMAT_BOLD, "Simulating Eventvisor event");
+        console.log(`  ${colorize("Event", CLI_COLOR_CYAN)}: ${parsed.event}`);
+        console.log("");
+        console.log(CLI_FORMAT_GREEN, "Simulation complete");
+        console.log(JSON.stringify(result, null, 2));
+        console.log("");
+      }
     } finally {
       await instance.close();
     }

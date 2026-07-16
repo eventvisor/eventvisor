@@ -5,10 +5,12 @@
     "dist"
   ],
   "scripts": {
+    "dev1": "node scripts/dev.mjs --project=../../projects/project-1",
+    "dev": "node scripts/dev.mjs",
     "build": "vite build",
     "typecheck": "tsc --noEmit",
-    "dev": "vite",
-    "test": "jest --config jest.config.js && npm run typecheck",
+    "test": "jest --config jest.config.js --coverage && npm run typecheck",
+    "test:browser": "playwright test --config playwright.config.ts",
     "lint": "eslint src",
     "preview": "vite preview"
   },

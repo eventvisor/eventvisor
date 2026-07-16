@@ -1,0 +1,12 @@
+description: Product details shared by storefront events
+type: object
+properties:
+  productId:
+    schema: identifier
+  name:
+    type: string
+  category:
+    type: string
+  price:
+    schema: money
+required: [productId, name, price]

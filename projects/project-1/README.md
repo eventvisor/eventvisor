@@ -1,6 +1,7 @@
 ## project-1
 
-This is an internal test project for testing things out with Eventvisor.
+This is an internal test project for testing things out with Eventvisor. It includes reusable
+Schemas under `schemas/`, including root and nested references.
 
 ### Installation
 

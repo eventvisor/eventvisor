@@ -10,6 +10,7 @@ function createDeps(): Dependencies {
       destinationsDirectoryPath: "/tmp/eventvisor/destinations",
       statesDirectoryPath: "/tmp/eventvisor/states",
       effectsDirectoryPath: "/tmp/eventvisor/effects",
+      schemasDirectoryPath: "/tmp/eventvisor/schemas",
       testsDirectoryPath: "/tmp/eventvisor/tests",
       targetsDirectoryPath: "/tmp/eventvisor/targets",
       setsDirectoryPath: "/tmp/eventvisor/sets",

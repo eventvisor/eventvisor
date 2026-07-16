@@ -15,7 +15,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     permissions:
-      id-token: write   # required for npm OIDC trusted publishing
+      id-token: write # required for npm OIDC trusted publishing
       contents: write
       packages: write
     steps:
@@ -50,6 +50,9 @@ jobs:
 
       - name: Test
         run: make test
+
+      - name: Verify packages
+        run: npm run release-check
 
       - name: Bump version
         continue-on-error: true

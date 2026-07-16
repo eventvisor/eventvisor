@@ -2,6 +2,7 @@ import * as path from "path";
 
 import { Parser, parsers } from "./parsers";
 import { FilesystemAdapter } from "../datasource/filesystemAdapter";
+import { CLI_COLOR_CYAN, CLI_FORMAT_BOLD, colorize } from "../tester/cliFormat";
 import type { Plugin } from "../cli";
 import type { Adapter } from "../datasource/adapter";
 
@@ -12,6 +13,7 @@ export const ATTRIBUTES_DIRECTORY_NAME = "attributes";
 export const DESTINATIONS_DIRECTORY_NAME = "destinations";
 export const STATES_DIRECTORY_NAME = "states";
 export const EFFECTS_DIRECTORY_NAME = "effects";
+export const SCHEMAS_DIRECTORY_NAME = "schemas";
 export const TESTS_DIRECTORY_NAME = "tests";
 export const TARGETS_DIRECTORY_NAME = "targets";
 export const SETS_DIRECTORY_NAME = "sets";
@@ -37,6 +39,7 @@ export interface ProjectConfig {
   destinationsDirectoryPath: string;
   statesDirectoryPath: string;
   effectsDirectoryPath: string;
+  schemasDirectoryPath: string;
   testsDirectoryPath: string;
   targetsDirectoryPath: string;
   setsDirectoryPath: string;
@@ -75,6 +78,7 @@ export function getProjectConfig(rootDirectoryPath: string): ProjectConfig {
     destinationsDirectoryPath: path.join(rootDirectoryPath, DESTINATIONS_DIRECTORY_NAME),
     statesDirectoryPath: path.join(rootDirectoryPath, STATES_DIRECTORY_NAME),
     effectsDirectoryPath: path.join(rootDirectoryPath, EFFECTS_DIRECTORY_NAME),
+    schemasDirectoryPath: path.join(rootDirectoryPath, SCHEMAS_DIRECTORY_NAME),
     testsDirectoryPath: path.join(rootDirectoryPath, TESTS_DIRECTORY_NAME),
     targetsDirectoryPath: path.join(rootDirectoryPath, TARGETS_DIRECTORY_NAME),
     setsDirectoryPath: path.join(rootDirectoryPath, SETS_DIRECTORY_NAME),
@@ -165,6 +169,7 @@ export function getProjectConfigForSet(projectConfig: ProjectConfig, set: string
     attributesDirectoryPath: path.join(setRootDirectoryPath, ATTRIBUTES_DIRECTORY_NAME),
     destinationsDirectoryPath: path.join(setRootDirectoryPath, DESTINATIONS_DIRECTORY_NAME),
     effectsDirectoryPath: path.join(setRootDirectoryPath, EFFECTS_DIRECTORY_NAME),
+    schemasDirectoryPath: path.join(setRootDirectoryPath, SCHEMAS_DIRECTORY_NAME),
     testsDirectoryPath: path.join(setRootDirectoryPath, TESTS_DIRECTORY_NAME),
     targetsDirectoryPath: path.join(setRootDirectoryPath, TARGETS_DIRECTORY_NAME),
     statesDirectoryPath: path.join(projectConfig.systemDirectoryPath, SETS_DIRECTORY_NAME, set),
@@ -199,7 +204,9 @@ export function showProjectConfig(
     return;
   }
 
-  console.log("\nProject configuration:\n");
+  console.log("");
+  console.log(CLI_FORMAT_BOLD, "Project configuration");
+  console.log("");
 
   const keys = Object.keys(projectConfig);
   const longestKeyLength = keys.reduce((acc, key) => (key.length > acc ? key.length : acc), 0);
@@ -210,7 +217,9 @@ export function showProjectConfig(
       continue;
     }
 
-    console.log(`  - ${key.padEnd(longestKeyLength, " ")}: ${projectConfig[key]}`);
+    console.log(
+      `  ${colorize(key.padEnd(longestKeyLength, " "), CLI_COLOR_CYAN)}: ${projectConfig[key]}`,
+    );
   }
 }
 

@@ -1,7 +1,20 @@
 import type { Test } from "@eventvisor/types";
 
-export type CatalogEntityType = "event" | "attribute" | "destination" | "effect" | "target";
-export type EntityPath = "events" | "attributes" | "destinations" | "effects" | "targets";
+export type CatalogEntityType =
+  | "event"
+  | "attribute"
+  | "destination"
+  | "effect"
+  | "schema"
+  | "target";
+export type EntityPath =
+  | "events"
+  | "attributes"
+  | "destinations"
+  | "effects"
+  | "schemas"
+  | "targets";
+export type GitProvider = "github" | "gitlab" | "bitbucket";
 
 export interface LastModified {
   commit: string;
@@ -10,6 +23,7 @@ export interface LastModified {
 }
 export interface EntitySummary {
   key: string;
+  href?: string;
   description?: string;
   archived?: boolean;
   deprecated?: boolean;
@@ -32,10 +46,16 @@ export interface CatalogManifest {
   schemaVersion: string;
   generatedAt: string;
   router?: "hash" | "browser";
+  basePath?: string;
   sets: boolean;
   setKeys: string[];
   projectConfig: { tags: string[] };
-  links?: { commit?: string };
+  links?: {
+    provider?: GitProvider;
+    repository?: string;
+    source?: string;
+    commit?: string;
+  };
   paths: { projectHistory: string; root?: string; sets?: Record<string, string> };
   counts: Record<string, Record<CatalogEntityType, number>>;
 }
@@ -61,7 +81,7 @@ export interface EntityDetail {
   type: CatalogEntityType;
   key: string;
   entity: Record<string, any>;
-  sourceUrl?: string;
+  sourcePath?: string;
   lastModified?: LastModified;
   relationships?: Record<string, string[]>;
   tests?: Test[];

@@ -11,6 +11,9 @@ build:
 test:
 	npm test
 
+test-browser:
+	npm run test:browser
+
 typecheck:
 	npm run typecheck
 
@@ -21,7 +24,10 @@ format:
 	npx prettier examples/ packages/ modules/ projects/ --write
 	npx eslint . --fix
 
-check: build test lint typecheck
+check: build test lint typecheck release-check
+
+release-check: build
+	npm run release-check
 
 ##
 # Misc.

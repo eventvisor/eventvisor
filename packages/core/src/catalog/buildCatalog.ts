@@ -6,6 +6,8 @@ import { getLastModifiedFromHistory } from "./getLastModifiedFromHistory";
 import { RepoDetails } from "./getRepoDetails";
 import { Dependencies } from "../dependencies";
 import { buildDatafile } from "../builder/buildProject";
+import { collectSchemaReferences } from "../schemas";
+import { containsExactString } from "../utils/references";
 
 export async function buildCatalog(
   deps: Dependencies,
@@ -25,6 +27,7 @@ export async function buildCatalog(
       events: {},
       destinations: {},
       effects: {},
+      schemas: {},
       targets: {},
       tests: {},
     },
@@ -40,6 +43,7 @@ export async function buildCatalog(
       relativeEventsPath,
       relativeDestinationsPath,
       relativeEffectsPath,
+      relativeSchemasPath,
     } = getRelativePaths(rootDirectoryPath, projectConfig);
 
     let prefix = "";
@@ -63,6 +67,10 @@ export async function buildCatalog(
       effect: repoDetails.blobUrl.replace(
         "{{blobPath}}",
         prefix + relativeEffectsPath + "/{{name}}." + datasource.getExtension(),
+      ),
+      schema: repoDetails.blobUrl.replace(
+        "{{blobPath}}",
+        prefix + relativeSchemasPath + "/{{name}}." + datasource.getExtension(),
       ),
       target: repoDetails.blobUrl.replace(
         "{{blobPath}}",
@@ -130,6 +138,13 @@ export async function buildCatalog(
     };
   }
 
+  for (const entityName of await datasource.listSchemas()) {
+    result.entities.schemas[entityName] = {
+      ...(await datasource.readSchema(entityName)),
+      lastModified: getLastModifiedFromHistory(fullHistory, "schema", entityName),
+    };
+  }
+
   for (const entityName of await datasource.listTargets()) {
     result.entities.targets[entityName] = {
       ...(await datasource.readTarget(entityName)),
@@ -145,6 +160,25 @@ export async function buildCatalog(
         if (entity) entity.targets = [...(entity.targets || []), targetName];
       }
     }
+    const schemaQueue = [
+      ...Object.keys(datafile.attributes).flatMap((key) =>
+        collectSchemaReferences(result.entities.attributes[key] || {}),
+      ),
+      ...Object.keys(datafile.events).flatMap((key) =>
+        collectSchemaReferences(result.entities.events[key] || {}),
+      ),
+    ];
+    const selectedSchemas = new Set<string>();
+    while (schemaQueue.length) {
+      const schemaKey = schemaQueue.shift() as string;
+      if (selectedSchemas.has(schemaKey) || !result.entities.schemas[schemaKey]) continue;
+      selectedSchemas.add(schemaKey);
+      schemaQueue.push(...collectSchemaReferences(result.entities.schemas[schemaKey]));
+    }
+    selectedSchemas.forEach((schemaKey) => {
+      const schema = result.entities.schemas[schemaKey];
+      schema.targets = [...(schema.targets || []), targetName];
+    });
   }
 
   for (const entityName of await datasource.listTests()) {
@@ -159,18 +193,24 @@ export async function buildCatalog(
     "events",
     "destinations",
     "effects",
+    "schemas",
     "targets",
     "tests",
   ] as const;
   for (const type of collections) {
     for (const key of Object.keys(result.entities[type])) {
-      const needle = JSON.stringify(key);
       const usageKey = `${type}:${key}`;
       result.usages[usageKey] = [];
       for (const candidateType of collections) {
         for (const [candidateKey, candidate] of Object.entries(result.entities[candidateType])) {
           if (type === candidateType && key === candidateKey) continue;
-          if (JSON.stringify(candidate).includes(needle)) {
+          const referencesSchema =
+            type === "schemas" &&
+            (candidateType === "attributes" ||
+              candidateType === "events" ||
+              candidateType === "schemas") &&
+            collectSchemaReferences(candidate as Record<string, any>).includes(key);
+          if (referencesSchema || (type !== "schemas" && containsExactString(candidate, key))) {
             result.usages[usageKey].push({
               type: candidateType.slice(0, -1) as any,
               key: candidateKey,

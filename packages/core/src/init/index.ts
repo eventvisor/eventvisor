@@ -5,6 +5,7 @@ import * as path from "path";
 import * as tar from "tar";
 
 import type { Plugin } from "../cli";
+import { CLI_COLOR_CYAN, CLI_FORMAT_GREEN, colorize } from "../tester/cliFormat";
 
 export const DEFAULT_PROJECT = "yml";
 const REPOSITORY = "eventvisor/eventvisor";
@@ -44,8 +45,12 @@ export async function initProject(
       throw new Error(`Unknown project scaffold "${project}".`);
     }
     fs.cpSync(temporary, directoryPath, { recursive: true, force });
-    console.log(`Project scaffolded in ${directoryPath}`);
+    console.log("");
+    console.log(CLI_FORMAT_GREEN, "Eventvisor project scaffolded");
+    console.log(`  ${colorize("Directory", CLI_COLOR_CYAN)}: ${directoryPath}`);
+    console.log("");
     console.log('Run "npm install" to install its dependencies.');
+    console.log("");
     return true;
   } catch (error) {
     throw new Error(`Could not initialize Eventvisor project: ${(error as Error).message}`);

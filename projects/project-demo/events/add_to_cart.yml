@@ -3,11 +3,10 @@ tags: [all, storefront, checkout]
 type: object
 properties:
   productId:
-    type: string
+    schema: identifier
   quantity:
     type: integer
     minimum: 1
   unitPrice:
-    type: number
-    minimum: 0
+    schema: money
 required: [productId, quantity, unitPrice]

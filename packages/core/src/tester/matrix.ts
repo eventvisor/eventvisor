@@ -5,6 +5,7 @@ export interface ExpandedAssertion<T> {
   assertionIndex: number;
   matrixIndex?: number;
   matrixCount?: number;
+  matrixValues?: Record<string, Value>;
 }
 
 export function getMatrixCombinations(matrix: AssertionMatrix): Record<string, Value>[] {
@@ -49,6 +50,7 @@ export function expandAssertions<T extends { matrix?: AssertionMatrix; descripti
         assertionIndex,
         matrixIndex,
         matrixCount: combinations.length,
+        matrixValues: combination,
       };
     });
   });

@@ -41,7 +41,11 @@ Individual packages can be built and tested by `cd`ing into the package director
 
 The SDK is created with `createEventvisor(options)`. Its public contract uses asynchronous operations, modules, diagnostics, typed events, merge-by-default datafile updates, and explicit `close()` cleanup. `addModule()` returns an asynchronous, idempotent removal callback. Failed setup must clean module subscriptions and resources. Do not restore `DatafileReader`, custom logger construction, or old async aliases as public APIs. Keep package `files` lists narrow, declare dependencies referenced by published types, inspect `npm pack --dry-run`, and verify CommonJS and ESM entry points before publishing.
 
-The project model includes Targets for focused dependency-aware datafiles and Sets for multiple isolated projects in one repository. Combined Target and tag filters use AND semantics. Target dependency closure includes required attributes, named and collection-wide sources, and effect trigger events and attributes, while exclusions and archived definitions continue to win. Condition groups, test specs, and matrix dimensions must be nonempty in both lint schemas and public TypeScript contracts. Malformed stringified runtime conditions fail closed.
+The project model includes reusable Schemas under `schemas/`, Targets for focused dependency-aware datafiles, and Sets for multiple isolated projects in one repository. Events, attributes, nested properties, and array items can reference a Schema with `schema: <key>`. Core resolves transitive references at build time and inlines them into events and attributes, so SDK datafiles have no separate Schema collection. Linting rejects missing and circular references. Combined Target and tag filters use AND semantics. Target dependency closure includes required attributes, named and collection-wide sources, effect trigger events and attributes, and reusable Schema dependencies, while exclusions and archived definitions continue to win. Condition groups, test specs, and matrix dimensions must be nonempty in both lint schemas and public TypeScript contracts. Malformed stringified runtime conditions fail closed.
+
+Direct `source`, `attribute`, `state`, `effect`, `payload`, and `lookup` properties accept one source or a nonempty ordered array. Transform `value` remains the operand for increment and decrement when a target is present, and the current target value is the numeric input.
+
+Catalog exports require a dedicated output directory. Core rejects filesystem roots, home directories, project roots, and directories containing the project. Use `--base-path` for deployments below an origin path. Catalog matrix cases are expanded by the core tester implementation before being written for the UI.
 
 ## Examples
 
@@ -115,6 +119,8 @@ make typecheck
 ```
 
 Run the complete release-oriented sequence with `make check`.
+
+Run `make test-browser` for the Playwright Catalog smoke test against `project-1`. Run `make release-check` before publishing to inspect every tarball and load declared CommonJS and ES module entries.
 
 ## Formatting
 

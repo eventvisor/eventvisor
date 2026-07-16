@@ -34,6 +34,8 @@ describe("TypeScript code generation", () => {
           .mockImplementation(async (name: string) => schemas.get(name) ?? null),
         listEvents: jest.fn().mockResolvedValue(["auth/signup"]),
         readEvent: jest.fn().mockImplementation(async (name: string) => schemas.get(name) ?? null),
+        listSchemas: jest.fn().mockResolvedValue([]),
+        readSchema: jest.fn(),
       },
     } as unknown as Dependencies;
 
@@ -60,6 +62,8 @@ describe("TypeScript code generation", () => {
         readAttribute: jest.fn().mockResolvedValue({ type: "string" }),
         listEvents: jest.fn().mockResolvedValue([]),
         readEvent: jest.fn(),
+        listSchemas: jest.fn().mockResolvedValue([]),
+        readSchema: jest.fn(),
       },
     } as unknown as Dependencies;
 
@@ -69,8 +73,62 @@ describe("TypeScript code generation", () => {
 
     expect(attributesContent).toContain("export type UserNamespaceIdAttribute = string");
     expect(attributesContent).toContain("export type UserNamespaceIdAttribute2 = string");
-    expect(attributesContent).toContain('"user/id": UserNamespaceIdAttribute;');
-    expect(attributesContent).toContain('"user-namespace-id": UserNamespaceIdAttribute2;');
+    expect(attributesContent).toContain('"user-namespace-id": UserNamespaceIdAttribute;');
+    expect(attributesContent).toContain('"user/id": UserNamespaceIdAttribute2;');
+  });
+
+  it("resolves reusable schemas before generating entity types", async () => {
+    const outputPath = fs.mkdtempSync(path.join(os.tmpdir(), "eventvisor-typescript-codegen-"));
+    const deps = {
+      datasource: {
+        listAttributes: jest.fn().mockResolvedValue([]),
+        readAttribute: jest.fn(),
+        listEvents: jest.fn().mockResolvedValue(["customer/updated"]),
+        readEvent: jest.fn().mockResolvedValue({
+          schema: "customer",
+          description: "Customer updated",
+        }),
+        listSchemas: jest.fn().mockResolvedValue(["customer", "identifier"]),
+        readSchema: jest.fn().mockImplementation(async (key: string) =>
+          key === "customer"
+            ? {
+                type: "object",
+                properties: { id: { schema: "identifier" } },
+                required: ["id"],
+              }
+            : { type: "string", minLength: 1 },
+        ),
+      },
+    } as unknown as Dependencies;
+
+    await generateTypeScriptCodeForProject(deps, outputPath);
+
+    const eventsContent = fs.readFileSync(path.join(outputPath, "events.ts"), "utf8");
+    expect(eventsContent).toContain("export interface CustomerNamespaceUpdatedEvent");
+    expect(eventsContent).toContain("id: string;");
+    expect(eventsContent).not.toContain("schema:");
+  });
+
+  it("sorts generated entities and returns the SDK track result", async () => {
+    const outputPath = fs.mkdtempSync(path.join(os.tmpdir(), "eventvisor-typescript-codegen-"));
+    const deps = {
+      datasource: {
+        listAttributes: jest.fn().mockResolvedValue(["zeta", "alpha"]),
+        readAttribute: jest.fn().mockResolvedValue({ type: "string" }),
+        listEvents: jest.fn().mockResolvedValue(["zeta", "alpha"]),
+        readEvent: jest.fn().mockResolvedValue({ type: "object" }),
+        listSchemas: jest.fn().mockResolvedValue([]),
+        readSchema: jest.fn(),
+      },
+    } as unknown as Dependencies;
+
+    await generateTypeScriptCodeForProject(deps, outputPath);
+
+    const eventsContent = fs.readFileSync(path.join(outputPath, "events.ts"), "utf8");
+    const indexContent = fs.readFileSync(path.join(outputPath, "index.ts"), "utf8");
+    expect(eventsContent.indexOf("alpha")).toBeLessThan(eventsContent.indexOf("zeta"));
+    expect(indexContent).toContain("result = await instance.track");
+    expect(indexContent).toContain("return result;");
   });
 });
 

@@ -1,4 +1,7 @@
 packages/*/dist
 packages/*/lib
 
+**/.catalog-dev/**
+**/test-results/**
+
 CHANGELOG.md

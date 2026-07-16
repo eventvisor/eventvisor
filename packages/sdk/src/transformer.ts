@@ -46,24 +46,19 @@ export class Transformer {
        */
       let sourceValue = await this.sourceResolver.resolve(transform, inputs);
 
-      if ((sourceValue === null || sourceValue === undefined) && "value" in transform) {
-        sourceValue = transform.value;
-      }
-
-      // when Transform has no source, but only target
+      // A target identifies the existing value to transform when no explicit
+      // source is present. `value` remains an operand for transforms such as
+      // increment/decrement and a literal input for set/append/spread.
       if (sourceValue === null || sourceValue === undefined) {
-        if (transform.target) {
-          sourceValue = await this.sourceResolver.resolve(
-            {
-              payload: transform.target,
-            },
-            typeof inputs.payload === "undefined"
-              ? {
-                  ...inputs,
-                  payload: value,
-                }
-              : inputs,
-          );
+        if (
+          transform.target &&
+          transform.type !== "set" &&
+          transform.type !== "append" &&
+          transform.type !== "spread"
+        ) {
+          sourceValue = Transformer.getValueAtPath(result, transform.target);
+        } else if ("value" in transform) {
+          sourceValue = transform.value;
         }
       }
 

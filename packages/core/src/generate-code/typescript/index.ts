@@ -3,6 +3,7 @@ import * as path from "path";
 
 import type { DatafileContent } from "@eventvisor/types";
 import { Dependencies } from "../../dependencies";
+import { loadSchemas, resolveEntitySchema } from "../../schemas";
 import { generateInterface } from "./generateInterface";
 
 const VALID_TYPESCRIPT_IDENTIFIER_REGEX = /^[A-Za-z_$][A-Za-z0-9_$]*$/;
@@ -79,6 +80,7 @@ export async function generateTypeScriptCodeForProject(
   datafile?: DatafileContent,
 ) {
   const { datasource } = deps;
+  const schemas = datafile ? {} : await loadSchemas(datasource);
 
   /**
    * Attributes
@@ -89,12 +91,15 @@ export async function generateTypeScriptCodeForProject(
     code: string;
   }[] = [];
 
-  const attributes = datafile
-    ? Object.keys(datafile.attributes)
-    : await datasource.listAttributes();
+  const attributes = (
+    datafile ? Object.keys(datafile.attributes) : await datasource.listAttributes()
+  ).sort();
   const attributeInterfaceNames = createUniqueInterfaceNames(attributes, "Attribute");
   for (const attribute of attributes) {
-    const parsedAttribute = await datasource.readAttribute(attribute);
+    const authoredAttribute = datafile ? undefined : await datasource.readAttribute(attribute);
+    const parsedAttribute = datafile
+      ? datafile.attributes[attribute]
+      : authoredAttribute && resolveEntitySchema(authoredAttribute, schemas);
     if (!parsedAttribute) {
       continue;
     }
@@ -146,10 +151,13 @@ ${generatedAttributes
     code: string;
   }[] = [];
 
-  const events = datafile ? Object.keys(datafile.events) : await datasource.listEvents();
+  const events = (datafile ? Object.keys(datafile.events) : await datasource.listEvents()).sort();
   const eventInterfaceNames = createUniqueInterfaceNames(events, "Event");
   for (const event of events) {
-    const parsedEvent = await datasource.readEvent(event);
+    const authoredEvent = datafile ? undefined : await datasource.readEvent(event);
+    const parsedEvent = datafile
+      ? datafile.events[event]
+      : authoredEvent && resolveEntitySchema(authoredEvent, schemas);
     if (!parsedEvent) {
       continue;
     }
@@ -220,14 +228,21 @@ export function assignEventHandler(handler: TrackHandler | null) {
   trackHandler = handler;
 }
 
-export async function track<K extends keyof Events>(eventName: K, payload: Events[K]): Promise<void> {
+export async function track<K extends keyof Events>(
+  eventName: K,
+  payload: Events[K],
+): Promise<Value | null | undefined> {
+  let result: Value | null | undefined;
+
   if (instance) {
-    await instance.track(eventName, payload as unknown as Value);
+    result = await instance.track(eventName, payload as unknown as Value);
   }
 
   if (trackHandler) {
     await trackHandler(eventName, payload as unknown as Value);
   }
+
+  return result;
 }
 
 /**

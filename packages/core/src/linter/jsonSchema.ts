@@ -8,6 +8,9 @@ export const JSONZodSchema = getJSONSchema();
 export function getJSONSchema(): z.ZodObject<any> {
   return z
     .object({
+      // Reusable project Schema reference
+      schema: z.string().min(1).optional(),
+
       // Basic metadata
       description: z.string().optional(),
 
@@ -40,10 +43,6 @@ export function getJSONSchema(): z.ZodObject<any> {
       // Annotations
       default: createValueSchema().optional(),
       examples: z.array(createValueSchema()).optional(),
-
-      // project specific additional properties
-      defaultSource: z.string().optional(),
-      defaultSources: z.array(z.string()).optional(),
     })
     .refine((schema) => validateSchemaConstraints(schema), {
       message: "Schema validation failed: schema does not conform to JSON Schema specification",

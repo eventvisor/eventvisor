@@ -4,7 +4,7 @@ import { Dependencies } from "../dependencies";
 // eslint-disable-next-line
 export function getSourceBaseSchema(deps: Dependencies) {
   const source = z.string();
-  const sourceUnion = z.union([source, z.array(source)]);
+  const sourceUnion = z.union([source, z.array(source).min(1)]);
 
   // need .shape API from Zod, so cannot do .union() here
   return z.object({

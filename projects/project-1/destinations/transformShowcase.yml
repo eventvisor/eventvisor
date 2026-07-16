@@ -1,0 +1,66 @@
+description: Builds a transport envelope through a multi-step transform pipeline
+tags:
+  - web
+
+transport: console
+
+conditions:
+  - source: eventName
+    operator: equals
+    value: transform_showcase
+
+transforms:
+  # Start with an empty envelope, then populate it one source at a time.
+  - type: set
+    value: {}
+
+  - source: eventName
+    type: set
+    target: envelope.event
+
+  - source: payload
+    type: set
+    target: envelope.properties
+
+  - source: attributes
+    type: set
+    target: envelope.context
+
+  - payload:
+      - channel
+      - customer.id
+    type: concat
+    separator: "@"
+    target: envelope.traceLabel
+
+  # Collection operations show how enrichment accumulates.
+  - type: append
+    target: envelope.processors
+    value: eventvisor
+
+  - type: append
+    target: envelope.processors
+    value: catalog-showcase
+
+  - type: spread
+    target: envelope.metadata
+    value:
+      format: compact
+      version: 1
+
+  # A lookup is performed only when the tracked payload opts into debugging.
+  - lookup: request.id
+    type: set
+    target: envelope.metadata.requestId
+    conditions:
+      - payload: debug
+        operator: equals
+        value: true
+
+  - type: rename
+    targetMap:
+      - envelope.properties: envelope.payload
+      - envelope.context: envelope.attributes
+
+  - type: remove
+    target: envelope.attributes.internalToken

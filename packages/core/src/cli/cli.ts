@@ -2,6 +2,7 @@ import type { ProjectConfig } from "../config";
 import { Datasource } from "../datasource";
 
 import { commonPlugins, nonProjectPlugins, projectBasedPlugins } from "./plugins";
+import { CLI_FORMAT_RED } from "../tester/cliFormat";
 
 export interface ParsedOptions {
   _: string[];
@@ -75,7 +76,8 @@ export async function runCLI(runnerOptions: RunnerOptions): Promise<number> {
             exitCode = 1;
           }
         } catch (error) {
-          console.error(error);
+          const message = error instanceof Error ? error.message : String(error);
+          console.error(CLI_FORMAT_RED, `Error: ${message}`);
           exitCode = 1;
         }
       },

@@ -22,6 +22,7 @@ function createDeps(testContent: Record<string, any>): Dependencies {
       destinationsDirectoryPath: "/tmp/eventvisor/destinations",
       statesDirectoryPath: "/tmp/eventvisor/states",
       effectsDirectoryPath: "/tmp/eventvisor/effects",
+      schemasDirectoryPath: "/tmp/eventvisor/schemas",
       testsDirectoryPath: "/tmp/eventvisor/tests",
       targetsDirectoryPath: "/tmp/eventvisor/targets",
       setsDirectoryPath: "/tmp/eventvisor/sets",
@@ -42,6 +43,7 @@ function createDeps(testContent: Record<string, any>): Dependencies {
       listEvents: jest.fn().mockResolvedValue(["page_view"]),
       listDestinations: jest.fn().mockResolvedValue([]),
       listEffects: jest.fn().mockResolvedValue([]),
+      listSchemas: jest.fn().mockResolvedValue([]),
       listTests: jest.fn().mockResolvedValue(["events/page_view.spec"]),
       listTargets: jest.fn().mockResolvedValue([]),
       readEvent: jest.fn().mockResolvedValue({
@@ -54,6 +56,7 @@ function createDeps(testContent: Record<string, any>): Dependencies {
           },
         },
       }),
+      readSchema: jest.fn(),
       readTest: jest.fn().mockResolvedValue(testContent),
     } as unknown as Dependencies["datasource"],
     options: {},
@@ -112,5 +115,57 @@ describe("lintProject", () => {
     expect(deps.datasource.listEffects).toHaveBeenCalled();
     expect(deps.datasource.listTests).toHaveBeenCalled();
     expect(deps.datasource.readTest).toHaveBeenCalledWith("events/page_view.spec");
+  });
+
+  it("accepts reusable schemas and resolves them before semantic validation", async () => {
+    const deps = createDeps({
+      event: "page_view",
+      assertions: [{ track: { location: { path: "/home" } }, expectedToBeValid: true }],
+    });
+    (deps.datasource.listSchemas as jest.Mock).mockResolvedValue(["page"]);
+    (deps.datasource.readSchema as jest.Mock).mockResolvedValue({
+      type: "object",
+      properties: { location: { type: "object", properties: { path: { type: "string" } } } },
+    });
+    (deps.datasource.readEvent as jest.Mock).mockResolvedValue({
+      description: "Page view",
+      tags: ["all"],
+      schema: "page",
+      transforms: [{ type: "trim", target: "location.path" }],
+    });
+
+    await expect(lintProject(deps)).resolves.toBe(true);
+  });
+
+  it("rejects missing reusable schema references", async () => {
+    const deps = createDeps({
+      event: "page_view",
+      assertions: [{ track: {}, expectedToBeValid: true }],
+    });
+    (deps.datasource.readEvent as jest.Mock).mockResolvedValue({
+      description: "Page view",
+      tags: ["all"],
+      schema: "missing",
+    });
+
+    await expect(lintProject(deps)).resolves.toBe(false);
+  });
+
+  it("rejects circular reusable schemas", async () => {
+    const deps = createDeps({
+      event: "page_view",
+      assertions: [{ track: {}, expectedToBeValid: true }],
+    });
+    (deps.datasource.listSchemas as jest.Mock).mockResolvedValue(["a", "b"]);
+    (deps.datasource.readSchema as jest.Mock).mockImplementation(async (key: string) => ({
+      schema: key === "a" ? "b" : "a",
+    }));
+    (deps.datasource.readEvent as jest.Mock).mockResolvedValue({
+      description: "Page view",
+      tags: ["all"],
+      schema: "a",
+    });
+
+    await expect(lintProject(deps)).resolves.toBe(false);
   });
 });

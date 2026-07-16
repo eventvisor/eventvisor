@@ -3,6 +3,8 @@ import * as path from "path";
 import * as http from "http";
 
 import type { Dependencies } from "../dependencies";
+import { CLI_COLOR_CYAN, CLI_FORMAT_GREEN, colorize } from "../tester/cliFormat";
+import { normalizeCatalogBasePath } from "./exportCatalog";
 
 const contentTypes: Record<string, string> = {
   ".html": "text/html; charset=utf-8",
@@ -14,12 +16,15 @@ const contentTypes: Record<string, string> = {
   ".ico": "image/x-icon",
 };
 
-export function serveCatalog(deps: Dependencies) {
-  const root = path.resolve(deps.projectConfig.catalogExportDirectoryPath);
-  const port = Number(deps.options.port || deps.options.p || 3000);
-  if (!Number.isInteger(port) || port < 1 || port > 65535) throw new Error("Invalid catalog port.");
+export function shouldServeCatalogIndex(pathname: string, browserRouter: boolean) {
+  if (!browserRouter) return false;
+  if (pathname === "/favicon.ico") return false;
 
-  const server = http.createServer((request, response) => {
+  return !["/assets/", "/data/", "/img/"].some((prefix) => pathname.startsWith(prefix));
+}
+
+export function createCatalogServer(root: string, browserRouter: boolean, basePath = "") {
+  return http.createServer((request, response) => {
     let pathname: string;
     try {
       pathname = decodeURIComponent(new URL(request.url || "/", "http://localhost").pathname);
@@ -28,7 +33,20 @@ export function serveCatalog(deps: Dependencies) {
       return;
     }
 
-    const relative = pathname === "/" ? "index.html" : pathname.replace(/^\/+/, "");
+    if (basePath) {
+      if (pathname !== basePath && !pathname.startsWith(`${basePath}/`)) {
+        response.writeHead(404).end("Not Found");
+        return;
+      }
+      pathname = pathname.slice(basePath.length) || "/";
+    }
+
+    const relative =
+      pathname === "/"
+        ? "index.html"
+        : pathname === "/favicon.ico"
+          ? "img/logo.png"
+          : pathname.replace(/^\/+/, "");
     const filePath = path.resolve(root, relative);
     if (filePath !== root && !filePath.startsWith(`${root}${path.sep}`)) {
       response.writeHead(403).end("Forbidden");
@@ -37,9 +55,26 @@ export function serveCatalog(deps: Dependencies) {
 
     fs.readFile(filePath, (error, content) => {
       if (error) {
-        response
-          .writeHead(error.code === "ENOENT" ? 404 : 500)
-          .end(error.code === "ENOENT" ? "Not Found" : "Internal Server Error");
+        if (error.code !== "ENOENT") {
+          response.writeHead(500).end("Internal Server Error");
+          return;
+        }
+        if (!shouldServeCatalogIndex(pathname, browserRouter)) {
+          response.writeHead(404).end("Not Found");
+          return;
+        }
+        fs.readFile(path.join(root, "index.html"), (indexError, indexContent) => {
+          if (indexError) {
+            response.writeHead(500).end("Catalog index.html not found");
+            return;
+          }
+          response.writeHead(200, {
+            "Content-Type": contentTypes[".html"],
+            "X-Content-Type-Options": "nosniff",
+            "Cache-Control": "no-cache",
+          });
+          response.end(indexContent);
+        });
         return;
       }
       response.writeHead(200, {
@@ -51,7 +86,30 @@ export function serveCatalog(deps: Dependencies) {
       response.end(content);
     });
   });
-  server.listen(port, "127.0.0.1");
-  console.log(`Catalog available at http://127.0.0.1:${port}/`);
-  return true;
+}
+
+export function serveCatalog(deps: Dependencies): Promise<http.Server> {
+  const root = deps.options.outDir
+    ? path.resolve(deps.rootDirectoryPath, deps.options.outDir)
+    : path.resolve(deps.projectConfig.catalogExportDirectoryPath);
+  const port = Number(deps.options.port || deps.options.p || 3000);
+  const browserRouter = !(deps.options.hashRouter || deps.options["hash-router"]);
+  const configuredBasePath = deps.options.basePath || deps.options["base-path"];
+  const basePath = normalizeCatalogBasePath(configuredBasePath);
+  if (!Number.isInteger(port) || port < 1 || port > 65535) throw new Error("Invalid catalog port.");
+
+  const server = createCatalogServer(root, browserRouter, basePath);
+  return new Promise((resolve, reject) => {
+    const onError = (error: Error) => reject(error);
+    server.once("error", onError);
+    server.listen(port, "127.0.0.1", () => {
+      server.off("error", onError);
+      server.on("error", (error) => console.error(`Catalog server error: ${error.message}`));
+      console.log("");
+      console.log(CLI_FORMAT_GREEN, "Eventvisor catalog is available");
+      console.log(`  ${colorize("URL", CLI_COLOR_CYAN)}: http://127.0.0.1:${port}${basePath}/`);
+      console.log("");
+      resolve(server);
+    });
+  });
 }
