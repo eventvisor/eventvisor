@@ -1,4 +1,4 @@
-import { createPixelModule } from "./index";
+import { createPixelModule } from "./index.js";
 
 describe("createPixelModule", () => {
   it("reports invalid handler configuration through diagnostics", async () => {

@@ -1,7 +1,7 @@
 import { JSONSchema, Value } from "@eventvisor/types";
 
-import type { GetSourceResolver } from "./sourceResolver";
-import type { Logger } from "./logger";
+import type { GetSourceResolver } from "./sourceResolver.js";
+import type { Logger } from "./logger.js";
 
 export interface ValidatorOptions {
   logger: Logger;

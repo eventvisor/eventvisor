@@ -1,9 +1,9 @@
 import type { Sample, SampleBy, Inputs } from "@eventvisor/types";
 
-import type { Logger } from "./logger";
-import { MurmurHashV3 } from "./murmurhash";
-import type { SourceResolver } from "./sourceResolver";
-import type { ConditionsChecker } from "./conditions";
+import type { Logger } from "./logger.js";
+import { MurmurHashV3 } from "./murmurhash.js";
+import type { SourceResolver } from "./sourceResolver.js";
+import type { ConditionsChecker } from "./conditions.js";
 
 export type BucketKey = string;
 export type BucketValue = number; // 0 to 100,000 (100% * 1000 to include three decimal places in same integer)

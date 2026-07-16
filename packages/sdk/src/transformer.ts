@@ -1,8 +1,8 @@
 import type { Value, Transform, Inputs } from "@eventvisor/types";
 
-import type { Logger } from "./logger";
-import type { ConditionsChecker } from "./conditions";
-import type { SourceResolver } from "./sourceResolver";
+import type { Logger } from "./logger.js";
+import type { ConditionsChecker } from "./conditions.js";
+import type { SourceResolver } from "./sourceResolver.js";
 
 export type GetTransformer = () => Transformer;
 

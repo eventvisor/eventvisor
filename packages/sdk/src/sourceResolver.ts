@@ -1,9 +1,9 @@
 import type { Source, SourceBase, Value, Inputs } from "@eventvisor/types";
 
-import type { ModulesManager } from "./modulesManager";
-import type { Logger } from "./logger";
-import type { AttributesManager } from "./attributesManager";
-import type { EffectsManager } from "./effectsManager";
+import type { ModulesManager } from "./modulesManager.js";
+import type { Logger } from "./logger.js";
+import type { AttributesManager } from "./attributesManager.js";
+import type { EffectsManager } from "./effectsManager.js";
 
 export type GetSourceResolver = () => SourceResolver;
 

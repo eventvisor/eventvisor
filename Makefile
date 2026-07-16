@@ -33,10 +33,4 @@ release-check: build
 # Misc.
 #
 print-size:
-	@echo 'SDK package size:'
-	@ls -alh packages/sdk/dist/index.mjs | awk '{print $$9 "\t" $$5}'
-	@gzip -c packages/sdk/dist/index.mjs | wc -c | awk '{print "index.mjs.gz\t" $$1 " bytes"}'
-
-	@echo 'LocalStorage module size:'
-	@ls -alh modules/module-localstorage/dist/index.mjs | awk '{print $$9 "\t" $$5}'
-	@gzip -c modules/module-localstorage/dist/index.mjs | wc -c | awk '{print "index.mjs.gz\t" $$1 " bytes"}'
+	npm run bundle-sizes

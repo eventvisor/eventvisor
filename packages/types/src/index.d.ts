@@ -55,9 +55,7 @@ export type NonEmptyArray<T> = [T, ...T[]];
 export type TargetKey = string;
 export type TargetPatterns = "*" | string | NonEmptyArray<string>;
 export type TargetTags =
-  | NonEmptyArray<Tag>
-  | { or: NonEmptyArray<Tag> }
-  | { and: NonEmptyArray<Tag> };
+  NonEmptyArray<Tag> | { or: NonEmptyArray<Tag> } | { and: NonEmptyArray<Tag> };
 
 export interface Target {
   key?: TargetKey;
@@ -369,14 +367,7 @@ export interface DatafileContent {
  * Others
  */
 export type EntityType =
-  | "attribute"
-  | "event"
-  | "destination"
-  | "state"
-  | "effect"
-  | "schema"
-  | "target"
-  | "test";
+  "attribute" | "event" | "destination" | "state" | "effect" | "schema" | "target" | "test";
 
 /**
  * Test

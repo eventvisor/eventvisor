@@ -1,4 +1,4 @@
-import { createLocalStorageModule } from "./index";
+import { createLocalStorageModule } from "./index.js";
 
 describe("createLocalStorageModule", () => {
   it("reads, writes and removes namespaced values while keeping lookups direct", async () => {

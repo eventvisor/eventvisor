@@ -169,10 +169,10 @@ export function OverviewTab() {
   const hasDescription = typeof entity.description === "string" && entity.description.trim();
   const hasMetadata = Boolean(
     displayType ||
-      facts.some(([, value]) => value !== undefined) ||
-      requiredAttributes.length ||
-      (detail.type !== "target" && entity.tags?.length) ||
-      entity.targets?.length,
+    facts.some(([, value]) => value !== undefined) ||
+    requiredAttributes.length ||
+    (detail.type !== "target" && entity.tags?.length) ||
+    entity.targets?.length,
   );
   return (
     <div className="space-y-7">

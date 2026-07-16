@@ -1,4 +1,4 @@
-import { createGTMModule } from "./index";
+import { createGTMModule } from "./index.js";
 
 describe("createGTMModule", () => {
   it("pushes the payload and Eventvisor event name", async () => {

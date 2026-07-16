@@ -1,8 +1,8 @@
 {
   "extends": "../../tsconfig.esm.json",
   "compilerOptions": {
-    "outDir": "./lib",
-    "lib": ["DOM"]
+    "outDir": "./esm",
+    "rootDir": "./src"
   },
   "include": ["./src/**/*.ts"],
   "exclude": ["./src/**/*.spec.ts", "./src/**/*.spec.tsx", "./src/**/*.test-fixtures.ts"]

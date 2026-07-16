@@ -1,7 +1,6 @@
 import * as path from "path";
 
 import * as z from "zod";
-import chalk from "chalk";
 
 import { ProjectConfig, CustomParser } from "../config";
 
@@ -51,7 +50,7 @@ export function printError(options: PrintErrorOptions) {
 
   console.log("\n");
 
-  console.log(chalk.bold.red.underline(getFilePath(options)));
+  console.log(`\u001b[1;31;4m${getFilePath(options)}\u001b[0m`);
 
   console.log(prefixLines(z.prettifyError(error), "  "));
 }

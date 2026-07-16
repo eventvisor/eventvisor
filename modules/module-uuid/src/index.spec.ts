@@ -1,4 +1,4 @@
-import { createUUIDModule } from "./index";
+import { createUUIDModule } from "./index.js";
 import { EventvisorModuleApi } from "@eventvisor/sdk";
 
 describe("createUUIDModule", () => {

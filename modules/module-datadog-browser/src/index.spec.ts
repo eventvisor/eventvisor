@@ -1,4 +1,4 @@
-import { createDatadogBrowserModule } from "./index";
+import { createDatadogBrowserModule } from "./index.js";
 
 describe("createDatadogBrowserModule", () => {
   it("routes events and errors to the matching Datadog API", async () => {

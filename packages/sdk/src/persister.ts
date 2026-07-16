@@ -1,7 +1,7 @@
 import type { Attribute, Effect, Value, ComplexPersist } from "@eventvisor/types";
-import type { InstanceDataProvider } from "./datafile";
-import type { ConditionsChecker } from "./conditions";
-import type { ModulesManager } from "./modulesManager";
+import type { InstanceDataProvider } from "./datafile.js";
+import type { ConditionsChecker } from "./conditions.js";
+import type { ModulesManager } from "./modulesManager.js";
 
 export type EntityMap = Record<string, Value>;
 

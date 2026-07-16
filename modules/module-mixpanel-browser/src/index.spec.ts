@@ -1,4 +1,4 @@
-import { createMixpanelBrowserModule } from "./index";
+import { createMixpanelBrowserModule } from "./index.js";
 
 describe("createMixpanelBrowserModule", () => {
   it("tracks the event and payload", async () => {

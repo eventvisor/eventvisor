@@ -1,4 +1,4 @@
-import { createNewrelicBrowserModule } from "./index";
+import { createNewrelicBrowserModule } from "./index.js";
 
 describe("createNewRelicBrowserModule", () => {
   it("routes events and errors to the matching New Relic API", async () => {

@@ -23,16 +23,16 @@
     "registry": "https://registry.npmjs.org/"
   },
   "devDependencies": {
-    "@tailwindcss/typography": "^0.5.19",
-    "@tailwindcss/vite": "^4.1.14",
+    "@tailwindcss/typography": "^0.5.20",
+    "@tailwindcss/vite": "^4.3.3",
     "@types/react": "^19.1.1",
     "@types/react-dom": "^19.1.1",
-    "@vitejs/plugin-react": "^5.0.3",
+    "@vitejs/plugin-react": "^6.0.3",
     "react": "^19.1.1",
     "react-dom": "^19.1.1",
     "react-markdown": "^10.1.0",
-    "react-router": "^7.9.3",
-    "tailwindcss": "^4.1.14",
-    "vite": "^7.1.7"
+    "react-router": "^7.18.1",
+    "tailwindcss": "^4.3.3",
+    "vite": "^8.1.5"
   }
 }

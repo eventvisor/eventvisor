@@ -1,4 +1,4 @@
-import { createEventvisor } from "./index";
+import { createEventvisor } from "./index.js";
 import type { DatafileContent } from "@eventvisor/types";
 
 function datafile(overrides: Partial<DatafileContent> = {}): DatafileContent {

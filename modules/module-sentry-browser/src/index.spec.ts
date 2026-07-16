@@ -1,4 +1,4 @@
-import { createSentryBrowserModule } from "./index";
+import { createSentryBrowserModule } from "./index.js";
 
 describe("createSentryBrowserModule", () => {
   it("captures messages and exceptions with event metadata", async () => {

@@ -1,14 +1,14 @@
-import { Transformer } from "./transformer";
-import { emptyDatafile } from "./datafile";
-import { createTestDataProvider } from "./datafile.test-fixtures";
-import { createLogger } from "./logger";
-import { ModulesManager } from "./modulesManager";
-import { EffectsManager } from "./effectsManager";
-import { AttributesManager } from "./attributesManager";
-import { SourceResolver } from "./sourceResolver";
-import { ConditionsChecker } from "./conditions";
-import { Emitter } from "./emitter";
-import { Validator } from "./validator";
+import { Transformer } from "./transformer.js";
+import { emptyDatafile } from "./datafile.js";
+import { createTestDataProvider } from "./datafile.test-fixtures.js";
+import { createLogger } from "./logger.js";
+import { ModulesManager } from "./modulesManager.js";
+import { EffectsManager } from "./effectsManager.js";
+import { AttributesManager } from "./attributesManager.js";
+import { SourceResolver } from "./sourceResolver.js";
+import { ConditionsChecker } from "./conditions.js";
+import { Emitter } from "./emitter.js";
+import { Validator } from "./validator.js";
 
 describe("Transformer types", () => {
   // initialize the dependencies

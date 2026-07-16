@@ -2,10 +2,14 @@
   "extends": "../../tsconfig.cjs.json",
   "compilerOptions": {
     "target": "es2020",
+    "lib": ["es2020"],
+    "types": ["node"],
     "outDir": "./lib",
-    "moduleResolution": "node",
+    "rootDir": "./src",
+    "moduleResolution": "node16",
     "esModuleInterop": true,
-    "allowSyntheticDefaultImports": true
+    "allowSyntheticDefaultImports": true,
+    "skipLibCheck": true
   },
   "include": ["./src/**/*.ts"],
   "exclude": ["./src/**/*.spec.ts"]

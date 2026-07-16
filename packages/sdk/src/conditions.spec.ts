@@ -1,5 +1,5 @@
 import type { Condition, Conditions, DatafileContent, Value } from "@eventvisor/types";
-import { createEventvisor } from "./index";
+import { createEventvisor } from "./index.js";
 
 function instance(condition: Conditions) {
   const datafile: DatafileContent = {

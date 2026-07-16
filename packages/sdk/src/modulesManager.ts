@@ -8,7 +8,7 @@ import type {
   EventLevel,
 } from "@eventvisor/types";
 
-import type { EventvisorDiagnostic, EventvisorDiagnosticHandler, Logger } from "./logger";
+import type { EventvisorDiagnostic, EventvisorDiagnosticHandler, Logger } from "./logger.js";
 
 export type ModuleName = string;
 

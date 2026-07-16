@@ -8,7 +8,7 @@ import {
   useEventvisorInstance,
   useEventvisorReady,
   useEventvisor,
-} from "./index";
+} from "./index.js";
 
 async function waitFor(ms: number) {
   return new Promise((resolve) => setTimeout(resolve, ms));

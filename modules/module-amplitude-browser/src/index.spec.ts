@@ -1,4 +1,4 @@
-import { createAmplitudeBrowserModule } from "./index";
+import { createAmplitudeBrowserModule } from "./index.js";
 
 describe("createAmplitudeBrowserModule", () => {
   it("tracks the event and payload", async () => {

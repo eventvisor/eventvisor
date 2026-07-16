@@ -1,5 +1,5 @@
 import type { Attribute, DatafileContent, Effect } from "@eventvisor/types";
-import { getComplexPersists, type InstanceDataProvider } from "./datafile";
+import { getComplexPersists, type InstanceDataProvider } from "./datafile.js";
 
 export function createTestDataProvider(datafile: DatafileContent): InstanceDataProvider {
   const regexCache: Record<string, RegExp> = {};

@@ -1,13 +1,8 @@
 import type { AttributeName, EventName, Value } from "@eventvisor/types";
-import type { EventvisorDiagnostic } from "./logger";
+import type { EventvisorDiagnostic } from "./logger.js";
 
 export type EmitType =
-  | "ready"
-  | "datafile_set"
-  | "attribute_set"
-  | "attribute_removed"
-  | "event_tracked"
-  | "error";
+  "ready" | "datafile_set" | "attribute_set" | "attribute_removed" | "event_tracked" | "error";
 
 export interface EventDetailsMap {
   ready: Record<string, never>;

@@ -1,4 +1,4 @@
-import { createSegmentBrowserModule } from "./index";
+import { createSegmentBrowserModule } from "./index.js";
 
 describe("createSegmentBrowserModule", () => {
   it("tracks the event and payload", async () => {

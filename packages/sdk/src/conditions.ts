@@ -1,9 +1,9 @@
 import type { PlainCondition, Condition, Inputs } from "@eventvisor/types";
 
-import type { SourceResolver } from "./sourceResolver";
+import type { SourceResolver } from "./sourceResolver.js";
 
-import { compareVersions } from "./compareVersions";
-import { Logger } from "./logger";
+import { compareVersions } from "./compareVersions.js";
+import { Logger } from "./logger.js";
 
 export type GetConditionsChecker = () => ConditionsChecker;
 export type GetRegex = (regexString: string, regexFlags?: string) => RegExp;

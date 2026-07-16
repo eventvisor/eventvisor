@@ -1,7 +1,9 @@
 {
   "extends": "./tsconfig.cjs.json",
   "compilerOptions": {
-    "noEmit": true
+    "noEmit": true,
+    "skipLibCheck": true,
+    "types": ["node", "jest"]
   },
   "include": ["./src/**/*.ts"],
   "exclude": []

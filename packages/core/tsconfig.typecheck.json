@@ -1,7 +1,13 @@
 {
   "extends": "./tsconfig.cjs.json",
   "compilerOptions": {
-    "noEmit": true
+    "noEmit": true,
+    "rootDir": "../..",
+    "skipLibCheck": true,
+    "types": ["node", "jest"],
+    "paths": {
+      "@eventvisor/sdk": ["../sdk/src/index.ts"]
+    }
   },
   "include": ["./src/**/*.ts"],
   "exclude": []

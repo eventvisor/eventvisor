@@ -1,4 +1,4 @@
-import { validate } from "./validator";
+import { validate } from "./validator.js";
 import { JSONSchema } from "@eventvisor/types";
 
 describe("Validator", () => {

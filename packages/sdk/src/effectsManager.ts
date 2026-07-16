@@ -1,11 +1,11 @@
 import type { EventName, AttributeName, EffectName, Value, EffectOnType } from "@eventvisor/types";
 
-import type { InstanceDataProvider } from "./datafile";
-import type { Logger } from "./logger";
-import type { GetTransformer } from "./transformer";
-import type { GetConditionsChecker } from "./conditions";
-import type { ModulesManager } from "./modulesManager";
-import { initializeFromStorage, persistEntity } from "./persister";
+import type { InstanceDataProvider } from "./datafile.js";
+import type { Logger } from "./logger.js";
+import type { GetTransformer } from "./transformer.js";
+import type { GetConditionsChecker } from "./conditions.js";
+import type { ModulesManager } from "./modulesManager.js";
+import { initializeFromStorage, persistEntity } from "./persister.js";
 
 export type StatesByEffect = Record<EffectName, Value>;
 

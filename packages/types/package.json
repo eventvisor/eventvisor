@@ -19,7 +19,7 @@
   "scripts": {
     "transpile": "echo 'Nothing to transpile'",
     "dist": "echo 'Nothing to dist'",
-    "build": "tsc ./src/index.d.ts",
+    "build": "tsc --project tsconfig.json --noEmit",
     "typecheck": "tsc --noEmit --project tsconfig.json",
     "test": "npm run typecheck",
     "lint": "eslint src"

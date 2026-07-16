@@ -7,23 +7,23 @@ import {
   parseDatafile,
   type DatafileInput,
   type InstanceDataProvider,
-} from "./datafile";
+} from "./datafile.js";
 import {
   createLogger,
   Logger,
   LogLevel,
   type EventvisorDiagnostic,
   type EventvisorDiagnosticHandler,
-} from "./logger";
-import { Emitter, EmitType, EventCallback } from "./emitter";
-import { AttributesManager } from "./attributesManager";
-import { EventvisorModule, ModuleName, ModulesManager } from "./modulesManager";
-import { SourceResolver } from "./sourceResolver";
-import { ConditionsChecker } from "./conditions";
-import { Bucketer } from "./bucketer";
-import { Transformer } from "./transformer";
-import { Validator } from "./validator";
-import { EffectsManager } from "./effectsManager";
+} from "./logger.js";
+import { Emitter, EmitType, EventCallback } from "./emitter.js";
+import { AttributesManager } from "./attributesManager.js";
+import { EventvisorModule, ModuleName, ModulesManager } from "./modulesManager.js";
+import { SourceResolver } from "./sourceResolver.js";
+import { ConditionsChecker } from "./conditions.js";
+import { Bucketer } from "./bucketer.js";
+import { Transformer } from "./transformer.js";
+import { Validator } from "./validator.js";
+import { EffectsManager } from "./effectsManager.js";
 
 export interface EventvisorOptions {
   datafile?: DatafileInput;

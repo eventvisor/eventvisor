@@ -1,4 +1,4 @@
-import { createConsoleModule } from "./index";
+import { createConsoleModule } from "./index.js";
 
 describe("createConsoleModule", () => {
   it("routes event levels and errors to the matching console method", async () => {

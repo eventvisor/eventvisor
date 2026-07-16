@@ -1,5 +1,5 @@
-export { createEventvisor } from "./instance";
-export type { Eventvisor, EventvisorOptions } from "./instance";
+export { createEventvisor } from "./instance.js";
+export type { Eventvisor, EventvisorOptions } from "./instance.js";
 export type {
   EventvisorModule,
   EventvisorModuleApi,
@@ -10,12 +10,12 @@ export type {
   ReadFromStorageOptions,
   WriteToStorageOptions,
   RemoveFromStorageOptions,
-} from "./modulesManager";
+} from "./modulesManager.js";
 export type {
   EmitType as EventvisorEvent,
   EventCallback,
   EventDetailsMap as EventvisorEventDetails,
-} from "./emitter";
-export type { LogLevel, EventvisorDiagnostic, EventvisorDiagnosticHandler } from "./logger";
-export type { DatafileInput } from "./datafile";
+} from "./emitter.js";
+export type { LogLevel, EventvisorDiagnostic, EventvisorDiagnosticHandler } from "./logger.js";
+export type { DatafileInput } from "./datafile.js";
 export type { Value, DatafileContent } from "@eventvisor/types";

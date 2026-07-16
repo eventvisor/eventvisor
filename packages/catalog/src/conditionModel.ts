@@ -26,9 +26,7 @@ export interface ConditionMessagePresentation {
 }
 
 export type ConditionPresentation =
-  | ConditionLeafPresentation
-  | ConditionGroupPresentation
-  | ConditionMessagePresentation;
+  ConditionLeafPresentation | ConditionGroupPresentation | ConditionMessagePresentation;
 
 const sourceLabels: Record<string, string> = {
   source: "Input",

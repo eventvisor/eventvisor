@@ -1,4 +1,4 @@
-import { createTimestampModule } from "./index";
+import { createTimestampModule } from "./index.js";
 import { EventvisorModuleApi } from "@eventvisor/sdk";
 
 describe("createTimestampModule", () => {

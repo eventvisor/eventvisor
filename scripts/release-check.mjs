@@ -43,8 +43,9 @@ async function main() {
       if (manifest.main && manifest.name !== "@eventvisor/cli") {
         require(join(directory, manifest.main));
       }
-      if (manifest.module) {
-        await import(pathToFileURL(join(directory, manifest.module)).href);
+      const importEntry = manifest.exports?.["."]?.import || manifest.module;
+      if (importEntry) {
+        await import(pathToFileURL(join(directory, importEntry)).href);
       }
 
       console.log(`✓ ${manifest.name} (${result.entryCount} files, ${result.size} bytes)`);

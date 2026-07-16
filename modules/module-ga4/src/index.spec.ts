@@ -1,4 +1,4 @@
-import { createGA4Module } from "./index";
+import { createGA4Module } from "./index.js";
 
 describe("createGA4Module", () => {
   it("normalizes event names before sending them to gtag", async () => {

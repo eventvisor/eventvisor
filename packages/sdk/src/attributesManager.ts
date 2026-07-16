@@ -1,13 +1,13 @@
 import type { AttributeName, Value } from "@eventvisor/types";
 
-import type { InstanceDataProvider } from "./datafile";
-import type { GetConditionsChecker } from "./conditions";
-import type { ModulesManager } from "./modulesManager";
-import type { Emitter } from "./emitter";
-import type { Logger } from "./logger";
-import type { GetTransformer } from "./transformer";
-import type { Validator } from "./validator";
-import { initializeFromStorage, persistEntity, removeEntity } from "./persister";
+import type { InstanceDataProvider } from "./datafile.js";
+import type { GetConditionsChecker } from "./conditions.js";
+import type { ModulesManager } from "./modulesManager.js";
+import type { Emitter } from "./emitter.js";
+import type { Logger } from "./logger.js";
+import type { GetTransformer } from "./transformer.js";
+import type { Validator } from "./validator.js";
+import { initializeFromStorage, persistEntity, removeEntity } from "./persister.js";
 
 export type AttributesMap = Record<AttributeName, Value>;
 

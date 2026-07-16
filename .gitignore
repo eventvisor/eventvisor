@@ -1,4 +1,7 @@
 node_modules
+cjs
+esm
+node-esm
 lib
 *.log
 coverage

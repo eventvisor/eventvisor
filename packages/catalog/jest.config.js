@@ -1,11 +1,6 @@
 module.exports = {
   roots: ["<rootDir>/src"],
-  transform: {
-    "^.+\\.tsx?$": [
-      "ts-jest",
-      { tsconfig: { module: "CommonJS", jsx: "react-jsx", esModuleInterop: true } },
-    ],
-  },
+  transform: require("../../jest.swc-transform.cjs"),
   collectCoverageFrom: [
     "src/api.ts",
     "src/conditionModel.ts",

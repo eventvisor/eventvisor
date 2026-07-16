@@ -25,12 +25,7 @@ const CATALOG_MARKER = ".eventvisor-catalog";
 
 type CatalogEntityType = "event" | "attribute" | "destination" | "effect" | "schema" | "target";
 type CatalogCollection =
-  | "events"
-  | "attributes"
-  | "destinations"
-  | "effects"
-  | "schemas"
-  | "targets";
+  "events" | "attributes" | "destinations" | "effects" | "schemas" | "targets";
 type CatalogHistoryEntry = Omit<HistoryEntry, "entities"> & {
   set?: string;
   entities: Array<HistoryEntry["entities"][number] & { set?: string }>;
@@ -188,8 +183,7 @@ function mapTestHistoryToEntities(history: HistoryEntry[], catalog: Catalog): Hi
       const entities = entry.entities.flatMap((entity) => {
         if (entity.type !== "test") return [entity];
         const test = catalog.entities.tests[entity.key] as unknown as
-          | Record<string, unknown>
-          | undefined;
+          Record<string, unknown> | undefined;
         if (!test) return [];
         for (const type of ["event", "attribute", "destination", "effect"] as const) {
           if (typeof test[type] === "string") return [{ type, key: test[type] as string }];

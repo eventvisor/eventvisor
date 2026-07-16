@@ -1,13 +1,13 @@
-import { SourceResolver } from "./sourceResolver";
-import { Emitter } from "./emitter";
-import { createLogger } from "./logger";
-import { ModulesManager } from "./modulesManager";
-import { AttributesManager } from "./attributesManager";
-import { EffectsManager } from "./effectsManager";
-import { createTestDataProvider } from "./datafile.test-fixtures";
-import { Validator } from "./validator";
-import { ConditionsChecker } from "./conditions";
-import { Transformer } from "./transformer";
+import { SourceResolver } from "./sourceResolver.js";
+import { Emitter } from "./emitter.js";
+import { createLogger } from "./logger.js";
+import { ModulesManager } from "./modulesManager.js";
+import { AttributesManager } from "./attributesManager.js";
+import { EffectsManager } from "./effectsManager.js";
+import { createTestDataProvider } from "./datafile.test-fixtures.js";
+import { Validator } from "./validator.js";
+import { ConditionsChecker } from "./conditions.js";
+import { Transformer } from "./transformer.js";
 
 describe("SourceResolver", () => {
   // initialize the dependencies

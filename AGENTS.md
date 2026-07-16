@@ -24,7 +24,8 @@ This is the original monorepo of Eventvisor, which is a Git-based analytics even
 - The monorepo is managed with Lerna
 - Using Node.js v24+
 - Using npm workspaces
-- Using TypeScript
+- Using TypeScript 6
+- Jest tests use SWC for TypeScript and TSX transformation
 
 ## Packages
 
@@ -40,6 +41,8 @@ Individual packages can be built and tested by `cd`ing into the package director
 - `packages/catalog`: Static project Catalog used by the CLI
 
 The SDK is created with `createEventvisor(options)`. Its public contract uses asynchronous operations, modules, diagnostics, typed events, merge-by-default datafile updates, and explicit `close()` cleanup. `addModule()` returns an asynchronous, idempotent removal callback. Failed setup must clean module subscriptions and resources. Do not restore `DatafileReader`, custom logger construction, or old async aliases as public APIs. Keep package `files` lists narrow, declare dependencies referenced by published types, inspect `npm pack --dry-run`, and verify CommonJS and ESM entry points before publishing.
+
+The SDK, React package, and modules are transpiled directly with TypeScript. They publish separate `cjs`, bundler-oriented `esm`, and Node-compatible `node-esm` outputs. Package exports route `require` to `cjs` and `import` to `node-esm`. No separate bundler is part of the package build. Keep relative TypeScript imports explicit with `.js` suffixes so Node ESM output remains valid. Use `npm run bundle-sizes` to inspect minified and compressed browser sizes.
 
 The project model includes reusable Schemas under `schemas/`, Targets for focused dependency-aware datafiles, and Sets for multiple isolated projects in one repository. Events, attributes, nested properties, and array items can reference a Schema with `schema: <key>`. Core resolves transitive references at build time and inlines them into events and attributes, so SDK datafiles have no separate Schema collection. Linting rejects missing and circular references. Combined Target and tag filters use AND semantics. Target dependency closure includes required attributes, named and collection-wide sources, effect trigger events and attributes, and reusable Schema dependencies, while exclusions and archived definitions continue to win. Condition groups, test specs, and matrix dimensions must be nonempty in both lint schemas and public TypeScript contracts. Malformed stringified runtime conditions fail closed.
 

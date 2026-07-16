@@ -1,19 +1,9 @@
 import type { Test } from "@eventvisor/types";
 
 export type CatalogEntityType =
-  | "event"
-  | "attribute"
-  | "destination"
-  | "effect"
-  | "schema"
-  | "target";
+  "event" | "attribute" | "destination" | "effect" | "schema" | "target";
 export type EntityPath =
-  | "events"
-  | "attributes"
-  | "destinations"
-  | "effects"
-  | "schemas"
-  | "targets";
+  "events" | "attributes" | "destinations" | "effects" | "schemas" | "targets";
 export type GitProvider = "github" | "gitlab" | "bitbucket";
 
 export interface LastModified {

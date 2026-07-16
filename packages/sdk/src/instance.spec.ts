@@ -1,8 +1,8 @@
 import { DatafileContent } from "@eventvisor/types";
 
-import { createEventvisor } from "./instance";
-import { EventvisorModule } from "./modulesManager";
-import { emptyDatafile } from "./datafile";
+import { createEventvisor } from "./instance.js";
+import { EventvisorModule } from "./modulesManager.js";
+import { emptyDatafile } from "./datafile.js";
 
 function waitFor(durationInMs: number) {
   return new Promise((resolve) => setTimeout(resolve, durationInMs));
