@@ -77,7 +77,7 @@ npx eventvisor simulate page_view --value='{"url":"https://example.com"}' \
 npx eventvisor benchmark page_view -n 1000000 --value='{"url":"https://example.com"}'
 ```
 
-`simulate` runs the real pipeline (validation → conditions → sample → transforms → destinations) against a freshly built datafile and prints the outcome — the primary debugging tool. `benchmark` warms up the SDK, then reports min/avg/max/p50/p95/p99 per evaluation in microseconds.
+`simulate` runs the real pipeline (validation → conditions → sample → transforms → effects → destinations) against a freshly built datafile with all transports/handlers stubbed — no modules needed. It prints the final transformed payload, or `null` when the event was dropped; it does not print drop reasons or reached destinations (use `info` + a quick test spec for those — [querying.md](querying.md)). `benchmark` warms up the SDK, then reports min/avg/max/p50/p95/p99 per evaluation in microseconds.
 
 ## Code generation
 
@@ -91,13 +91,14 @@ See [code-generation.md](code-generation.md).
 ## Catalog
 
 ```bash
-npx eventvisor catalog                        # export to out/ + serve locally, prints URL
+npx eventvisor catalog                        # export to out/ + serve locally in WATCH MODE, prints URL
+npx eventvisor catalog --port 3000            # watch mode on another port
 npx eventvisor catalog export [--base-path /event-catalog] [--out-dir <dir>] [--no-assets]
-npx eventvisor catalog serve --port 3000
+npx eventvisor catalog serve --port 3000      # serve an existing export
 npx eventvisor catalog --hash-router          # only when the host can't serve index.html fallbacks
 ```
 
-Export refuses unsafe output locations (project root, home dir, a directory containing the project). See [querying.md](querying.md).
+Bare `catalog` watches definitions and `eventvisor.config.js`, rebuilds on change, and live-reloads open browser pages — the local-development mode. `catalog export` and `catalog serve` are intentionally one-shot (CI exports, serving existing output). Export refuses unsafe output locations (project root, home dir, a directory containing the project). See [querying.md](querying.md).
 
 ## Version
 

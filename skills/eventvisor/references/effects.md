@@ -124,6 +124,8 @@ assertions:
 
 See [testing.md](testing.md).
 
+At runtime, `eventvisor.getStateValue("<effectName>")` reads the current state — useful when debugging "why didn't it fire again?" in a live app.
+
 ## Cautions
 
 - An effect's triggers create hidden dependencies: Targets automatically pull in the events/attributes that can trigger an included effect, and `find-usage` reveals them — check before renaming/removing trigger keys.

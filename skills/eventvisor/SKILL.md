@@ -1,6 +1,6 @@
 ---
 name: eventvisor
-description: Author, query, and integrate Eventvisor — Git-based governance, transformation, filtering, and routing of analytics events and logs. Use whenever the user mentions Eventvisor, works in a project containing eventvisor.config.js, edits files under events/, attributes/, destinations/, effects/, schemas/, targets/, or tests/, runs `eventvisor` CLI commands, or asks to define/validate/route/sample/filter/transform/deprecate analytics events, cut data ingestion costs, migrate analytics vendors, manage marketing pixels, or govern tracking schemas. Also use when consuming Eventvisor from app code — @eventvisor/sdk, @eventvisor/react, @eventvisor/module-*, createEventvisor, track/setAttribute, datafiles, transports, lookups, handlers. Covers starting a project from scratch, events, attributes, reusable Schemas, destinations, effects, conditions, transforms, sampling, tags, Targets, Sets, test specs, linting, building/deploying datafiles, simulation debugging, the Catalog, and code generation.
+description: Author, query, and integrate Eventvisor — Git-based governance, transformation, filtering, and routing of analytics events and logs. Use whenever the user mentions Eventvisor, works in a project containing eventvisor.config.js, edits files under events/, attributes/, destinations/, effects/, schemas/, targets/, or tests/, runs `eventvisor` CLI commands, or asks to define/validate/route/sample/filter/transform/deprecate analytics events, set up or audit a tracking plan, cut data ingestion costs, migrate analytics vendors, manage marketing pixels, or govern tracking schemas. Also use when consuming Eventvisor from app code — @eventvisor/sdk, @eventvisor/react, @eventvisor/module-*, createEventvisor, track/setAttribute, datafiles, transports, lookups, handlers. Covers starting a project from scratch, events, attributes, reusable Schemas, destinations, effects, conditions, transforms, sampling, tags, Targets, Sets, test specs, linting, building/deploying datafiles, simulation debugging, the Catalog, and code generation.
 ---
 
 # Eventvisor
@@ -167,7 +167,7 @@ All `eventvisor` CLI commands are local and safe to run without confirmation, wi
 | `npx eventvisor build --tag=<t> --json --pretty`                              | Print one datafile without side effects                                 |
 | `npx eventvisor benchmark <event> -n 1000`                                    | Measure evaluation performance                                          |
 | `npx eventvisor generate-code --language typescript --out-dir src/eventvisor` | Typed TS bindings                                                       |
-| `npx eventvisor catalog`                                                      | Browsable UI of the whole project                                       |
+| `npx eventvisor catalog`                                                      | Browsable UI of the whole project, live-reloading in watch mode         |
 
 Add `--set=<set>` to any project command in a Sets project. Full reference in [cli.md](references/cli.md).
 
@@ -228,7 +228,13 @@ Use `npx eventvisor simulate <event> --value='{…}' --attributes='{…}'` rathe
 
 ### Visual review with Catalog
 
-`npx eventvisor catalog` exports a browsable UI of the whole project and serves it locally — every event, attribute, Schema, destination, effect, and Target, with usage relationships, test cases (matrix-expanded), and Git history per entity. Offer it proactively when a session involves several authoring changes or when the user is less comfortable reading YAML. Entity URLs are shareable. Details in [querying.md](references/querying.md).
+`npx eventvisor catalog` serves a browsable UI of the whole project at `http://127.0.0.1:3000` **in watch mode** — it rebuilds and live-reloads the browser whenever definition files or the config change. Every event, attribute, Schema, destination, effect, and Target is shown with usage relationships, test cases (matrix-expanded), and Git history per entity. That makes it the ideal companion to an authoring session:
+
+1. Start it once as a background process (it's local and read-only — safe to leave running).
+2. If you have a browser tool, open `http://127.0.0.1:3000` in it; otherwise give the user the URL.
+3. Author changes as usual — every edit shows up in the Catalog on save, so the user watches events, routing, and test coverage evolve visually while they prompt you.
+
+Offer this proactively when a session involves several authoring changes or when the user is less comfortable reading YAML (PMs, marketers, analysts) — prompting plus a live Catalog is the best way to experience Eventvisor. Entity URLs are shareable. Details in [querying.md](references/querying.md).
 
 ### Recipes for higher-level use cases
 

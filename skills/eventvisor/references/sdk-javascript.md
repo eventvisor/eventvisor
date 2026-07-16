@@ -71,6 +71,8 @@ unsub();
 
 Available: `ready`, `datafile_set` (`{ replaced }`), `attribute_set`, `attribute_removed`, `event_tracked`, `error`.
 
+Related runtime read: `eventvisor.getStateValue("<effectName>")` returns an effect's current internal state — handy when debugging why an effect did or didn't fire again.
+
 ## Diagnostics
 
 Structured reports (level, code, message, details, optional module/error info) from the SDK and modules — validation warnings, missing transports, module failures:

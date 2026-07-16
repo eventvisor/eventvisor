@@ -24,9 +24,10 @@ npx eventvisor config --json --pretty
 
 ## Directory path overrides
 
-Each entity directory can be relocated; defaults are `<rootDir>/<plural>`:
+Each directory can be relocated; defaults are `<rootDir>/<plural>`:
 
-- `eventsDirectoryPath`, `attributesDirectoryPath`, `destinationsDirectoryPath`, `effectsDirectoryPath`, `schemasDirectoryPath`, `targetsDirectoryPath`, `testsDirectoryPath`
+- Entities: `eventsDirectoryPath`, `attributesDirectoryPath`, `destinationsDirectoryPath`, `effectsDirectoryPath`, `schemasDirectoryPath`, `targetsDirectoryPath`, `testsDirectoryPath`, `setsDirectoryPath`
+- Output/state: `datafilesDirectoryPath` (default `datafiles/`), `catalogExportDirectoryPath` (default `out/`), `systemDirectoryPath` (default `.eventvisor/`, revision state)
 
 If `npx eventvisor config` shows overrides, author in those paths, not the defaults.
 

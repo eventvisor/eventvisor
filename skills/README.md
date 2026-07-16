@@ -32,7 +32,7 @@ A single skill, `eventvisor`, that the agent invokes (e.g. as `/eventvisor` in C
 - **Authoring** — events (schemas, validation, levels, conditions, transforms, sampling, per-destination routing), attributes (typed context with defaults, transforms, persistence), reusable Schemas, destinations (transports, filtering, body shaping), effects (triggered side-effects with state, steps, handlers), tags, Targets (dependency-aware datafiles), and Sets (isolated projects / environments).
 - **Testing** — declarative `.spec.yml` assertions for events, attributes, destinations, and effects; matrix expansion; simulated lookups; async destination assertions.
 - **Querying** — `list`, `info`, `find-usage`, `simulate`, and `benchmark` recipes for answering questions about an existing project without grepping YAML.
-- **Visual review** — pairs authoring with `npx eventvisor catalog` running locally: browse every entity, its history, usage relationships, tests, and Target membership.
+- **Visual review** — pairs authoring with `npx eventvisor catalog` running locally in watch mode: the agent makes changes by prompt, and the Catalog in your (or the agent's) browser live-reloads so you see every entity, its history, usage relationships, tests, and Target membership evolve visually.
 - **Application integration** — `@eventvisor/sdk` (browser and Node.js), `@eventvisor/react`, official modules (console, GA4, GTM, Segment, Sentry, Datadog, Amplitude, Mixpanel, New Relic, pixel, localStorage, timestamp, UUID), custom modules, and typed code generation.
 - **Templates** — copy-and-adapt YAML for every common authoring shape, plus a complete lint- and test-passing example project.
 
