@@ -616,6 +616,22 @@ function validateAttributeSemantics(state: ValidationState, attribute: Attribute
 }
 
 function validateEventSemantics(state: ValidationState, event: Event) {
+  if (event.type !== "object") {
+    pushIssue(state, ["type"], 'Events must resolve to JSON Schema type "object"');
+  }
+
+  if (
+    event.onValidationFailure &&
+    typeof event.onValidationFailure === "object" &&
+    !state.ctx.destinations[event.onValidationFailure.destination]
+  ) {
+    pushIssue(
+      state,
+      ["onValidationFailure", "destination"],
+      `onValidationFailure references missing destination "${event.onValidationFailure.destination}"`,
+    );
+  }
+
   const options: SourceValidationOptions = {
     path: [],
     allowedOrigins: new Set([

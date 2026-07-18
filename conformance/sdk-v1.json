@@ -1,0 +1,70 @@
+{
+  "contract": "eventvisor-sdk-v1",
+  "description": "Language-neutral Eventvisor SDK behavior. Implementations must preserve these results.",
+  "bucketing": {
+    "algorithm": "MurmurHash3 x86 32-bit",
+    "seed": 1,
+    "buckets": 100000,
+    "vectors": [
+      { "key": "a", "bucket": 34586 },
+      { "key": "user-123", "bucket": 63182 },
+      { "key": "checkout.42", "bucket": 33214 },
+      { "key": "", "bucket": 31759 }
+    ]
+  },
+  "conditions": [
+    {
+      "name": "implicit-and",
+      "conditions": [
+        { "payload": "country", "operator": "equals", "value": "NL" },
+        { "payload": "paid", "operator": "equals", "value": true }
+      ],
+      "payload": { "country": "NL", "paid": true },
+      "matches": true
+    },
+    {
+      "name": "not-negates-implicit-and",
+      "conditions": {
+        "not": [
+          { "payload": "country", "operator": "equals", "value": "NL" },
+          { "payload": "paid", "operator": "equals", "value": true }
+        ]
+      },
+      "payload": { "country": "NL", "paid": false },
+      "matches": true
+    }
+  ],
+  "validation": [
+    {
+      "name": "strict-object-rejects-unknown",
+      "schema": { "type": "object", "properties": { "id": { "type": "string" } } },
+      "value": { "id": "1", "extra": true },
+      "valid": false
+    },
+    {
+      "name": "additional-properties-opt-in",
+      "schema": { "type": "object", "additionalProperties": true },
+      "value": { "id": "1", "extra": true },
+      "valid": true
+    },
+    {
+      "name": "structural-unique-items",
+      "schema": { "type": "array", "items": { "type": "object", "additionalProperties": true }, "uniqueItems": true },
+      "value": [{ "id": 1 }, { "id": 1 }],
+      "valid": false
+    }
+  ],
+  "pipeline": [
+    "event lookup",
+    "required attributes",
+    "validation policy",
+    "conditions",
+    "sampling",
+    "event transforms",
+    "event_tracked effects",
+    "destination conditions and sampling",
+    "destination transforms",
+    "parallel transport fan-out",
+    "SDK event_tracked emission"
+  ]
+}

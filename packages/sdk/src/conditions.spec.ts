@@ -123,4 +123,28 @@ describe("conditions", () => {
       matches({ payload: "value", operator: "matches", value: "[" }, { value: "hello" }),
     ).resolves.toBe(false);
   });
+
+  it("caches malformed stringified conditions and clears the cache for a new datafile", async () => {
+    const error = jest.spyOn(console, "error").mockImplementation(() => undefined);
+    const datafile: DatafileContent = {
+      schemaVersion: "1",
+      revision: "1",
+      attributes: {},
+      destinations: {},
+      effects: {},
+      events: { test: { skipValidation: true, conditions: "not-json" } },
+    };
+    const e = createEventvisor({ datafile, logLevel: "error" });
+    try {
+      await e.track("test", {});
+      await e.track("test", {});
+      expect(error).toHaveBeenCalledTimes(1);
+      await e.setDatafile({ ...datafile, revision: "2" }, true);
+      await e.track("test", {});
+      expect(error).toHaveBeenCalledTimes(2);
+    } finally {
+      error.mockRestore();
+      await e.close();
+    }
+  });
 });

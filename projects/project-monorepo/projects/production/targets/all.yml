@@ -1,0 +1,5 @@
+description: All production entities
+includeEvents: "*"
+includeAttributes: "*"
+includeDestinations: "*"
+includeEffects: "*"

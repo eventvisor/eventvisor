@@ -18,6 +18,7 @@ export class ConditionsChecker {
   private getRegex: GetRegex;
   private sourceResolver: SourceResolver;
   private logger: Logger;
+  private parsedConditions = new Map<string, Condition | Condition[] | null>();
 
   constructor(options: ConditionsCheckerOptions) {
     this.getRegex = options.getRegex;
@@ -214,9 +215,16 @@ export class ConditionsChecker {
       return conditions;
     }
 
+    if (this.parsedConditions.has(conditions)) {
+      return this.parsedConditions.get(conditions) || conditions;
+    }
+
     try {
-      return JSON.parse(conditions);
+      const parsed = JSON.parse(conditions) as Condition | Condition[];
+      this.parsedConditions.set(conditions, parsed);
+      return parsed;
     } catch (e) {
+      this.parsedConditions.set(conditions, null);
       this.logger.error("Error parsing conditions", {
         error: e,
         details: {
@@ -226,5 +234,9 @@ export class ConditionsChecker {
 
       return conditions;
     }
+  }
+
+  clearParsedConditions() {
+    this.parsedConditions.clear();
   }
 }

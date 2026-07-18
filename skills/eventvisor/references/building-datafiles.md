@@ -2,7 +2,7 @@
 
 Full docs: <https://eventvisor.org/docs/building-datafiles> and <https://eventvisor.org/docs/deployment>
 
-Datafiles are the static JSON files SDKs consume. A normal build generates one per configured tag plus one per Target:
+Datafiles are the static JSON files SDKs consume. A normal build generates one per Target:
 
 ```bash
 npx eventvisor build
@@ -10,12 +10,11 @@ npx eventvisor build
 
 ```text
 datafiles/
-├── eventvisor-tag-all.json
-├── eventvisor-tag-web.json
-└── eventvisor-target-checkout.json
+├── eventvisor-checkout.json
+└── eventvisor-account.json
 ```
 
-Selective builds: `--tag web`, `--target checkout` (repeatable), `--set staging`. Print without writing: `--tag/--target … --json --pretty` (Sets projects must pass one `--set`). Datafiles contain `schemaVersion`, `revision`, `eventvisorVersion`, and the resolved `attributes`/`events`/`destinations`/`effects` maps — reusable Schemas are already inlined; Target dependency closure already applied.
+Selective builds: `--target checkout` (repeatable), `--set staging`, and optional `--tag web` filtering. Print without writing: `--tag/--target … --json --pretty` (Sets projects must pass one `--set`). Tags are selection metadata and do not create artifacts. Datafiles contain `schemaVersion`, `revision`, `eventvisorVersion`, the validation failure policy, and resolved runtime maps. Reusable Schemas are inlined and Target dependency closure is already applied.
 
 ## Revisions
 

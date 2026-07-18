@@ -35,7 +35,7 @@ import { createEventvisor } from "@eventvisor/sdk";
 import { createConsoleModule } from "@eventvisor/module-console";
 import { createPixelModule } from "@eventvisor/module-pixel";
 
-const datafile = await fetch("https://cdn.example.com/eventvisor-target-web.json")
+const datafile = await fetch("https://cdn.example.com/eventvisor-web.json")
   .then((res) => res.json());
 
 const eventvisor = createEventvisor({

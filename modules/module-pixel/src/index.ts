@@ -2,17 +2,25 @@ import type { EventvisorModule } from "@eventvisor/sdk";
 
 export type PixelModuleOptions = {
   name?: string;
+  /** Script execution is disabled by default because datafiles are remote control input. */
+  allowScripts?: boolean;
+  /** CSP nonce applied to every injected script. */
+  nonce?: string | (() => string | undefined);
 };
 
 export function createPixelModule(options: PixelModuleOptions = {}): EventvisorModule {
-  const { name = "pixel" } = options;
+  const { name = "pixel", allowScripts = false, nonce } = options;
 
   return {
     name,
 
-    handle: async ({ step, payload }, api) => {
-      const report = (code: string, message: string, details: Record<string, unknown>) =>
-        api.reportDiagnostic({ level: "error", code, message, details });
+    handle: async ({ effectName, step, payload }, api) => {
+      const report = (
+        code: string,
+        message: string,
+        details: Record<string, unknown>,
+        level: "error" | "warn" = "error",
+      ) => api.reportDiagnostic({ level, code, message, details });
       const { params } = step;
 
       if (!params) {
@@ -71,13 +79,25 @@ export function createPixelModule(options: PixelModuleOptions = {}): EventvisorM
 
       // Handle script tags separately to ensure they execute
       const scripts = doc.querySelectorAll("script");
+      if (scripts.length && !allowScripts) {
+        report(
+          "pixel_scripts_disabled",
+          "Pixel snippet scripts were ignored because allowScripts is disabled",
+          { effectName, scripts: scripts.length },
+          "warn",
+        );
+      }
       scripts.forEach((script) => {
+        if (!allowScripts) return;
         const newScript = document.createElement("script");
 
         // Copy all attributes from the original script
         Array.from(script.attributes).forEach((attr) => {
           newScript.setAttribute(attr.name, attr.value);
         });
+
+        const resolvedNonce = typeof nonce === "function" ? nonce() : nonce;
+        if (resolvedNonce) newScript.setAttribute("nonce", resolvedNonce);
 
         // Copy the script content
         newScript.textContent = script.textContent;

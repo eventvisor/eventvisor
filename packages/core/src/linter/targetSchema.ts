@@ -38,6 +38,7 @@ export function getTargetSchema(projectConfig: ProjectConfig) {
       pretty: z.boolean().optional(),
       stringify: z.boolean().optional(),
       revisionFromHash: z.boolean().optional(),
+      promotable: z.boolean().optional(),
     })
     .strict()
     .refine((value) => !(value.tag && value.tags), {

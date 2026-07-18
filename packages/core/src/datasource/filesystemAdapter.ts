@@ -61,8 +61,6 @@ export class FilesystemAdapter extends Adapter {
       return this.config.attributesDirectoryPath;
     } else if (entityType === "destination") {
       return this.config.destinationsDirectoryPath;
-    } else if (entityType === "state") {
-      return this.config.statesDirectoryPath;
     } else if (entityType === "effect") {
       return this.config.effectsDirectoryPath;
     } else if (entityType === "schema") {
@@ -197,9 +195,7 @@ export class FilesystemAdapter extends Adapter {
   getDatafilePath(options: DatafileOptions): string {
     const pattern = this.config.datafileNamePattern || "eventvisor-%s.json";
 
-    const suffix = options.target
-      ? `target-${encodeURIComponent(options.target)}`
-      : `tag-${options.tag || "all"}`;
+    const suffix = options.target ? encodeURIComponent(options.target) : "all";
     const fileName = pattern.replace("%s", suffix);
     const dir = options.datafilesDir || this.config.datafilesDirectoryPath;
 

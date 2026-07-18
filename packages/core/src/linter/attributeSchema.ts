@@ -12,6 +12,7 @@ export function getAttributeSchema(deps: Dependencies) {
       ...JSONZodSchema.shape,
 
       archived: z.boolean().optional(),
+      promotable: z.boolean().optional(),
       deprecated: z.boolean().optional(),
       description: z.string(),
       tags: getTagsSchema(deps),

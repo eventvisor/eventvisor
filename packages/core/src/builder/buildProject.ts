@@ -315,6 +315,7 @@ export async function buildDatafile(
     schemaVersion: SCHEMA_VERSION,
     eventvisorVersion: getEventvisorVersion(),
     revision: options.revision || "1",
+    onValidationFailure: deps.projectConfig.onValidationFailure,
     attributes: {},
     events: {},
     destinations: {},
@@ -336,7 +337,7 @@ export async function buildDatafile(
 }
 
 async function buildExecution(deps: Dependencies, options: BuildCLIOptions) {
-  const { projectConfig, datasource } = deps;
+  const { datasource } = deps;
   const currentRevision = await datasource.readRevision();
   const nextRevision = options.revision?.toString() || getNextRevision(currentRevision);
 
@@ -365,23 +366,10 @@ async function buildExecution(deps: Dependencies, options: BuildCLIOptions) {
     : options.target
       ? [options.target]
       : [];
-  const tags = selectedTargets.length ? [] : options.tag ? [options.tag] : projectConfig.tags;
-  for (const tag of tags) {
-    const datafile = await buildDatafile(deps, { tag, revision: nextRevision });
-    if (options.revisionFromHash) datafile.revision = generateHashForDatafile(datafile);
-    console.log("");
-    console.log(`  ${colorize("Tag", CLI_COLOR_CYAN)}: ${tag}`);
-    await datasource.writeDatafile(datafile, {
-      tag,
-      datafilesDir: options.datafilesDir,
-      pretty: options.pretty,
-    });
+  const targets = selectedTargets.length ? selectedTargets : await datasource.listTargets();
+  if (targets.length === 0) {
+    throw new Error("No Targets found. Create at least one Target before building datafiles.");
   }
-  const targets = selectedTargets.length
-    ? selectedTargets
-    : options.tag
-      ? []
-      : await datasource.listTargets();
   for (const target of targets) {
     const definition = await datasource.readTarget(target);
     const datafile = await buildDatafile(deps, {
@@ -446,7 +434,7 @@ export async function buildProject(deps: Dependencies, options: BuildCLIOptions 
 export const buildPlugin: Plugin = {
   command: "build",
   options: {
-    tag: { type: "string", description: "build JSON for a tag" },
+    tag: { type: "string", description: "filter selected Target content by tag" },
     target: { type: "array", description: "build one or more targets" },
     set: { type: "string", description: "build a project set" },
     json: { type: "boolean", description: "print the datafile as JSON" },

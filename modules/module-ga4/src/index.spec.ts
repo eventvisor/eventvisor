@@ -5,7 +5,7 @@ describe("createGA4Module", () => {
     const gtag = jest.fn();
     (globalThis as any).gtag = gtag;
     await createGA4Module().transport!(
-      { destinationName: "ga4", eventName: "Checkout Started", payload: { id: 1 } },
+      { destinationName: "ga4", eventName: "Checkout Started", revision: "1", payload: { id: 1 } },
       {} as any,
     );
     expect(gtag).toHaveBeenCalledWith("event", "_checkout_started", { id: 1 });

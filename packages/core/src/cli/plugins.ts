@@ -12,6 +12,7 @@ import { infoPlugin } from "../info";
 import { findUsagePlugin } from "../find-usage";
 import { simulatePlugin } from "../simulate";
 import { benchmarkPlugin } from "../benchmark";
+import { promotePlugin } from "../promoter";
 
 export const commonPlugins: Plugin[] = [];
 
@@ -29,4 +30,5 @@ export const projectBasedPlugins: Plugin[] = [
   findUsagePlugin,
   simulatePlugin,
   benchmarkPlugin,
+  promotePlugin,
 ];

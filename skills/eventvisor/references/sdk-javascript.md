@@ -14,7 +14,7 @@ npm install @eventvisor/sdk
 import { createEventvisor } from "@eventvisor/sdk";
 import { createConsoleModule } from "@eventvisor/module-console";
 
-const datafile = await fetch("https://cdn.example.com/eventvisor-tag-web.json")
+const datafile = await fetch("https://cdn.example.com/eventvisor-web.json")
   .then((res) => res.json());
 
 const eventvisor = createEventvisor({
@@ -26,7 +26,7 @@ const eventvisor = createEventvisor({
 });
 ```
 
-`createEventvisor()` is the factory; the `Eventvisor` type is exported for passing instances around. Instances are ready immediately — `await eventvisor.onReady()` is only needed when **persistence** modules must load stored attribute/effect state first.
+`createEventvisor()` is the factory; the `Eventvisor` type is exported for passing instances around. Async SDK operations wait for readiness automatically. Use `await eventvisor.onReady()` when application code must know that persisted attribute and effect state has loaded before doing synchronous reads.
 
 > Migrating pre-v1 code? `createInstance` → `createEventvisor`, `registerModule` → `addModule`, logger handlers → `onDiagnostic`. Full mapping: <https://eventvisor.org/docs/migration/v1>.
 
@@ -47,9 +47,9 @@ eventvisor.getAttributes();
 eventvisor.isAttributeSet("userId");
 ```
 
-`track`, `setAttribute`, `removeAttribute`, `setDatafile`, `removeModule`, and `close` are async — await them whenever ordering or completion matters (e.g. set `userId` before tracking an event that has `requiredAttributes: [userId]`; track before navigating away). A `null` from `track` isn't an exception — it means dropped; see the pipeline in SKILL.md and the debugging checklist in [querying.md](querying.md).
+`track`, `setAttribute`, `removeAttribute`, `setDatafile`, `removeModule`, `flush`, and `close` are async. Await them whenever ordering or completion matters. Destination attempts begin in parallel. A `null` from `track` means governance dropped the event, not that an exception occurred.
 
-Invalid attribute values are not set; invalid event payloads are not tracked — both log warnings. Falsy values (`false`, `0`, `""`) are valid values.
+Invalid attribute values are not set. Invalid event payloads follow `onValidationFailure`: drop by default, deliver with validation metadata, or route to quarantine. Validation failures produce diagnostics. Falsy values (`false`, `0`, `""`) are valid values.
 
 ## Updating a datafile
 
@@ -58,7 +58,7 @@ await eventvisor.setDatafile(nextDatafile);        // MERGES into the current on
 await eventvisor.setDatafile(nextDatafile, true);  // replaces completely
 ```
 
-Merge-by-default lets an app load several datafiles (a tag datafile + a target datafile, or per-microfrontend datafiles) into one instance. Invalid JSON is reported ("Could not parse datafile") and the active datafile stays. Refreshing preserves in-memory attributes, initializes newly persisted definitions, and drops state for deleted ones.
+Merge-by-default lets an app load several Target datafiles into one instance. Invalid JSON is reported ("Could not parse datafile") and the active datafile stays. Refreshing preserves in-memory attributes, initializes newly persisted definitions, and drops state for deleted ones.
 
 Refresh strategies (the SDK has no built-in poller — pick one): periodic `setInterval` fetch; refresh on app events (route change, foreground); or push via WebSocket/webhook. Check what's live with `eventvisor.getRevision()` / `eventvisor.getSchemaVersion()`.
 
@@ -105,6 +105,7 @@ const child = eventvisor.spawn({ initialAttributes: { application: "checkout" } 
 // independent instance sharing the current datafile — per-request contexts on servers,
 // per-microfrontend instances in one page
 await child.close();
+await eventvisor.flush();   // asks queueing modules to attempt buffered work
 await eventvisor.close();   // releases modules, diagnostics, listeners
 ```
 

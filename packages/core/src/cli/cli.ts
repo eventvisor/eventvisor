@@ -34,6 +34,13 @@ export interface Plugin {
   >;
 }
 
+/**
+ * Defines a type-safe Eventvisor CLI plugin without changing it at runtime.
+ */
+export function definePlugin(plugin: Plugin): Plugin {
+  return plugin;
+}
+
 export interface RunnerOptions {
   rootDirectoryPath: string;
 

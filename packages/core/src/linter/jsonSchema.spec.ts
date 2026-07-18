@@ -373,6 +373,7 @@ describe("JSON Schema Validator", () => {
     it("should validate required array contains strings", () => {
       const schema = {
         type: "object",
+        properties: { prop1: {}, prop3: {} },
         required: ["prop1", 123, "prop3"],
       };
       const result = validateJSONSchema(schema);

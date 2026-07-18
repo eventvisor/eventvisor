@@ -20,7 +20,6 @@ function createDeps(testContent: Record<string, any>): Dependencies {
       eventsDirectoryPath: "/tmp/eventvisor/events",
       attributesDirectoryPath: "/tmp/eventvisor/attributes",
       destinationsDirectoryPath: "/tmp/eventvisor/destinations",
-      statesDirectoryPath: "/tmp/eventvisor/states",
       effectsDirectoryPath: "/tmp/eventvisor/effects",
       schemasDirectoryPath: "/tmp/eventvisor/schemas",
       testsDirectoryPath: "/tmp/eventvisor/tests",
@@ -37,6 +36,7 @@ function createDeps(testContent: Record<string, any>): Dependencies {
       parser: { extension: "yml", parse: jest.fn(), stringify: jest.fn() },
       prettyDatafile: false,
       stringify: true,
+      onValidationFailure: "drop",
     },
     datasource: {
       listAttributes: jest.fn().mockResolvedValue([]),
@@ -165,6 +165,19 @@ describe("lintProject", () => {
       tags: ["all"],
       schema: "a",
     });
+
+    await expect(lintProject(deps)).resolves.toBe(false);
+  });
+
+  it("rejects a missing project-level quarantine destination", async () => {
+    const deps = createDeps({
+      event: "page_view",
+      assertions: [{ track: {}, expectedToBeValid: true }],
+    });
+    deps.projectConfig.onValidationFailure = {
+      action: "quarantine",
+      destination: "invalidEvents",
+    };
 
     await expect(lintProject(deps)).resolves.toBe(false);
   });

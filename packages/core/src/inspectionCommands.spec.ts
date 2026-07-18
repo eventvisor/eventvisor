@@ -45,14 +45,15 @@ describe("inspection command output", () => {
   it("supports pretty JSON for usage results", async () => {
     const empty = async () => [];
     const datasource = {
-      listEvents: empty,
-      listAttributes: async () => ["userId"],
+      listEvents: async () => ["page"],
+      listAttributes: empty,
       listDestinations: empty,
       listEffects: empty,
       listSchemas: empty,
       listTargets: empty,
-      listTests: empty,
-      readAttribute: async () => ({ event: "page" }),
+      listTests: async () => ["pageSpec"],
+      readTest: async () => ({ event: "page", assertions: [{}] }),
+      readEvent: async () => ({ description: "Page", tags: ["all"], type: "object" }),
     };
 
     await findUsagePlugin.handler({
@@ -68,7 +69,7 @@ describe("inspection command output", () => {
     } as any);
 
     expect(log).toHaveBeenCalledWith(
-      '[\n  {\n    "entityType": "attribute",\n    "key": "userId"\n  }\n]',
+      '[\n  {\n    "entityType": "test",\n    "key": "pageSpec"\n  }\n]',
     );
   });
 

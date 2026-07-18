@@ -3,6 +3,7 @@ tags:
   - web
 
 level: error
+type: object
 
 properties:
   name:

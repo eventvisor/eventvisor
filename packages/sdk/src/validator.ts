@@ -144,7 +144,12 @@ function validateValue(
   let result = value;
 
   // Object validation
-  if (typeof value === "object" && !Array.isArray(value) && schema.properties) {
+  if (
+    typeof value === "object" &&
+    value !== null &&
+    !Array.isArray(value) &&
+    (schema.type === "object" || schema.properties || schema.additionalProperties !== undefined)
+  ) {
     // Handle JavaScript Error objects specially
     let obj: Record<string, Value>;
     if (value instanceof Error) {
@@ -163,13 +168,13 @@ function validateValue(
     if (schema.required) {
       for (const requiredProp of schema.required) {
         if (!(requiredProp in obj)) {
-          if (schema.properties[requiredProp]?.default !== undefined) {
+          if (schema.properties?.[requiredProp]?.default !== undefined) {
             validatedObj[requiredProp] = schema.properties[requiredProp].default!;
           } else {
             errors.push({
               path: path ? `${path}.${requiredProp}` : requiredProp,
               message: `Required property '${requiredProp}' is missing`,
-              schema: schema.properties[requiredProp],
+              schema: schema.properties?.[requiredProp],
               value: undefined,
             });
           }
@@ -186,6 +191,8 @@ function validateValue(
         if (validatedProp !== undefined) {
           validatedObj[prop] = validatedProp;
         }
+      } else if (schema.additionalProperties === true) {
+        validatedObj[prop] = propValue;
       } else {
         errors.push({
           path: path ? `${path}.${prop}` : prop,
@@ -229,6 +236,20 @@ function validateValue(
         value,
       });
       return undefined;
+    }
+
+    if (schema.uniqueItems === true) {
+      for (let index = 0; index < value.length; index++) {
+        if (value.slice(0, index).some((entry) => valuesAreEqual(entry, value[index]))) {
+          errors.push({
+            path: `${path}[${index}]`,
+            message: "Array items must be unique",
+            schema,
+            value: value[index],
+          });
+          return undefined;
+        }
+      }
     }
 
     if (schema.items) {
@@ -346,6 +367,35 @@ function validateValue(
   }
 
   return result;
+}
+
+function valuesAreEqual(left: Value, right: Value): boolean {
+  if (left === right) return true;
+  if (Array.isArray(left) && Array.isArray(right)) {
+    return (
+      left.length === right.length &&
+      left.every((value, index) => valuesAreEqual(value, right[index]))
+    );
+  }
+  if (
+    left &&
+    right &&
+    typeof left === "object" &&
+    typeof right === "object" &&
+    !Array.isArray(left) &&
+    !Array.isArray(right)
+  ) {
+    const leftKeys = Object.keys(left);
+    const rightKeys = Object.keys(right);
+    return (
+      leftKeys.length === rightKeys.length &&
+      leftKeys.every(
+        (key) =>
+          Object.prototype.hasOwnProperty.call(right, key) && valuesAreEqual(left[key], right[key]),
+      )
+    );
+  }
+  return false;
 }
 
 function validateType(expectedType: string, value: Value): boolean {

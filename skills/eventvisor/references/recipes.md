@@ -169,7 +169,7 @@ Transports receive the original `error` object as a separate argument — a Sent
 
 ## Microfrontends
 
-One project, one tag per microfrontend (`products`, `checkout`, `account`…); shared entities carry several tags. Each microfrontend loads only its own `eventvisor-tag-<name>.json` (or a Target for a precise contract) with its own SDK instance — small datafiles, central review, no cross-team drift. `spawn()` shares one datafile across per-area instances when a shell app owns fetching. See [tags-targets.md](tags-targets.md).
+One project, one Target per microfrontend (`products`, `checkout`, `account`), with tags as reusable selection metadata. Each microfrontend loads `eventvisor-<target>.json` with its own SDK instance. `spawn()` shares one datafile across per-area instances when a shell app owns fetching. See [tags-targets.md](tags-targets.md).
 
 ## Environments
 

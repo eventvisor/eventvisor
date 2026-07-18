@@ -2,7 +2,7 @@
 
 Full docs: <https://eventvisor.org/docs/tags> and <https://eventvisor.org/docs/targets>
 
-Both scope what goes into each generated datafile, so every app loads only what it needs. **Tags** are coarse labels on entities; **Targets** are named, reviewable selections with dependency awareness.
+Tags are coarse labels on entities. Targets turn those labels and key patterns into named, reviewable, dependency-aware datafiles.
 
 ## Tags
 
@@ -19,7 +19,7 @@ module.exports = {
 tags: [all, web]
 ```
 
-`npx eventvisor build` emits one datafile per configured tag — `datafiles/eventvisor-tag-web.json` contains exactly the entities tagged `web`. Tagging an entity with a tag not in the config fails lint.
+Tags do not emit datafiles. Target definitions, Catalog filters, code generation, and supported CLI commands use them as selection metadata. Tagging an entity with a tag not in the config fails lint.
 
 Typical schemes: per platform (`web`/`mobile`/`backend`), per microfrontend (`products`/`checkout`/`account`), plus an `all` umbrella. Tags are about **datafile size and scope**, not security or ownership — for ownership use CODEOWNERS ([recipes.md](recipes.md#ownership)).
 
@@ -64,12 +64,12 @@ npx eventvisor build --target checkout
 npx eventvisor build --target checkout --target account   # several at once
 ```
 
-Output: `datafiles/eventvisor-target-checkout.json`. Apps fetch it exactly like a tag datafile. An app can even load both a tag datafile and a target datafile — `setDatafile` merges by default ([sdk-javascript.md](sdk-javascript.md#updating-a-datafile)).
+Output: `datafiles/eventvisor-checkout.json`. Apps may load and merge several Target datafiles because `setDatafile` merges by default ([sdk-javascript.md](sdk-javascript.md#updating-a-datafile)).
 
 Targets also scope other commands: `test --target checkout`, `simulate <event> --target checkout`, `generate-code --target checkout` — useful for "does this app's datafile behave correctly" questions.
 
 ## Choosing
 
-- One app, one team → a single tag is enough; skip Targets.
-- Several surfaces sharing a project → tags per surface; add Targets when apps need precise contracts (exact event lists, exclusions) or when reviewers want the datafile contents to be an explicit, diffable file.
+- One app, one team → create one broad Target, optionally selecting one tag.
+- Several surfaces sharing a project → use one Target per deployable application or service.
 - Renaming/removing anything a Target references? `npx eventvisor find-usage` first; lint catches dangling patterns only if they match nothing at all.

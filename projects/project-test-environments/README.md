@@ -9,4 +9,12 @@ npx eventvisor test --set=staging --assertionPattern=internal
 npx eventvisor test --set=production --onlyFailures
 ```
 
+Definitions can be promoted through the configured release lanes. Promotion includes dependencies
+and validates the destination set before keeping any writes:
+
+```sh
+npx eventvisor promote --from=development --to=staging
+npx eventvisor promote --from=development --to=staging --apply
+```
+
 Use it as a starter with `npx @eventvisor/cli init --project=test-environments`.

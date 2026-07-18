@@ -95,12 +95,24 @@ export async function lintProject(
   const printSection = (label: string) =>
     console.log(`  ${colorize("•", CLI_COLOR_CYAN)} Linting ${label}`);
 
+  if (
+    typeof projectConfig.onValidationFailure === "object" &&
+    !lintContext.destinations[projectConfig.onValidationFailure.destination]
+  ) {
+    console.log(
+      `  ${colorize("×", 31)} Project onValidationFailure references missing destination "${projectConfig.onValidationFailure.destination}"`,
+    );
+    hasErrors = true;
+  }
+
   // reusable schemas
   printSection("schemas");
   for (const schemaKey of Object.keys(schemasByKey)) {
     if (entityType && entityType !== "schema") continue;
     if (keyPattern && !schemaKey.includes(keyPattern)) continue;
-    const result = await JSONZodSchema.safeParseAsync(schemasByKey[schemaKey]);
+    const result = await JSONZodSchema.extend({
+      promotable: z.boolean().optional(),
+    }).safeParseAsync(schemasByKey[schemaKey]);
     if (!result.success) {
       printError({
         entityType: "schema",

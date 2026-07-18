@@ -2,7 +2,7 @@ import { createEventvisor } from "@eventvisor/sdk";
 import { createConsoleModule } from "@eventvisor/module-console";
 
 // hardcoded datafile (only for testing in this example)
-import datafile from "../datafiles/eventvisor-tag-web.json";
+import datafile from "../datafiles/eventvisor-web.json";
 
 const eventvisor = createEventvisor({
   datafile,

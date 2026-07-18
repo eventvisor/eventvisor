@@ -3,7 +3,7 @@ import { createPixelModule } from "./index.js";
 describe("createPixelModule", () => {
   it("reports invalid handler configuration through diagnostics", async () => {
     const reportDiagnostic = jest.fn();
-    await createPixelModule().handle!(
+    await createPixelModule({ allowScripts: true }).handle!(
       { effectName: "pixel", effect: { on: [] }, step: {}, payload: {} },
       { reportDiagnostic } as any,
     );
@@ -39,7 +39,7 @@ describe("createPixelModule", () => {
 
   it("interpolates payload values and appends script and HTML nodes", async () => {
     document.body.innerHTML = '<div id="target"></div>';
-    await createPixelModule().handle!(
+    await createPixelModule({ allowScripts: true }).handle!(
       {
         effectName: "pixel",
         effect: { on: [] },
@@ -58,5 +58,38 @@ describe("createPixelModule", () => {
     expect(target.querySelector("script")?.getAttribute("data-id")).toBe("123");
     expect(target.querySelector("script")?.textContent).toContain("window.pixel");
     expect(target.querySelector("img")?.getAttribute("alt")).toBe("Checkout");
+  });
+
+  it("blocks scripts by default while preserving non-script markup", async () => {
+    document.body.innerHTML = '<div id="target"></div>';
+    const reportDiagnostic = jest.fn();
+    await createPixelModule().handle!(
+      {
+        effectName: "pixel",
+        effect: { on: [] },
+        step: { params: { selector: "#target", snippet: "<script>unsafe()</script><img>" } },
+        payload: {},
+      },
+      { reportDiagnostic } as any,
+    );
+    expect(document.querySelector("#target script")).toBeNull();
+    expect(document.querySelector("#target img")).not.toBeNull();
+    expect(reportDiagnostic).toHaveBeenCalledWith(
+      expect.objectContaining({ code: "pixel_scripts_disabled", level: "warn" }),
+    );
+  });
+
+  it("applies a configured CSP nonce to enabled scripts", async () => {
+    document.body.innerHTML = '<div id="target"></div>';
+    await createPixelModule({ allowScripts: true, nonce: () => "request-nonce" }).handle!(
+      {
+        effectName: "pixel",
+        effect: { on: [] },
+        step: { params: { selector: "#target", snippet: "<script>window.safe = true</script>" } },
+        payload: {},
+      },
+      { reportDiagnostic: jest.fn() } as any,
+    );
+    expect(document.querySelector("#target script")?.getAttribute("nonce")).toBe("request-nonce");
   });
 });

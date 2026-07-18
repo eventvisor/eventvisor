@@ -3,6 +3,7 @@ import * as path from "path";
 import { Parser, parsers } from "./parsers";
 import { FilesystemAdapter } from "../datasource/filesystemAdapter";
 import { CLI_COLOR_CYAN, CLI_FORMAT_BOLD, colorize } from "../tester/cliFormat";
+import type { OnValidationFailure } from "@eventvisor/types";
 import type { Plugin } from "../cli";
 import type { Adapter } from "../datasource/adapter";
 
@@ -11,7 +12,6 @@ export type AdapterConstructor = new (config: ProjectConfig, rootDirectoryPath?:
 export const EVENTS_DIRECTORY_NAME = "events";
 export const ATTRIBUTES_DIRECTORY_NAME = "attributes";
 export const DESTINATIONS_DIRECTORY_NAME = "destinations";
-export const STATES_DIRECTORY_NAME = "states";
 export const EFFECTS_DIRECTORY_NAME = "effects";
 export const SCHEMAS_DIRECTORY_NAME = "schemas";
 export const TESTS_DIRECTORY_NAME = "tests";
@@ -37,7 +37,6 @@ export interface ProjectConfig {
   eventsDirectoryPath: string;
   attributesDirectoryPath: string;
   destinationsDirectoryPath: string;
-  statesDirectoryPath: string;
   effectsDirectoryPath: string;
   schemasDirectoryPath: string;
   testsDirectoryPath: string;
@@ -58,6 +57,8 @@ export interface ProjectConfig {
 
   prettyDatafile: boolean;
   stringify: boolean;
+  onValidationFailure: OnValidationFailure;
+  promotionFlows?: Array<{ from: string; to: string }>;
 }
 
 // rootDirectoryPath: path to the root directory of the project (without ending with a slash)
@@ -70,13 +71,14 @@ export function getProjectConfig(rootDirectoryPath: string): ProjectConfig {
 
     prettyDatafile: DEFAULT_PRETTY_DATAFILE,
     stringify: true,
+    onValidationFailure: "drop",
+    promotionFlows: undefined,
 
     adapter: FilesystemAdapter,
 
     eventsDirectoryPath: path.join(rootDirectoryPath, EVENTS_DIRECTORY_NAME),
     attributesDirectoryPath: path.join(rootDirectoryPath, ATTRIBUTES_DIRECTORY_NAME),
     destinationsDirectoryPath: path.join(rootDirectoryPath, DESTINATIONS_DIRECTORY_NAME),
-    statesDirectoryPath: path.join(rootDirectoryPath, STATES_DIRECTORY_NAME),
     effectsDirectoryPath: path.join(rootDirectoryPath, EFFECTS_DIRECTORY_NAME),
     schemasDirectoryPath: path.join(rootDirectoryPath, SCHEMAS_DIRECTORY_NAME),
     testsDirectoryPath: path.join(rootDirectoryPath, TESTS_DIRECTORY_NAME),
@@ -150,11 +152,56 @@ export function getProjectConfig(rootDirectoryPath: string): ProjectConfig {
   ) {
     throw new Error("Invalid datafile options. prettyDatafile and stringify must be booleans.");
   }
+  const validationFailure = finalConfig.onValidationFailure;
+  if (
+    validationFailure !== "drop" &&
+    validationFailure !== "deliverWithWarning" &&
+    !(
+      validationFailure &&
+      typeof validationFailure === "object" &&
+      validationFailure.action === "quarantine" &&
+      typeof validationFailure.destination === "string" &&
+      validationFailure.destination.length > 0 &&
+      Object.keys(validationFailure).length === 2
+    )
+  ) {
+    throw new Error(
+      'Invalid onValidationFailure. Use "drop", "deliverWithWarning", or { action: "quarantine", destination: "..." }.',
+    );
+  }
   if (typeof finalConfig.adapter !== "function") {
     throw new Error("Invalid adapter. It must be a constructor.");
   }
   if (!Array.isArray(finalConfig.plugins)) {
     throw new Error("Invalid plugins. It must be an array.");
+  }
+  if (typeof finalConfig.promotionFlows !== "undefined") {
+    if (!Array.isArray(finalConfig.promotionFlows)) {
+      throw new Error(
+        `Invalid promotionFlows: ${finalConfig.promotionFlows}. It must be an array.`,
+      );
+    }
+    finalConfig.promotionFlows.forEach((entry: any, index: number) => {
+      const keys =
+        entry && typeof entry === "object" && !Array.isArray(entry)
+          ? Object.keys(entry).sort()
+          : [];
+      if (keys.length !== 2 || keys[0] !== "from" || keys[1] !== "to") {
+        throw new Error(
+          `Invalid promotionFlows[${index}]. Each entry must contain exactly "from" and "to".`,
+        );
+      }
+      if (
+        typeof entry.from !== "string" ||
+        typeof entry.to !== "string" ||
+        !entry.from ||
+        !entry.to
+      ) {
+        throw new Error(
+          `Invalid promotionFlows[${index}]. "from" and "to" must be non-empty strings.`,
+        );
+      }
+    });
   }
 
   return finalConfig as ProjectConfig;
@@ -172,7 +219,6 @@ export function getProjectConfigForSet(projectConfig: ProjectConfig, set: string
     schemasDirectoryPath: path.join(setRootDirectoryPath, SCHEMAS_DIRECTORY_NAME),
     testsDirectoryPath: path.join(setRootDirectoryPath, TESTS_DIRECTORY_NAME),
     targetsDirectoryPath: path.join(setRootDirectoryPath, TARGETS_DIRECTORY_NAME),
-    statesDirectoryPath: path.join(projectConfig.systemDirectoryPath, SETS_DIRECTORY_NAME, set),
     systemDirectoryPath: path.join(projectConfig.systemDirectoryPath, SETS_DIRECTORY_NAME, set),
     datafilesDirectoryPath: path.join(
       projectConfig.datafilesDirectoryPath,

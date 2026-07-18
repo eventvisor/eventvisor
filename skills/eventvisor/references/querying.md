@@ -13,7 +13,7 @@ Prefer CLI queries over grepping YAML: they resolve Sets, namespaced keys, Schem
 | What references this event (effects, tests, targets)? | `npx eventvisor find-usage event page_view`                                                    |
 | What would happen if an app tracked this?             | `npx eventvisor simulate <event> --value='{…}' --attributes='{…}'`                             |
 | Which destinations would it reach?                    | A quick event spec with `expectedDestinations` (see below)                                     |
-| What exactly is in the datafile app X loads?          | `npx eventvisor build --tag=<t> --json --pretty` or `--target=<t> --json --pretty`             |
+| What exactly is in the datafile app X loads?          | `npx eventvisor build --target=<t> --json --pretty`                                            |
 | Is this change fast enough?                           | `npx eventvisor benchmark <event> -n 100000`                                                   |
 
 Add `--json` to `list`/`config` for parseable output; add `--set` in Sets projects.
@@ -23,7 +23,7 @@ Add `--json` to `list`/`config` for parseable output; add `--set` in Sets projec
 Walk the pipeline in order, eliminating each stage:
 
 1. **Key exists?** `npx eventvisor list event --keyPattern=<name>` — typos and namespacing (`auth/signup` vs `signup`) are common.
-2. **In the app's datafile?** `npx eventvisor build --tag=<theAppsTag> --json | jq '.events | keys'` — wrong tags keep events out of that app's datafile entirely.
+2. **In the app's datafile?** `npx eventvisor build --target=<theAppsTarget> --json | jq '.events | keys'` — Target patterns and tags decide what the app receives.
 3. **Required attributes set?** Check the event's `requiredAttributes` against what the app sets before tracking.
 4. **Valid payload? Survives conditions/sampling?** `npx eventvisor simulate <event> --value='<the actual payload>' --attributes='<the actual attributes>'` — it runs the real pipeline (transports and handlers are stubbed automatically) and prints the final transformed payload, or `null` when the event was dropped anywhere in steps 1–5. Note it prints the outcome, not the reason: for the _why_, compare the payload against `info event <key>` (schema, `requiredAttributes`, `conditions`, `sample`) or write a throwaway spec — the test runner reports which expectation failed.
 5. **Which destinations?** Simulate doesn't list routes. A three-line event spec with `expectedDestinations` answers it exactly ([testing.md](testing.md)); its failure output shows the routes actually taken.

@@ -47,7 +47,7 @@ schema: product          # root-level reference; see schemas.md
 
 ## Where each field acts in the pipeline
 
-Order on `track(key, payload)`: `requiredAttributes` → validation (`skipValidation` may bypass) → `conditions` → `sample` → `transforms` → effects fire → per-destination routing. A failure before `transforms` drops the event for **all** destinations and `track()` resolves to `null`.
+Order on `track(key, payload)`: required attributes → validation policy → conditions → sampling → event transforms → effects → parallel destination routing → SDK event emission. Validation always sees the original tracked payload. Effects finish before destination routing starts. Destination attempts run in parallel.
 
 - **Validation** checks the original tracked payload — transforms run after, so transformed shapes don't need to satisfy the schema.
 - **`requiredAttributes`** is enforced before validation, even when validation is skipped.
@@ -122,6 +122,8 @@ skipValidation:                     # conditional bypass (e.g. save cycles in pr
 ```
 
 `false` and unmatched conditions mean validation runs. Prefer keeping validation on everywhere it's affordable; warnings in pre-production catch wrong shapes early.
+
+Invalid events use `onValidationFailure`: `drop` (default), `deliverWithWarning`, or `{action: quarantine, destination: invalidEvents}`. Warning delivery keeps the original payload and passes errors as transport metadata. Quarantine bypasses normal destinations and effects. Define a new event key for an incompatible event shape.
 
 ## Deprecating and archiving
 

@@ -57,16 +57,24 @@ npx eventvisor test --tag=web | --target=checkout | --set=staging
 ## Build
 
 ```bash
-npx eventvisor build                          # all tag datafiles + all target datafiles
-npx eventvisor build --tag=web                # one tag
+npx eventvisor build                          # all Target datafiles
 npx eventvisor build --target=checkout --target=account   # repeatable
-npx eventvisor build --tag=web --json --pretty             # PRINT one datafile, no files written
+npx eventvisor build --target=checkout --tag=web --json --pretty  # PRINT filtered JSON
 npx eventvisor build --revision=100
 npx eventvisor build --revision-from-hash     # content-derived revision (stable caching)
 npx eventvisor build --datafilesDir=<dir>
 ```
 
 Notes: normal builds write `datafiles/` and bump the incremental revision under `.eventvisor/` — CI usually owns committing that state (or use `--revision-from-hash` and skip it). `--json` requires a single selection (and a single `--set` in Sets projects).
+
+## Promote Sets
+
+```bash
+npx eventvisor promote --from=development --to=staging
+npx eventvisor promote --from=development --to=staging --target=checkout --apply --audit
+```
+
+Preview is default. Promotion honors `promotionFlows`, `promotable: false`, dependencies, and conflict policy.
 
 ## Simulate and benchmark
 

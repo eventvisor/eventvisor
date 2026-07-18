@@ -46,7 +46,14 @@ sets/
 └── production/
 ```
 
-The same event key can have different validation, routing, transforms, and tests per lane. Promotion between lanes is a copy-and-review Git change (there is no automated promote command — diff the two sets' files and port deliberately).
+The same event key can have different validation, routing, transforms, and tests per lane. Promotion is preview-first:
+
+```bash
+npx eventvisor promote --from development --to staging
+npx eventvisor promote --from development --to staging --apply --audit
+```
+
+Configure `promotionFlows` to restrict release paths. Filters accept repeatable Targets, tags, and event patterns. Dependencies and tests for selected contracts follow the selection. `promotable: false` protects an existing entity from updates when either Set marks it as protected. Missing entities are still created so the destination receives a complete dependency graph.
 
 Reference scaffolds:
 

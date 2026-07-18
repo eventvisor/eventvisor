@@ -46,9 +46,7 @@ describe("buildProject targets and sets", () => {
     write(root, "events/page.yml", "description: Page\ntags: [web]\ntype: object\n");
     write(root, "targets/apps/web.yml", "description: Web\nincludeEvents: page\n");
     await buildProject(deps(root), { target: "apps/web" });
-    expect(fs.existsSync(path.join(root, "datafiles/eventvisor-target-apps%2Fweb.json"))).toBe(
-      true,
-    );
+    expect(fs.existsSync(path.join(root, "datafiles/eventvisor-apps%2Fweb.json"))).toBe(true);
   });
 
   it("combines tag and target filters and includes runtime dependencies", async () => {
@@ -261,7 +259,7 @@ describe("buildProject targets and sets", () => {
 
     await buildProject(deps(root), { tag: "web", target: "application" });
     const output = JSON.parse(
-      fs.readFileSync(path.join(root, "datafiles/eventvisor-target-application.json"), "utf8"),
+      fs.readFileSync(path.join(root, "datafiles/eventvisor-application.json"), "utf8"),
     );
     expect(Object.keys(output.events)).toEqual(["web"]);
     expect(fs.existsSync(path.join(root, "datafiles/eventvisor-tag-web.json"))).toBe(false);
@@ -375,13 +373,12 @@ describe("buildProject targets and sets", () => {
     const root = project(true);
     for (const set of ["consumer", "admin"]) {
       write(root, `sets/${set}/events/page.yml`, "description: Page\ntags: [all]\ntype: object\n");
+      write(root, `sets/${set}/targets/all.yml`, "description: All\nincludeEvents: '*'\n");
     }
     await buildProject(deps(root));
-    expect(fs.existsSync(path.join(root, "datafiles/sets/consumer/eventvisor-tag-all.json"))).toBe(
+    expect(fs.existsSync(path.join(root, "datafiles/sets/consumer/eventvisor-all.json"))).toBe(
       true,
     );
-    expect(fs.existsSync(path.join(root, "datafiles/sets/admin/eventvisor-tag-all.json"))).toBe(
-      true,
-    );
+    expect(fs.existsSync(path.join(root, "datafiles/sets/admin/eventvisor-all.json"))).toBe(true);
   });
 });

@@ -35,6 +35,7 @@ export interface JSONSchema {
   // Object validation keywords
   required?: string[];
   properties?: { [key: string]: JSONSchema };
+  additionalProperties?: boolean;
 
   // Annotations
   default?: Value;
@@ -42,7 +43,7 @@ export interface JSONSchema {
 }
 
 export type SchemaKey = string;
-export type Schema = JSONSchema;
+export type Schema = JSONSchema & { promotable?: boolean };
 
 /**
  * Common aliases
@@ -73,6 +74,7 @@ export interface Target {
   pretty?: boolean;
   stringify?: boolean;
   revisionFromHash?: boolean;
+  promotable?: boolean;
 }
 
 export type Inputs = Record<string, Value>;
@@ -245,6 +247,7 @@ export type Transform = TransformBase & {
  * Attribute
  */
 export type Attribute = JSONSchema & {
+  promotable?: boolean;
   archived?: boolean;
   deprecated?: boolean;
   description?: string;
@@ -271,16 +274,18 @@ export type DestinationOverride = PlainDestinationOverride | ComplexDestinationO
 
 export type EventLevel = "fatal" | "error" | "warning" | "log" | "info" | "debug";
 
+export type OnValidationFailure =
+  "drop" | "deliverWithWarning" | { action: "quarantine"; destination: DestinationName };
+
 export type Event = JSONSchema & {
+  promotable?: boolean;
   archived?: boolean;
   deprecated?: boolean;
   description?: string;
   tags?: Tag[];
 
-  // @TODO: meta
-  // @TODO: conitnueOnValidationFailure?: boolean;
-
   skipValidation?: boolean | { conditions: Conditions };
+  onValidationFailure?: OnValidationFailure;
   level?: EventLevel;
   requiredAttributes?: string[];
   conditions?: Conditions;
@@ -297,6 +302,7 @@ export type EventName = string;
  * Destination
  */
 export interface Destination {
+  promotable?: boolean;
   archived?: boolean;
   description?: string;
   tags?: Tag[];
@@ -329,6 +335,7 @@ export interface Step {
 }
 
 export interface Effect {
+  promotable?: boolean;
   archived?: boolean;
   description?: string;
   tags?: Tag[];
@@ -349,6 +356,7 @@ export interface DatafileContent {
   schemaVersion: string;
   eventvisorVersion?: string;
   revision: string;
+  onValidationFailure?: OnValidationFailure;
   attributes: {
     [key: AttributeName]: Attribute;
   };
@@ -367,7 +375,7 @@ export interface DatafileContent {
  * Others
  */
 export type EntityType =
-  "attribute" | "event" | "destination" | "state" | "effect" | "schema" | "target" | "test";
+  "attribute" | "event" | "destination" | "effect" | "schema" | "target" | "test";
 
 /**
  * Test
@@ -396,6 +404,7 @@ export interface AttributeAssertion {
 }
 
 export interface AttributeTest {
+  promotable?: boolean;
   key?: string;
   attribute: AttributeName;
   assertions: NonEmptyArray<AttributeAssertion>;
@@ -419,6 +428,7 @@ export interface EventAssertion {
 }
 
 export interface EventTest {
+  promotable?: boolean;
   key?: string;
   event: EventName;
   assertions: NonEmptyArray<EventAssertion>;
@@ -444,6 +454,7 @@ export interface EffectAssertion {
 }
 
 export interface EffectTest {
+  promotable?: boolean;
   key?: string;
   effect: EffectName;
   assertions: NonEmptyArray<EffectAssertion>;
@@ -469,6 +480,7 @@ export interface DestinationAssertion {
 }
 
 export interface DestinationTest {
+  promotable?: boolean;
   key?: string;
   destination: DestinationName;
   assertions: NonEmptyArray<DestinationAssertion>;

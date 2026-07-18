@@ -83,24 +83,28 @@ export function getTestSchema(deps: Dependencies) {
   return z.union([
     z
       .object({
+        promotable: z.boolean().optional(),
         attribute: z.string(),
         assertions: z.array(attributeAssertionSchema).min(1),
       })
       .strict(),
     z
       .object({
+        promotable: z.boolean().optional(),
         event: z.string(),
         assertions: z.array(eventAssertionSchema).min(1),
       })
       .strict(),
     z
       .object({
+        promotable: z.boolean().optional(),
         effect: z.string(),
         assertions: z.array(effectAssertionSchema).min(1),
       })
       .strict(),
     z
       .object({
+        promotable: z.boolean().optional(),
         destination: z.string(),
         assertions: z.array(destinationAssertionSchema).min(1),
       })

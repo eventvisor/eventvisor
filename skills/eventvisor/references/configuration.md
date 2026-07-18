@@ -7,11 +7,15 @@ Every project has `eventvisor.config.js` at its root:
 ```js
 /** @type {import('@eventvisor/core').ProjectConfig} */
 module.exports = {
-  tags: ["all", "web", "backend"],   // allowlist for entity tags; one datafile per tag on build
+  tags: ["all", "web", "backend"],   // allowlist for selection metadata
   sets: false,                       // true -> isolated projects under sets/ (see sets.md)
   parser: "yml",                     // "yml" (default) | "json" | custom parser object
   prettyDatafile: false,             // format generated JSON for humans
   stringify: true,                   // compact condition stringification in datafiles
+  onValidationFailure: "drop",       // drop | deliverWithWarning | quarantine object
+  promotionFlows: [                  // optional allowlist for Set promotion
+    { from: "development", to: "staging" },
+  ],
 };
 ```
 

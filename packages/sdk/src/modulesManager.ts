@@ -32,8 +32,13 @@ export interface TransportOptions {
   destinationName: DestinationName;
   eventName: EventName;
   eventLevel?: EventLevel;
+  revision: string;
   payload: Value;
   error?: Error;
+  validation?: {
+    valid: false;
+    errors: Array<{ path: string; message: string }>;
+  };
 }
 
 export interface ReadFromStorageOptions {
@@ -53,6 +58,7 @@ export interface EventvisorModuleApi {
   getRevision: () => string;
   onDiagnostic: (handler: EventvisorDiagnosticHandler) => () => void;
   reportDiagnostic: (diagnostic: EventvisorDiagnostic) => void;
+  track: (eventName: EventName, payload: Value) => Promise<Value | null>;
 }
 
 export interface EventvisorModule {
@@ -68,6 +74,7 @@ export interface EventvisorModule {
   handle?: (options: HandleOptions, api: EventvisorModuleApi) => Promise<void>;
 
   transport?: (options: TransportOptions, api: EventvisorModuleApi) => Promise<void>;
+  flush?: (api: EventvisorModuleApi) => void | Promise<void>;
 
   readFromStorage?: (options: ReadFromStorageOptions, api: EventvisorModuleApi) => Promise<Value>;
   writeToStorage?: (options: WriteToStorageOptions, api: EventvisorModuleApi) => Promise<void>;
@@ -82,6 +89,7 @@ export interface ModulesManagerOptions {
   getRevision: () => string;
   onDiagnostic: (handler: EventvisorDiagnosticHandler) => () => void;
   reportDiagnostic: (diagnostic: EventvisorDiagnostic) => void;
+  track?: (eventName: EventName, payload: Value) => Promise<Value | null>;
 }
 
 export class ModulesManager {
@@ -175,7 +183,10 @@ export class ModulesManager {
     await this.closeModule(module);
   }
 
-  getModuleApi(moduleName: string): EventvisorModuleApi {
+  getModuleApi(
+    moduleName: string,
+    track: EventvisorModuleApi["track"] = this.options.track || (async () => null),
+  ): EventvisorModuleApi {
     return {
       getRevision: this.options.getRevision,
       onDiagnostic: (handler) => {
@@ -188,6 +199,7 @@ export class ModulesManager {
       },
       reportDiagnostic: (diagnostic) =>
         this.options.reportDiagnostic({ ...diagnostic, moduleName }),
+      track,
     };
   }
 
@@ -217,6 +229,7 @@ export class ModulesManager {
     effect: Effect,
     step: Step,
     payload: Value,
+    track: EventvisorModuleApi["track"] = this.options.track || (async () => null),
   ): Promise<void> {
     const [moduleName, key] = fullKey.split("."); // eslint-disable-line
 
@@ -226,7 +239,7 @@ export class ModulesManager {
       try {
         return await moduleInstance.handle(
           { effectName, effect, step, payload },
-          this.getModuleApi(moduleName),
+          this.getModuleApi(moduleName, track),
         );
       } catch (error) {
         this.logger.error(`Error in handle`, { moduleName, effectName, error });
@@ -246,33 +259,47 @@ export class ModulesManager {
     return !!(moduleInstance && moduleInstance.transport);
   }
 
-  // @TODO: change multiple args to single options object
-  async transport(
-    fullKey: string,
-    destinationName: DestinationName,
-    eventName: EventName,
-    payload: Value,
-    eventLevel?: EventLevel,
-    error?: Error,
-  ): Promise<void> {
+  async transport(fullKey: string, options: TransportOptions): Promise<void> {
     const [moduleName, key] = fullKey.split("."); // eslint-disable-line
 
     const moduleInstance = this.getModule(moduleName);
 
     if (moduleInstance && moduleInstance.transport) {
       try {
-        return await moduleInstance.transport(
-          { destinationName, eventName, eventLevel, payload, error },
-          this.getModuleApi(moduleName),
-        );
+        return await moduleInstance.transport(options, this.getModuleApi(moduleName));
       } catch (error) {
-        this.logger.error(`Error in transport`, { moduleName, destinationName, eventName, error });
+        this.logger.error(`Error in transport`, {
+          moduleName,
+          destinationName: options.destinationName,
+          eventName: options.eventName,
+          error,
+        });
 
         return;
       }
     }
 
     this.logger.error(`Module "${moduleName}" not found with "transport" function`);
+  }
+
+  async flush() {
+    await Promise.all(
+      this.modules.map(async (module) => {
+        if (!module.flush) return;
+        try {
+          await module.flush(this.getModuleApi(module.name));
+        } catch (error) {
+          this.options.reportDiagnostic({
+            level: "error",
+            code: "module_flush_failed",
+            message: `Module ${module.name} flush failed`,
+            details: {},
+            moduleName: module.name,
+            error,
+          });
+        }
+      }),
+    );
   }
 
   async readFromStorage(moduleName: ModuleName, key: string): Promise<Value> {
@@ -330,6 +357,7 @@ export class ModulesManager {
   }
 
   async close() {
+    await this.flush();
     for (const module of [...this.modules]) await this.removeModule(module.name);
   }
 }

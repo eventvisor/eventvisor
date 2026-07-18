@@ -103,18 +103,19 @@ Nearly every authoring question is really a question about where in this pipelin
 
 1. **Event lookup** — unknown event key → warning, dropped.
 2. **`requiredAttributes`** — every listed attribute must currently be set, else dropped.
-3. **Validation** against the event's schema (unless `skipValidation` applies) — invalid payload → warning, dropped. _Validation always sees the original tracked payload, before any transforms._
-4. **Event `conditions`** — no match → silently dropped (this is filtering).
+3. **Validation** against the original payload. Invalid events follow `drop`, `deliverWithWarning`, or quarantine policy.
+4. **Event `conditions`** — no match → silently dropped.
 5. **Event `sample`** — not in the sampled bucket → dropped.
 6. **Event `transforms`** — reshape the payload once, for all destinations.
-7. **Effects** with `on: event_tracked` fire.
-8. **Per destination** (independently, for every destination in the datafile):
+7. **Effects** with `on: event_tracked` run and finish.
+8. **Per destination**, with all selected transports started in parallel:
    a. the destination's `transport` module must be installed in the app, else an error is logged and that destination is skipped;
    b. the event's per-destination override — `false` disables, or its own `conditions` / `sample` / `transforms`;
    c. the destination's own `conditions` → `sample` → `transforms`;
-   d. the resulting body is handed to the transport.
+   d. the resulting body and datafile revision are handed to the transport.
+9. The SDK emits its `event_tracked` event.
 
-`track()` resolves to the transformed payload, or `null` when dropped at steps 1–5. A drop at step 8 affects only that one destination.
+`track()` resolves to the transformed payload, or `null` when governance drops it. Core governs events; transports own queueing, retry, persistence, and delivery guarantees. `flush()` asks queueing modules to attempt buffered work.
 
 Attributes have a shorter pipeline: `setAttribute` → validate against the attribute's schema (invalid → not set) → attribute `transforms` → stored → effects with `on: attribute_set` fire → persisted per `persist` strategy.
 
@@ -161,6 +162,7 @@ All `eventvisor` CLI commands are local and safe to run without confirmation, wi
 | `npx eventvisor list <entityType> [--keyPattern=…] [--json]`                  | List keys — event, attribute, destination, effect, schema, target, test |
 | `npx eventvisor info <entityType> <key>`                                      | Show one definition                                                     |
 | `npx eventvisor find-usage <entityType> <key>`                                | Where an attribute/schema/event/… is referenced                         |
+| `npx eventvisor find-usage --unused-attributes --unused-schemas`              | Find dead definitions                                                   |
 | `npx eventvisor simulate <event> --value='{…}' --attributes='{…}'`            | Run the full pipeline on a payload — the debugging tool                 |
 | `npx eventvisor test [--keyPattern=…] [--assertionPattern=…]`                 | Run test specs                                                          |
 | `npx eventvisor build [--tag=…] [--target=…]`                                 | Build datafiles                                                         |
@@ -168,6 +170,7 @@ All `eventvisor` CLI commands are local and safe to run without confirmation, wi
 | `npx eventvisor benchmark <event> -n 1000`                                    | Measure evaluation performance                                          |
 | `npx eventvisor generate-code --language typescript --out-dir src/eventvisor` | Typed TS bindings                                                       |
 | `npx eventvisor catalog`                                                      | Browsable UI of the whole project, live-reloading in watch mode         |
+| `npx eventvisor promote --from dev --to staging`                              | Preview a Set promotion                                                 |
 
 Add `--set=<set>` to any project command in a Sets project. Full reference in [cli.md](references/cli.md).
 

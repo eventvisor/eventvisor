@@ -7,7 +7,7 @@ import { RepoDetails } from "./getRepoDetails";
 import { Dependencies } from "../dependencies";
 import { buildDatafile } from "../builder/buildProject";
 import { collectSchemaReferences } from "../schemas";
-import { containsExactString } from "../utils/references";
+import { buildDependencyGraph, entityId, invertDependencyGraph } from "../utils/dependencyGraph";
 
 export async function buildCatalog(
   deps: Dependencies,
@@ -197,27 +197,12 @@ export async function buildCatalog(
     "targets",
     "tests",
   ] as const;
+  const inverseGraph = invertDependencyGraph(await buildDependencyGraph(datasource));
   for (const type of collections) {
     for (const key of Object.keys(result.entities[type])) {
       const usageKey = `${type}:${key}`;
-      result.usages[usageKey] = [];
-      for (const candidateType of collections) {
-        for (const [candidateKey, candidate] of Object.entries(result.entities[candidateType])) {
-          if (type === candidateType && key === candidateKey) continue;
-          const referencesSchema =
-            type === "schemas" &&
-            (candidateType === "attributes" ||
-              candidateType === "events" ||
-              candidateType === "schemas") &&
-            collectSchemaReferences(candidate as Record<string, any>).includes(key);
-          if (referencesSchema || (type !== "schemas" && containsExactString(candidate, key))) {
-            result.usages[usageKey].push({
-              type: candidateType.slice(0, -1) as any,
-              key: candidateKey,
-            });
-          }
-        }
-      }
+      const singular = type.slice(0, -1) as any;
+      result.usages[usageKey] = inverseGraph[entityId(singular, key)] || [];
     }
   }
 

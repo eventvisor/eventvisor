@@ -1,4 +1,12 @@
-import { AttributeName, DatafileContent, EventName, EffectName, Value } from "@eventvisor/types";
+import {
+  AttributeName,
+  DatafileContent,
+  EventLevel,
+  EventName,
+  EffectName,
+  OnValidationFailure,
+  Value,
+} from "@eventvisor/types";
 
 import {
   emptyDatafile,
@@ -80,6 +88,7 @@ export class Eventvisor {
       getRevision: () => this.getRevision(),
       onDiagnostic: (handler) => this.onDiagnostic(handler),
       reportDiagnostic: (diagnostic) => this.reportDiagnostic(diagnostic),
+      track: (eventName, payload) => this.track(eventName, payload),
     });
 
     this.validator = new Validator({
@@ -103,6 +112,8 @@ export class Eventvisor {
       getTransformer: () => this.transformer,
       getConditionsChecker: () => this.conditionsChecker,
       modulesManager: this.modulesManager,
+      track: (eventName, payload, effectChain) =>
+        this.trackWithEffectChain(eventName, payload, effectChain),
     });
 
     this.sourceResolver = new SourceResolver({
@@ -211,6 +222,7 @@ export class Eventvisor {
       const parsed = parseDatafile(datafile);
       this.datafile = replace ? parsed : mergeDatafiles(this.datafile, parsed);
       this.regexCache = {};
+      this.conditionsChecker.clearParsedConditions();
       await Promise.all([this.effectsManager.refresh(), this.attributesManager.refresh()]);
       this.emitter.trigger("datafile_set", { replaced: replace });
     } catch (error) {
@@ -301,10 +313,64 @@ export class Eventvisor {
     return this.modulesManager.removeModule(moduleName);
   }
 
+  async flush() {
+    await this.modulesManager.flush();
+  }
+
+  private async quarantineInvalidEvent(
+    eventName: EventName,
+    eventLevel: EventLevel,
+    value: Value,
+    error: Error | undefined,
+    policy: Extract<OnValidationFailure, { action: "quarantine" }>,
+    validationErrors: Array<{ path: string; message: string }>,
+  ) {
+    const destination = this.getDestination(policy.destination);
+    if (!destination) {
+      this.logger.error("Validation quarantine destination not found", {
+        code: "quarantine_destination_not_found",
+        eventName,
+        destinationName: policy.destination,
+      });
+      return;
+    }
+    if (!this.modulesManager.transportExists(destination.transport)) {
+      this.logger.error("Validation quarantine destination has no transport", {
+        code: "quarantine_transport_not_found",
+        eventName,
+        destinationName: policy.destination,
+      });
+      return;
+    }
+
+    await this.modulesManager.transport(destination.transport, {
+      destinationName: policy.destination,
+      eventName,
+      eventLevel,
+      revision: this.getRevision(),
+      payload: {
+        eventName,
+        payload: value,
+        validationErrors,
+        revision: this.getRevision(),
+      },
+      error,
+      validation: { valid: false, errors: validationErrors },
+    });
+  }
+
   /**
    * Event
    */
   async track(eventName: EventName, value: Value): Promise<Value | null> {
+    return this.trackWithEffectChain(eventName, value, []);
+  }
+
+  private async trackWithEffectChain(
+    eventName: EventName,
+    value: Value,
+    effectChain: EffectName[],
+  ): Promise<Value | null> {
     await this.onReady();
     /**
      * Find
@@ -368,21 +434,34 @@ export class Eventvisor {
     }
 
     let validatedValue: Value | undefined = undefined;
-    let error = value instanceof Error ? value : undefined;
+    let validationFailure:
+      { valid: false; errors: Array<{ path: string; message: string }> } | undefined;
+    const error = value instanceof Error ? value : undefined;
 
     if (shouldValidate) {
       const validationResult = await this.validator.validate(eventSchema, value);
 
       if (!validationResult.valid) {
+        const errors = (validationResult.errors || []).map(({ path, message }) => ({
+          path,
+          message,
+        }));
         this.logger.warn(`Event validation failed`, {
           eventName,
           errors: validationResult.errors,
         });
-
-        return null; // @TODO: allow to continue based on schema later
+        const policy =
+          eventSchema.onValidationFailure || this.datafile.onValidationFailure || "drop";
+        if (policy === "drop") return null;
+        if (typeof policy === "object" && policy.action === "quarantine") {
+          await this.quarantineInvalidEvent(eventName, eventLevel, value, error, policy, errors);
+          return null;
+        }
+        validationFailure = { valid: false, errors };
+        validatedValue = value;
+      } else {
+        validatedValue = validationResult.value;
       }
-
-      validatedValue = validationResult.value;
     } else {
       this.logger.debug(`Event validation skipped`, {
         eventName,
@@ -449,175 +528,177 @@ export class Eventvisor {
     /**
      * Effects
      */
-    await this.effectsManager.dispatch({
-      eventType: "event_tracked",
-      name: eventName,
-      value: transformedValue,
-    });
+    await this.effectsManager.dispatch(
+      {
+        eventType: "event_tracked",
+        name: eventName,
+        value: transformedValue,
+      },
+      effectChain,
+    );
 
     /**
      * Destinations
      */
     const destinationNames = this.getDestinationNames();
 
-    for (const destinationName of destinationNames) {
-      const destination = this.getDestination(destinationName);
+    await Promise.all(
+      destinationNames.map(async (destinationName) => {
+        const destination = this.getDestination(destinationName);
 
-      if (!destination) {
-        continue;
-      }
+        if (!destination) {
+          return;
+        }
 
-      const transportExists = this.modulesManager.transportExists(destination.transport);
+        const transportExists = this.modulesManager.transportExists(destination.transport);
 
-      if (!transportExists) {
-        this.logger.error(`Destination has no transport`, {
-          eventName,
-          destinationName,
-        });
-
-        continue;
-      }
-
-      let transportBody = transformedValue;
-
-      /**
-       * Event.destinations
-       */
-      if (
-        eventSchema.destinations &&
-        typeof eventSchema.destinations[destinationName] !== "undefined"
-      ) {
-        const destinationOverride = eventSchema.destinations[destinationName];
-
-        if (destinationOverride === false) {
-          this.logger.debug(`Event has destination disabled`, {
+        if (!transportExists) {
+          this.logger.error(`Destination has no transport`, {
             eventName,
             destinationName,
           });
 
-          continue;
-        } else if (typeof destinationOverride === "object") {
-          // conditions
-          if (destinationOverride.conditions) {
-            const isMatched = await this.conditionsChecker.allAreMatched(
-              destinationOverride.conditions,
-              {
-                eventName,
-                eventLevel,
-                payload: transportBody,
-              },
-            );
+          return;
+        }
 
-            if (!isMatched) {
-              this.logger.debug(`Destination conditions not matched for event`, {
-                eventName,
-                destinationName,
-              });
+        let transportBody = transformedValue;
 
-              continue;
-            }
-          }
+        /**
+         * Event.destinations
+         */
+        if (
+          eventSchema.destinations &&
+          typeof eventSchema.destinations[destinationName] !== "undefined"
+        ) {
+          const destinationOverride = eventSchema.destinations[destinationName];
 
-          // sample
-          if (destinationOverride.sample) {
-            const sampleResult = await this.bucketer.isSampled(destinationOverride.sample, {
+          if (destinationOverride === false) {
+            this.logger.debug(`Event has destination disabled`, {
               eventName,
-              eventLevel,
-              payload: transportBody,
+              destinationName,
             });
 
-            if (!sampleResult.isSampled) {
-              this.logger.debug(`Destination sample not matched for event`, {
-                eventName,
-                destinationName,
-                matchedSample: sampleResult.matchedSample,
-                bucketedNumber: sampleResult.bucketedNumber,
-                bucketKey: sampleResult.bucketKey,
-              });
+            return;
+          } else if (typeof destinationOverride === "object") {
+            // conditions
+            if (destinationOverride.conditions) {
+              const isMatched = await this.conditionsChecker.allAreMatched(
+                destinationOverride.conditions,
+                {
+                  eventName,
+                  eventLevel,
+                  payload: transportBody,
+                },
+              );
 
-              continue;
+              if (!isMatched) {
+                this.logger.debug(`Destination conditions not matched for event`, {
+                  eventName,
+                  destinationName,
+                });
+
+                return;
+              }
             }
-          }
 
-          // transform
-          if (destinationOverride.transforms) {
-            transportBody = await this.transformer.applyAll(
-              transformedValue,
-              destinationOverride.transforms,
-              {
+            // sample
+            if (destinationOverride.sample) {
+              const sampleResult = await this.bucketer.isSampled(destinationOverride.sample, {
                 eventName,
                 eventLevel,
                 payload: transportBody,
-              },
-            );
+              });
+
+              if (!sampleResult.isSampled) {
+                this.logger.debug(`Destination sample not matched for event`, {
+                  eventName,
+                  destinationName,
+                  matchedSample: sampleResult.matchedSample,
+                  bucketedNumber: sampleResult.bucketedNumber,
+                  bucketKey: sampleResult.bucketKey,
+                });
+
+                return;
+              }
+            }
+
+            // transform
+            if (destinationOverride.transforms) {
+              transportBody = await this.transformer.applyAll(
+                transformedValue,
+                destinationOverride.transforms,
+                {
+                  eventName,
+                  eventLevel,
+                  payload: transportBody,
+                },
+              );
+            }
           }
         }
-      }
 
-      /**
-       * Destination itself
-       */
+        /**
+         * Destination itself
+         */
 
-      // conditions
-      if (destination.conditions) {
-        const isMatched = await this.conditionsChecker.allAreMatched(destination.conditions, {
-          eventName,
-          eventLevel,
-          payload: transformedValue,
-        });
-
-        if (!isMatched) {
-          this.logger.debug(`Destination conditions not matched`, {
+        // conditions
+        if (destination.conditions) {
+          const isMatched = await this.conditionsChecker.allAreMatched(destination.conditions, {
             eventName,
-            destinationName,
+            eventLevel,
+            payload: transformedValue,
           });
 
-          continue;
+          if (!isMatched) {
+            this.logger.debug(`Destination conditions not matched`, {
+              eventName,
+              destinationName,
+            });
+
+            return;
+          }
         }
-      }
 
-      // sample
-      if (destination.sample) {
-        const sampleResult = await this.bucketer.isSampled(destination.sample, {
-          eventName,
-          eventLevel,
-          payload: transportBody,
-        });
-
-        if (!sampleResult.isSampled) {
-          this.logger.debug(`Destination sample not matched`, {
+        // sample
+        if (destination.sample) {
+          const sampleResult = await this.bucketer.isSampled(destination.sample, {
             eventName,
-            destinationName,
+            eventLevel,
+            payload: transportBody,
           });
 
-          continue;
-        }
-      }
+          if (!sampleResult.isSampled) {
+            this.logger.debug(`Destination sample not matched`, {
+              eventName,
+              destinationName,
+            });
 
-      // transform
-      if (destination.transforms) {
-        transportBody = await this.transformer.applyAll(transportBody, destination.transforms, {
-          eventName,
-          eventLevel,
-          payload: transportBody,
+            return;
+          }
+        }
+
+        // transform
+        if (destination.transforms) {
+          transportBody = await this.transformer.applyAll(transportBody, destination.transforms, {
+            eventName,
+            eventLevel,
+            payload: transportBody,
+            destinationName,
+            attributes: this.attributesManager.getAttributesMap(), // @TODO: check if needed
+          });
+        }
+
+        await this.modulesManager.transport(destination.transport, {
           destinationName,
-          attributes: this.attributesManager.getAttributesMap(), // @TODO: check if needed
+          eventName,
+          eventLevel,
+          revision: this.getRevision(),
+          payload: transportBody,
+          error,
+          validation: validationFailure,
         });
-      }
-
-      // hand over to module for transporting
-      // @TODO: decide about "await" or not
-      // @TODO: batch
-      // @TODO: retry
-      await this.modulesManager.transport(
-        destination.transport,
-        destinationName,
-        eventName,
-        transportBody,
-        eventLevel,
-        error,
-      );
-    }
+      }),
+    );
 
     this.emitter.trigger("event_tracked", { eventName, value: transformedValue });
     return transformedValue;

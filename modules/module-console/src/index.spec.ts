@@ -13,6 +13,7 @@ describe("createConsoleModule", () => {
     await transport(
       {
         destinationName: "console",
+        revision: "1",
         eventName: "viewed",
         eventLevel: "warning",
         payload: { id: 1 },
@@ -21,7 +22,7 @@ describe("createConsoleModule", () => {
     );
     const error = new Error("failed");
     await transport(
-      { destinationName: "console", eventName: "failed", payload: {}, error },
+      { destinationName: "console", eventName: "failed", revision: "1", payload: {}, error },
       {} as any,
     );
     expect(output.warn).toHaveBeenCalledWith("test[viewed]", { id: 1 });
@@ -43,7 +44,13 @@ describe("createConsoleModule", () => {
       debug: jest.fn(),
     } as any;
     await createConsoleModule({ console: output }).transport!(
-      { destinationName: "console", eventName: "event", eventLevel: level, payload: {} },
+      {
+        destinationName: "console",
+        eventName: "event",
+        revision: "1",
+        eventLevel: level,
+        payload: {},
+      },
       {} as any,
     );
     expect(output[method]).toHaveBeenCalled();

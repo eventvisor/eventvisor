@@ -5,12 +5,12 @@ describe("createNewRelicBrowserModule", () => {
     const nr = { addPageAction: jest.fn(), noticeError: jest.fn() };
     const transport = createNewrelicBrowserModule({ nr }).transport!;
     await transport(
-      { destinationName: "newrelic", eventName: "viewed", payload: { id: 1 } },
+      { destinationName: "newrelic", eventName: "viewed", revision: "1", payload: { id: 1 } },
       {} as any,
     );
     const error = new Error("failed");
     await transport(
-      { destinationName: "newrelic", eventName: "failed", payload: {}, error },
+      { destinationName: "newrelic", eventName: "failed", revision: "1", payload: {}, error },
       {} as any,
     );
     expect(nr.addPageAction).toHaveBeenCalledWith("viewed", { id: 1 });

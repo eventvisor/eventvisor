@@ -3,7 +3,7 @@
 | Term                      | Meaning                                                                                                                                                                            |
 | ------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | **Project**               | The Git repo of definitions (`events/`, `attributes/`, `destinations/`, `effects/`, `schemas/`, `targets/`, `tests/`) plus `eventvisor.config.js`. Separate from application code. |
-| **Datafile**              | Static JSON built from the project (`eventvisor-tag-web.json`, `eventvisor-target-checkout.json`), served to apps, consumed by SDKs. Carries a `revision`.                         |
+| **Datafile**              | Static JSON built for a Target (`eventvisor-checkout.json`), served to apps, consumed by SDKs. Carries a `revision`.                                                               |
 | **Event**                 | A structured analytics event or log an app tracks (`track("page_view", {...})`). Defined with a JSON Schema, optional level, conditions, sampling, transforms, and routing.        |
 | **Attribute**             | Slow-changing context (userId, country, consent) set via `setAttribute`, validated by its own schema, referenced in conditions/sampling/transforms.                                |
 | **Schema (reusable)**     | A shared JSON Schema fragment in `schemas/`, referenced with `schema: <key>`, inlined at build time.                                                                               |

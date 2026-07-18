@@ -21,6 +21,11 @@ export interface EffectsManagerOptions {
   getTransformer: GetTransformer;
   getConditionsChecker: GetConditionsChecker;
   modulesManager: ModulesManager;
+  track?: (
+    eventName: EventName,
+    payload: Value,
+    effectChain: EffectName[],
+  ) => Promise<Value | null>;
 }
 
 export class EffectsManager {
@@ -29,6 +34,7 @@ export class EffectsManager {
   private getTransformer: GetTransformer;
   private getConditionsChecker: GetConditionsChecker;
   private modulesManager: ModulesManager;
+  private track: NonNullable<EffectsManagerOptions["track"]>;
 
   private statesByEffect: StatesByEffect = {};
 
@@ -38,6 +44,7 @@ export class EffectsManager {
     this.getTransformer = options.getTransformer;
     this.getConditionsChecker = options.getConditionsChecker;
     this.modulesManager = options.modulesManager;
+    this.track = options.track || (async () => null);
   }
 
   async initialize(): Promise<void> {
@@ -79,7 +86,7 @@ export class EffectsManager {
     }
   }
 
-  async dispatch(dispatchOptions: DispatchOptions) {
+  async dispatch(dispatchOptions: DispatchOptions, effectChain: EffectName[] = []) {
     // @TODO: rename to actionType
     const { eventType, name, value } = dispatchOptions;
 
@@ -95,6 +102,17 @@ export class EffectsManager {
       if (!effect) {
         continue;
       }
+
+      if (effectChain.includes(effectName)) {
+        this.logger.error("Effect re-entrancy blocked", {
+          code: "effect_reentrancy_blocked",
+          effectName,
+          effectChain: [...effectChain, effectName],
+        });
+        continue;
+      }
+
+      const nextEffectChain = [...effectChain, effectName];
 
       if (eventType === "event_tracked") {
         if (Array.isArray(effect.on) && !effect.on.includes("event_tracked")) {
@@ -153,7 +171,14 @@ export class EffectsManager {
           // handler
           if (step.handler) {
             try {
-              await this.modulesManager.handle(step.handler, effectName, effect, step, value);
+              await this.modulesManager.handle(
+                step.handler,
+                effectName,
+                effect,
+                step,
+                value,
+                (eventName, payload) => this.track(eventName, payload, nextEffectChain),
+              );
             } catch (handlerError) {
               this.logger.error(`Effect handler error`, {
                 effectName,

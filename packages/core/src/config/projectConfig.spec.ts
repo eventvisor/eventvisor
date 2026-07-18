@@ -27,4 +27,21 @@ describe("project configuration", () => {
     expect(set.datafilesDirectoryPath).toBe(path.join(root, "datafiles/sets/admin"));
     expect(set.catalogExportDirectoryPath).toBe(path.join(root, "out/sets/admin"));
   });
+
+  it("validates delivery policy and promotion flows", () => {
+    expect(config("{}").read().onValidationFailure).toBe("drop");
+    expect(
+      config('{ onValidationFailure: { action: "quarantine", destination: "invalid" } }').read()
+        .onValidationFailure,
+    ).toEqual({ action: "quarantine", destination: "invalid" });
+    expect(() => config('{ onValidationFailure: "continue" }').read()).toThrow(
+      "Invalid onValidationFailure",
+    );
+    expect(
+      config('{ promotionFlows: [{ from: "development", to: "staging" }] }').read().promotionFlows,
+    ).toEqual([{ from: "development", to: "staging" }]);
+    expect(() => config('{ promotionFlows: [{ from: "development" }] }').read()).toThrow(
+      "Invalid promotionFlows[0]",
+    );
+  });
 });

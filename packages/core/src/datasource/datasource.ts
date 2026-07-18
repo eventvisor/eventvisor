@@ -188,6 +188,10 @@ export class Datasource {
     return this.adapter.readEntity<Test>("test", testName);
   }
 
+  testExists(testName: TestName) {
+    return this.adapter.entityExists("test", testName);
+  }
+
   writeTest(testName: TestName, test: Test) {
     return this.adapter.writeEntity<Test>("test", testName, test);
   }
@@ -211,6 +215,14 @@ export class Datasource {
 
   readTarget(targetKey: TargetKey) {
     return this.adapter.readEntity<Target>("target", targetKey);
+  }
+
+  writeTarget(targetKey: TargetKey, target: Target) {
+    return this.adapter.writeEntity<Target>("target", targetKey, target);
+  }
+
+  deleteTarget(targetKey: TargetKey) {
+    return this.adapter.deleteEntity("target", targetKey);
   }
 
   // history

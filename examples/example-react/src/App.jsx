@@ -6,7 +6,7 @@ import { createLocalStorageModule } from "@eventvisor/module-localstorage";
 import { createPixelModule } from "@eventvisor/module-pixel";
 
 // hardcoded datafile (only for testing in this example)
-import datafile from "../datafiles/eventvisor-tag-web.json";
+import datafile from "../datafiles/eventvisor-web.json";
 
 import { generateUUID } from "./uuid";
 

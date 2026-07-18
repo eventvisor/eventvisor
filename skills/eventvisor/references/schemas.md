@@ -76,7 +76,7 @@ Eventvisor validates with a subset of JSON Schema. Supported per type:
 | `number`  | `minimum`, `maximum` (integer or float)               |
 | `integer` | `minimum`, `maximum` (whole numbers only)             |
 | `boolean` | —                                                     |
-| `object`  | `properties`, `required` (nesting to any depth)       |
+| `object`  | `properties`, `required`, `additionalProperties`      |
 | `array`   | `items`, `minItems`, `maxItems`, `uniqueItems`        |
 | all       | `const`, `default`, `description`, `examples`, `enum` |
 
@@ -99,6 +99,8 @@ required: [user]
 ```
 
 `default` fills missing values in during validation (handy for consent booleans). `const` pins a value. Anything outside this table (e.g. `oneOf`, `format`, `$ref`) is **not** supported — use reusable Schemas (`schema: key`) instead of `$ref`.
+
+Objects are strict by default. Set `additionalProperties: true` only when undeclared properties must pass through. `uniqueItems` compares structured arrays and objects by value, not identity.
 
 ## Design guidance
 

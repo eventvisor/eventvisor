@@ -18,6 +18,8 @@ Modules are how the SDK gains capabilities while the core stays tiny. Definition
 | Package                                | Creator                               | Provides                                                        | Notes                                                                                             |
 | -------------------------------------- | ------------------------------------- | --------------------------------------------------------------- | ------------------------------------------------------------------------------------------------- |
 | `@eventvisor/module-console`           | `createConsoleModule()`               | transport `console`                                             | Browser/Node console. Options: `{name, console}` — register twice under different names if needed |
+| `@eventvisor/module-http`              | `createHttpModule()`                  | transport `http`                                                | Bounded batches, retry, timed and explicit flush                                                  |
+| `@eventvisor/module-beacon`            | `createBeaconModule()`                | transport `beacon`                                              | Browser pagehide delivery with keepalive fallback                                                 |
 | `@eventvisor/module-ga4`               | `createGA4Module()`                   | transport `ga4`                                                 | Google Analytics 4                                                                                |
 | `@eventvisor/module-gtm`               | `createGTMModule()`                   | transport `gtm`                                                 | Google Tag Manager dataLayer                                                                      |
 | `@eventvisor/module-segment-browser`   | `createSegmentBrowserModule({...})`   | transport `segment-browser`                                     | Segment                                                                                           |
@@ -29,7 +31,7 @@ Modules are how the SDK gains capabilities while the core stays tiny. Definition
 | `@eventvisor/module-localstorage`      | `createLocalStorageModule()`          | storage + lookup `localstorage.<key>`                           | Options: `{name, prefix}`                                                                         |
 | `@eventvisor/module-timestamp`         | `createTimestampModule()`             | lookup `timestamp` \| `timestamp.epoch` \| `timestamp.epoch_ms` | ISO 8601 / seconds / ms                                                                           |
 | `@eventvisor/module-uuid`              | `createUUIDModule()`                  | lookup `uuid`                                                   | Fresh UUID per lookup                                                                             |
-| `@eventvisor/module-pixel`             | `createPixelModule()`                 | handler `pixel`                                                 | Injects `params.snippet` at `params.selector`; snippets support `{{ source.path }}` variables     |
+| `@eventvisor/module-pixel`             | `createPixelModule()`                 | handler `pixel`                                                 | Scripts disabled by default; opt in with `allowScripts` and use a CSP nonce                       |
 
 Registration:
 
@@ -51,14 +53,14 @@ Vendor module docs (setup options like measurement IDs, keys): `https://eventvis
 A module is a plain object — `name` plus any of the capability methods:
 
 ```ts
-import type { Module } from "@eventvisor/sdk";
+import type { EventvisorModule } from "@eventvisor/sdk";
 
-export function createMyBackendModule(): Module {
+export function createMyBackendModule(): EventvisorModule {
   return {
     name: "myBackend",
 
     // transport: used by destinations with `transport: myBackend`
-    transport: async ({ payload, eventName, eventLevel, error, destinationName }) => {
+    transport: async ({ payload, eventName, eventLevel, error, destinationName, revision }) => {
       // `error` is set when an Error object was tracked (see level: error events)
       await fetch("https://collect.example.com/e", {
         method: "POST",
@@ -93,5 +95,8 @@ Conventions and contracts:
 - Export a `create<X>Module(options)` factory so consumers can customize (custom `name`, endpoints, etc.).
 - Names must be unique per instance — duplicates are rejected with a diagnostic. Registering the same implementation under two names (two consoles, two backends) is legitimate.
 - `addModule()` returns an async, idempotent removal callback; `removeModule(name)` works too. Failed `setup` must clean up its own subscriptions.
-- Transports should tolerate being called concurrently and decide their own batching/retry (the SDK currently does neither for them).
+- Transports must tolerate concurrent calls and own their batching, retry, persistence, and delivery semantics. They receive the active datafile `revision` and optional validation details.
+- Queueing modules implement `flush`; `eventvisor.flush()` runs module flushes in parallel and `close()` flushes first.
+- HTTP options use `flushIntervalMs`, `batchSize`, `maxQueueSize`, `maxRetries`, and `retryDelayMs`. Beacon uses `flushIntervalMs`, `batchSize`, and `maxQueueSize`, then flushes on browser lifecycle events.
+- Effect handlers that emit events use `api.track()` so the SDK can prevent recursive effect cycles.
 - Test destination bodies without real vendors: destination specs assert `expectedBody` against the built body before any transport runs, and `withLookups` simulates lookups ([testing.md](testing.md)).
