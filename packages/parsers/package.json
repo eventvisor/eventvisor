@@ -1,7 +1,7 @@
 {
-  "name": "@eventvisor/core",
+  "name": "@eventvisor/parsers",
   "version": "0.26.0",
-  "description": "Core package of Eventvisor for Node.js usage",
+  "description": "Source file parsers for Eventvisor projects",
   "main": "lib/index.js",
   "types": "lib/index.d.ts",
   "files": [
@@ -11,8 +11,8 @@
     "transpile": "rimraf lib && tsc --project tsconfig.cjs.json",
     "dist": "echo 'Nothing to dist here'",
     "build": "npm run transpile",
-    "typecheck": "tsc --project tsconfig.typecheck.json",
-    "test": "jest --config jest.config.js --verbose --coverage",
+    "test": "jest --config jest.config.js --verbose",
+    "typecheck": "tsc --noEmit --skipLibCheck -p tsconfig.typecheck.json",
     "lint": "eslint src"
   },
   "author": {
@@ -20,7 +20,6 @@
     "url": "https://fahad19.com"
   },
   "homepage": "https://eventvisor.org",
-  "keywords": [],
   "repository": {
     "type": "git",
     "url": "https://github.com/eventvisor/eventvisor.git"
@@ -33,14 +32,10 @@
     "url": "https://github.com/eventvisor/eventvisor/issues"
   },
   "license": "MIT",
+  "engines": {
+    "node": ">=24"
+  },
   "dependencies": {
-    "@eventvisor/catalog": "0.26.0",
-    "@eventvisor/parsers": "0.26.0",
-    "@eventvisor/sdk": "0.26.0",
-    "@eventvisor/types": "0.26.0",
-    "axios": "^1.12.2",
-    "tar": "^7.5.20",
-    "yargs": "^17.7.2",
-    "zod": "^4.0.17"
+    "yaml": "^2.9.0"
   }
 }

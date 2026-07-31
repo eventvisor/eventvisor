@@ -157,6 +157,7 @@ export type ConditionOperator =
 export type PlainCondition = SourceBase & {
   operator: ConditionOperator;
   value?: Value;
+  /** Unique portable flags: g, i, m, and s. Regex operators only. */
   regexFlags?: string;
 };
 

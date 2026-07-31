@@ -36,6 +36,7 @@ Individual packages can be built and tested by `cd`ing into the package director
 - `packages/types`: TypeScript types for all other packages
 - `packages/core`: Core package used in Eventvisor CLI
 - `packages/cli`: Eventvisor CLI package
+- `packages/parsers`: YAML and JSON authoring parsers used by core
 - `packages/sdk`: Eventvisor SDK package
 - `packages/react`: Additional React-specific hooks and components
 - `packages/catalog`: Static project Catalog used by the CLI

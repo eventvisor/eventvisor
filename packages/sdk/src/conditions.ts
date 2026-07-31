@@ -5,6 +5,35 @@ import type { SourceResolver } from "./sourceResolver.js";
 import { compareVersions } from "./compareVersions.js";
 import { Logger } from "./logger.js";
 
+const portableRegexFlagsPattern = /^[gims]+$/;
+const portableDatePattern =
+  /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d{1,3})?(?:Z|[+-]\d{2}:\d{2})$/;
+
+function isPortableRegex(pattern: string, flags = "") {
+  if (flags && (!portableRegexFlagsPattern.test(flags) || new Set(flags).size !== flags.length)) {
+    return false;
+  }
+
+  try {
+    new RegExp(pattern, flags);
+  } catch {
+    return false;
+  }
+
+  if (/\(\?/.test(pattern)) return false;
+  if (/\\(?:[1-9]|k<|k'|g<|g')/.test(pattern)) return false;
+  if (/(?:[?*+]|\{\d+(?:,\d*)?\})\+/.test(pattern)) return false;
+
+  return true;
+}
+
+function getPortableDate(value: unknown) {
+  if (value instanceof Date) return Number.isNaN(value.getTime()) ? null : value;
+  if (typeof value !== "string" || !portableDatePattern.test(value)) return null;
+  const date = new Date(value);
+  return Number.isNaN(date.getTime()) ? null : date;
+}
+
 export type GetConditionsChecker = () => ConditionsChecker;
 export type GetRegex = (regexString: string, regexFlags?: string) => RegExp;
 
@@ -32,30 +61,29 @@ export class ConditionsChecker {
     const sourceValue = await this.sourceResolver.resolve(condition, inputs);
 
     if (operator === "exists") {
-      return typeof sourceValue !== "undefined" && sourceValue !== null;
+      return typeof sourceValue !== "undefined";
     } else if (operator === "notExists") {
-      return typeof sourceValue === "undefined" || sourceValue === null;
+      return typeof sourceValue === "undefined";
     } else if (operator === "equals") {
       return sourceValue === value;
     } else if (operator === "notEquals") {
       return sourceValue !== value;
     } else if (operator === "before" || operator === "after") {
       // date comparisons
-      const valueInContext = sourceValue as string | Date;
+      const dateInContext = getPortableDate(sourceValue);
+      const dateInCondition = getPortableDate(value);
 
-      const dateInContext =
-        valueInContext instanceof Date ? valueInContext : new Date(valueInContext);
-      const dateInCondition = value instanceof Date ? value : new Date(value as string);
+      if (!dateInContext || !dateInCondition) return false;
 
       return operator === "before"
         ? dateInContext < dateInCondition
         : dateInContext > dateInCondition;
     } else if (
       Array.isArray(value) &&
-      (["string", "number"].indexOf(typeof sourceValue) !== -1 || sourceValue === null)
+      (["string", "number", "boolean"].indexOf(typeof sourceValue) !== -1 || sourceValue === null)
     ) {
       // in / notIn (where condition value is an array)
-      const valueInContext = sourceValue as string;
+      const valueInContext = sourceValue as string | number | boolean | null;
 
       if (operator === "in") {
         return value.indexOf(valueInContext) !== -1;
@@ -87,10 +115,12 @@ export class ConditionsChecker {
       } else if (operator === "semverLessThanOrEquals") {
         return compareVersions(valueInContext, value) <= 0;
       } else if (operator === "matches") {
+        if (!isPortableRegex(value, regexFlags || "")) return false;
         const regex = this.getRegex(value, regexFlags || "");
         regex.lastIndex = 0;
         return regex.test(valueInContext);
       } else if (operator === "notMatches") {
+        if (!isPortableRegex(value, regexFlags || "")) return false;
         const regex = this.getRegex(value, regexFlags || "");
         regex.lastIndex = 0;
         return !regex.test(valueInContext);
@@ -108,14 +138,18 @@ export class ConditionsChecker {
       } else if (operator === "lessThanOrEquals") {
         return valueInContext <= value;
       }
-    } else if (Array.isArray(sourceValue) && typeof value === "string") {
+    } else if (
+      Array.isArray(sourceValue) &&
+      (["string", "number", "boolean"].indexOf(typeof value) !== -1 || value === null)
+    ) {
       // includes / notIncludes (where context value is an array)
-      const valueInContext = sourceValue as string[];
+      const valueInContext = sourceValue as Array<string | number | boolean | null>;
+      const expected = value as string | number | boolean | null;
 
       if (operator === "includes") {
-        return valueInContext.indexOf(value) > -1;
+        return valueInContext.indexOf(expected) > -1;
       } else if (operator === "notIncludes") {
-        return valueInContext.indexOf(value) === -1;
+        return valueInContext.indexOf(expected) === -1;
       }
     }
 

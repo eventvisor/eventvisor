@@ -138,7 +138,7 @@ export class FilesystemAdapter extends Adapter {
 
     fs.mkdirSync(path.dirname(filePath), { recursive: true });
 
-    fs.writeFileSync(filePath, this.parser.stringify(entity));
+    fs.writeFileSync(filePath, this.parser.stringify(entity, filePath));
 
     return entity;
   }

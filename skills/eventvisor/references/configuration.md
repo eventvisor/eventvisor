@@ -44,14 +44,19 @@ module.exports = { tags: ["web"], parser: "json" };   // author .json files inst
 Custom parser (any format that parses to plain objects — e.g. TOML):
 
 ```js
+const TOML = require("@iarna/toml");
+
 module.exports = {
   tags: ["web"],
   parser: {
     extension: "toml",
-    parse: (content) => require("toml").parse(content),
+    parse: (content) => TOML.parse(content),
+    stringify: (content) => TOML.stringify(content),
   },
 };
 ```
+
+Custom parsers must provide both functions. `stringify` receives the current file path as an optional second argument, which can be used to preserve comments and formatting. Built in YAML and JSON implementations are published in `@eventvisor/parsers`. The YAML parser preserves existing comments during editorial writes where possible.
 
 With a custom parser, write **all** entity files in that format with that extension. Reference projects: `project-yml`, `project-json` in the monorepo.
 

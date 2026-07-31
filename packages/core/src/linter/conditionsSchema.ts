@@ -3,6 +3,32 @@ import * as z from "zod";
 import { Dependencies } from "../dependencies";
 import { getSourceBaseRefine, getSourceBaseSchema } from "./sourceSchema";
 
+const semverPattern =
+  /^[v^~<>=]*?(\d+)(?:\.([x*]|\d+)(?:\.([x*]|\d+)(?:\.([x*]|\d+))?(?:-([\da-z-]+(?:\.[\da-z-]+)*))?(?:\+[\da-z-]+(?:\.[\da-z-]+)*)?)?)?$/i;
+const portableDatePattern =
+  /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d{1,3})?(?:Z|[+-]\d{2}:\d{2})$/;
+
+function getPortableRegexError(pattern: string, flags = "") {
+  if (flags && (!/^[gims]+$/.test(flags) || new Set(flags).size !== flags.length)) {
+    return "flags must contain unique characters from g, i, m, and s";
+  }
+  try {
+    new RegExp(pattern, flags);
+  } catch (error) {
+    return `pattern must be valid: ${error instanceof Error ? error.message : String(error)}`;
+  }
+  if (/\(\?/.test(pattern)) {
+    return "pattern must not use lookaround, named groups, noncapturing groups, atomic groups, or inline mode groups";
+  }
+  if (/\\(?:[1-9]|k<|k'|g<|g')/.test(pattern)) {
+    return "pattern must not use backreferences";
+  }
+  if (/(?:[?*+]|\{\d+(?:,\d*)?\})\+/.test(pattern)) {
+    return "pattern must not use possessive quantifiers";
+  }
+  return undefined;
+}
+
 export function getConditionsSchema(deps: Dependencies) {
   const sourceBase = getSourceBaseSchema(deps);
 
@@ -81,8 +107,6 @@ export function getConditionsSchema(deps: Dependencies) {
         "semverLessThanOrEquals",
         "before",
         "after",
-        "includes",
-        "notIncludes",
         "matches",
         "notMatches",
       ];
@@ -100,14 +124,33 @@ export function getConditionsSchema(deps: Dependencies) {
           message: `${data.operator} requires a string`,
         });
       }
-      if (["in", "notIn"].includes(data.operator) && !Array.isArray(data.value)) {
-        ctx.addIssue({
-          code: "custom",
-          path: ["value"],
-          message: `${data.operator} requires an array`,
-        });
+      if (["in", "notIn"].includes(data.operator)) {
+        if (
+          !Array.isArray(data.value) ||
+          data.value.some(
+            (value) => value !== null && !["string", "number", "boolean"].includes(typeof value),
+          )
+        ) {
+          ctx.addIssue({
+            code: "custom",
+            path: ["value"],
+            message: `${data.operator} requires an array of primitive values`,
+          });
+        }
       }
-      if (data.regexFlags && !["matches", "notMatches"].includes(data.operator)) {
+      if (["includes", "notIncludes"].includes(data.operator)) {
+        if (data.value !== null && !["string", "number", "boolean"].includes(typeof data.value)) {
+          ctx.addIssue({
+            code: "custom",
+            path: ["value"],
+            message: `${data.operator} requires a primitive value`,
+          });
+        }
+      }
+      if (
+        typeof data.regexFlags !== "undefined" &&
+        !["matches", "notMatches"].includes(data.operator)
+      ) {
         ctx.addIssue({
           code: "custom",
           path: ["regexFlags"],
@@ -115,10 +158,32 @@ export function getConditionsSchema(deps: Dependencies) {
         });
       }
       if (["matches", "notMatches"].includes(data.operator) && typeof data.value === "string") {
-        try {
-          new RegExp(data.value, data.regexFlags || "");
-        } catch {
-          ctx.addIssue({ code: "custom", path: ["value"], message: "Invalid regular expression" });
+        const error = getPortableRegexError(data.value, data.regexFlags || "");
+        if (error) {
+          ctx.addIssue({
+            code: "custom",
+            path: ["value"],
+            message: `Regular expression ${error} in the cross-SDK subset`,
+          });
+        }
+      }
+      if (["before", "after"].includes(data.operator) && typeof data.value === "string") {
+        const date = new Date(data.value);
+        if (!portableDatePattern.test(data.value) || Number.isNaN(date.getTime())) {
+          ctx.addIssue({
+            code: "custom",
+            path: ["value"],
+            message: `${data.operator} requires an ISO 8601 date and time with a timezone`,
+          });
+        }
+      }
+      if (data.operator.startsWith("semver") && typeof data.value === "string") {
+        if (!semverPattern.test(data.value)) {
+          ctx.addIssue({
+            code: "custom",
+            path: ["value"],
+            message: `${data.operator} requires a valid semantic version`,
+          });
         }
       }
     });

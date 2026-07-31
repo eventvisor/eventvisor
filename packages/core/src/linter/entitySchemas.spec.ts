@@ -77,6 +77,70 @@ describe("entity lint schemas", () => {
     expect(schema.safeParse('{"and":[]}').success).toBe(false);
   });
 
+  it.each([
+    ["lookahead", "value(?=x)", ""],
+    ["lookbehind", "(?<=x)value", ""],
+    ["noncapturing group", "(?:value)", ""],
+    ["named group", "(?<name>value)", ""],
+    ["backreference", "(value)\\1", ""],
+    ["possessive quantifier", "value++", ""],
+    ["unsupported flag", "value", "u"],
+    ["duplicate flag", "value", "ii"],
+  ])("rejects nonportable regex %s", (_name, value, regexFlags) => {
+    const schema = getConditionsSchema(deps);
+    expect(
+      schema.safeParse({ payload: "value", operator: "matches", value, regexFlags }).success,
+    ).toBe(false);
+  });
+
+  it("accepts the portable regex subset", () => {
+    const schema = getConditionsSchema(deps);
+    expect(
+      schema.safeParse({
+        payload: "value",
+        operator: "matches",
+        value: "^(hello|world)[\\s\\S]+$",
+        regexFlags: "gims",
+      }).success,
+    ).toBe(true);
+  });
+
+  it("requires portable date and semantic version operands", () => {
+    const schema = getConditionsSchema(deps);
+    expect(
+      schema.safeParse({
+        payload: "timestamp",
+        operator: "after",
+        value: "2026-01-01T00:00:00Z",
+      }).success,
+    ).toBe(true);
+    expect(
+      schema.safeParse({ payload: "timestamp", operator: "after", value: "2026-01-01" }).success,
+    ).toBe(false);
+    expect(
+      schema.safeParse({ payload: "version", operator: "semverEquals", value: "1.2.3" }).success,
+    ).toBe(true);
+    expect(
+      schema.safeParse({ payload: "version", operator: "semverEquals", value: "latest" }).success,
+    ).toBe(false);
+  });
+
+  it("validates primitive membership operands", () => {
+    const schema = getConditionsSchema(deps);
+    expect(schema.safeParse({ payload: "value", operator: "includes", value: false }).success).toBe(
+      true,
+    );
+    expect(
+      schema.safeParse({ payload: "value", operator: "in", value: ["one", 2, true, null] }).success,
+    ).toBe(true);
+    expect(
+      schema.safeParse({ payload: "value", operator: "includes", value: { nested: true } }).success,
+    ).toBe(false);
+    expect(
+      schema.safeParse({ payload: "value", operator: "in", value: [{ nested: true }] }).success,
+    ).toBe(false);
+  });
+
   it("accepts arrays of samples", () => {
     const schema = getSampleSchema(deps);
 

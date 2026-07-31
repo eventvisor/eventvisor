@@ -40,8 +40,8 @@ describe("conditions", () => {
     ["semverGreaterThanOrEquals", "2.0.0", "2.0.0", true],
     ["semverLessThan", "1.0.0", "2.0.0", true],
     ["semverLessThanOrEquals", "1.0.0", "1.0.0", true],
-    ["before", "2025-01-01", "2026-01-01", true],
-    ["after", "2026-01-01", "2025-01-01", true],
+    ["before", "2025-01-01T00:00:00Z", "2026-01-01T00:00:00Z", true],
+    ["after", "2026-01-01T00:00:00Z", "2025-01-01T00:00:00Z", true],
     ["includes", ["one", "two"], "two", true],
     ["notIncludes", ["one"], "two", true],
     ["matches", "HELLO", "^hello$", true],
@@ -68,8 +68,39 @@ describe("conditions", () => {
     );
     await expect(matches({ payload: "value", operator: "notExists" }, {})).resolves.toBe(true);
     await expect(matches({ payload: "value", operator: "exists" }, { value: null })).resolves.toBe(
-      false,
+      true,
     );
+    await expect(
+      matches({ payload: "value", operator: "notExists" }, { value: null }),
+    ).resolves.toBe(false);
+  });
+
+  it.each([
+    ["includes", [1, 2], 2, true],
+    ["notIncludes", [1, 2], 3, true],
+    ["includes", [true, false], false, true],
+    ["includes", ["value", null], null, true],
+    ["in", true, [false, true], true],
+    ["notIn", false, [true], true],
+    ["in", null, ["value", null], true],
+  ])("supports primitive membership with %s", async (operator, source, expected, result) => {
+    await expect(
+      matches({ payload: "value", operator: operator as any, value: expected as Value }, {
+        value: source,
+      } as Value),
+    ).resolves.toBe(result);
+  });
+
+  it("fails closed for incompatible membership operands", async () => {
+    await expect(
+      matches({ payload: "value", operator: "includes", value: "a" }, { value: "a" }),
+    ).resolves.toBe(false);
+    await expect(
+      matches({ payload: "value", operator: "notIncludes", value: {} }, { value: ["a"] }),
+    ).resolves.toBe(false);
+    await expect(
+      matches({ payload: "value", operator: "notIn", value: "a" }, { value: "b" }),
+    ).resolves.toBe(false);
   });
 
   it("uses implicit AND for arrays and not children", async () => {
@@ -121,6 +152,65 @@ describe("conditions", () => {
   it("treats invalid regular expressions as non-matches", async () => {
     await expect(
       matches({ payload: "value", operator: "matches", value: "[" }, { value: "hello" }),
+    ).resolves.toBe(false);
+  });
+
+  it.each([
+    "value(?=x)",
+    "(?<=x)value",
+    "(?:value)",
+    "(?<name>value)",
+    "(value)\\1",
+    "(?<name>value)\\k<name>",
+    "value++",
+  ])("defensively rejects nonportable regular expression %s", async (value) => {
+    await expect(
+      matches({ payload: "value", operator: "matches", value }, { value: "valuex" }),
+    ).resolves.toBe(false);
+    await expect(
+      matches({ payload: "value", operator: "notMatches", value }, { value: "other" }),
+    ).resolves.toBe(false);
+  });
+
+  it("supports portable regex flags and ordinary capture groups", async () => {
+    await expect(
+      matches(
+        {
+          payload: "value",
+          operator: "matches",
+          value: "^(hello)[\\s\\S]+$",
+          regexFlags: "gi",
+        },
+        { value: "HELLO\nWORLD" },
+      ),
+    ).resolves.toBe(true);
+  });
+
+  it.each(["u", "y", "d", "ii"])("rejects nonportable regex flags %s", async (regexFlags) => {
+    await expect(
+      matches(
+        { payload: "value", operator: "matches", value: "value", regexFlags },
+        { value: "value" },
+      ),
+    ).resolves.toBe(false);
+  });
+
+  it("fails closed for nonportable dates and invalid semantic versions", async () => {
+    await expect(
+      matches(
+        { payload: "value", operator: "before", value: "2026-01-01" },
+        {
+          value: "2025-01-01",
+        },
+      ),
+    ).resolves.toBe(false);
+    await expect(
+      matches(
+        { payload: "value", operator: "semverEquals", value: "invalid" },
+        {
+          value: "invalid",
+        },
+      ),
     ).resolves.toBe(false);
   });
 

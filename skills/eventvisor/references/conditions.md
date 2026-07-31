@@ -15,22 +15,28 @@ conditions:
 
 A bare list of conditions is an implicit **AND**. `value` is omitted for `exists`/`notExists`. `regexFlags` accompanies `matches`/`notMatches`.
 
+Regular expressions use the portable cross SDK subset. Flags can contain unique `g`, `i`, `m`, and `s` characters. Do not use lookaround, named groups, noncapturing groups, backreferences, inline mode groups, atomic groups, or possessive quantifiers. Ordinary capture groups and character classes are supported.
+
+`before` and `after` require an ISO 8601 date and time with a timezone. Semantic version operators require valid semantic versions. Invalid values fail closed in SDKs.
+
 ## Operators
 
-| Operator                                                                                                                             | Operand                      | Meaning                                                  |
-| ------------------------------------------------------------------------------------------------------------------------------------ | ---------------------------- | -------------------------------------------------------- |
-| `exists` / `notExists`                                                                                                               | —                            | Source resolves to a value / doesn't                     |
-| `equals` / `notEquals`                                                                                                               | any                          | Equality                                                 |
-| `greaterThan` / `greaterThanOrEquals` / `lessThan` / `lessThanOrEquals`                                                              | number                       | Numeric comparison                                       |
-| `contains` / `notContains`                                                                                                           | string                       | Substring                                                |
-| `startsWith` / `endsWith`                                                                                                            | string                       | Prefix / suffix                                          |
-| `in` / `notIn`                                                                                                                       | string vs array value        | Source value is in `value: [a, b, c]`                    |
-| `includes` / `notIncludes`                                                                                                           | array source vs scalar value | Source array contains `value`                            |
-| `matches` / `notMatches`                                                                                                             | string                       | Regex (`value` is the pattern; optional `regexFlags: i`) |
-| `before` / `after`                                                                                                                   | date string                  | Date comparison (ISO 8601)                               |
-| `semverEquals` / `semverNotEquals` / `semverGreaterThan` / `semverGreaterThanOrEquals` / `semverLessThan` / `semverLessThanOrEquals` | semver string                | Version comparison                                       |
+| Operator                                                                                                                             | Operand                   | Meaning                                                  |
+| ------------------------------------------------------------------------------------------------------------------------------------ | ------------------------- | -------------------------------------------------------- |
+| `exists` / `notExists`                                                                                                               | —                         | Source is defined / undefined                            |
+| `equals` / `notEquals`                                                                                                               | any                       | Equality                                                 |
+| `greaterThan` / `greaterThanOrEquals` / `lessThan` / `lessThanOrEquals`                                                              | number                    | Numeric comparison                                       |
+| `contains` / `notContains`                                                                                                           | string                    | Substring                                                |
+| `startsWith` / `endsWith`                                                                                                            | string                    | Prefix / suffix                                          |
+| `in` / `notIn`                                                                                                                       | primitive vs array value  | Source value is in `value: [a, b, c]`                    |
+| `includes` / `notIncludes`                                                                                                           | array source vs primitive | Source array contains `value`                            |
+| `matches` / `notMatches`                                                                                                             | string                    | Regex (`value` is the pattern; optional `regexFlags: i`) |
+| `before` / `after`                                                                                                                   | date string               | ISO 8601 date and time with timezone                     |
+| `semverEquals` / `semverNotEquals` / `semverGreaterThan` / `semverGreaterThanOrEquals` / `semverLessThan` / `semverLessThanOrEquals` | semver string             | Version comparison                                       |
 
 Watch the `in` vs `includes` distinction: `in` = scalar source ∈ array value; `includes` = array source ∋ scalar value.
+
+Membership supports strings, numbers, booleans, and null. `null` is defined for `exists`; only an undefined source is missing.
 
 ```yaml
 # in: country is one of these
