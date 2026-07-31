@@ -14,7 +14,7 @@ datafiles/
 └── eventvisor-account.json
 ```
 
-Selective builds: `--target checkout` (repeatable), `--set staging`, and optional `--tag web` filtering. Print without writing: `--tag/--target … --json --pretty` (Sets projects must pass one `--set`). Tags are selection metadata and do not create artifacts. Datafiles contain `schemaVersion`, `revision`, `eventvisorVersion`, the validation failure policy, and resolved runtime maps. Reusable Schemas are inlined and Target dependency closure is already applied.
+Selective builds: `--target checkout` and `--tag web` are repeatable. Use `--set staging` for one Set. Print without writing with `--tag` or one `--target`, followed by `--json --pretty`. Sets projects must pass one `--set` for JSON. Tags are selection metadata and do not create artifacts. Datafiles contain `schemaVersion`, `revision`, `eventvisorVersion`, the validation failure policy, and resolved runtime maps. Reusable Schemas are inlined and Target dependency closure is already applied. A Target exclusion that removes a required dependency fails the build.
 
 ## Revisions
 

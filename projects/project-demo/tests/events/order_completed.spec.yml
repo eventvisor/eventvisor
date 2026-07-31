@@ -23,5 +23,6 @@ assertions:
       orderId: order-456
       total: 25
       itemCount: 1
-    expectedToBeValid: false
+    expectedToBeValid: true
+    expectedToBeTracked: false
     expectedDestinations: []

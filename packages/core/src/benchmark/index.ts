@@ -1,6 +1,6 @@
 import type { Value } from "@eventvisor/types";
-import { buildDatafile } from "../builder";
-import type { BuildDatafileOptions } from "../builder";
+import { buildSelectedDatafile } from "../builder";
+import type { BuildSelectedDatafileOptions } from "../builder";
 import type { Plugin } from "../cli";
 import { createCliInstance } from "../utils";
 import { parseJsonOption } from "../utils";
@@ -62,8 +62,8 @@ export const benchmarkPlugin: Plugin = {
   options: {
     n: { type: "number", description: "number of evaluations", alias: "iterations" },
     value: { type: "string", description: "event payload as JSON" },
-    tag: { type: "string" },
-    target: { type: "string" },
+    tag: { type: "array", description: "include one or more tags" },
+    target: { type: "array", description: "include one or more Targets" },
     set: { type: "string" },
     json: { type: "boolean" },
   },
@@ -75,7 +75,9 @@ export const benchmarkPlugin: Plugin = {
       datasource: execution.datasource,
       options: parsed,
     };
-    const instance = createCliInstance(await buildDatafile(deps, parsed as BuildDatafileOptions));
+    const instance = createCliInstance(
+      await buildSelectedDatafile(deps, parsed as BuildSelectedDatafileOptions),
+    );
     try {
       const value = parseJsonOption<Value>(parsed.value, {}, "Event value");
       const iterations = parsed.n ?? 1_000_000;

@@ -1,6 +1,6 @@
 import type { Value } from "@eventvisor/types";
-import { buildDatafile } from "../builder";
-import type { BuildDatafileOptions } from "../builder";
+import { buildSelectedDatafile } from "../builder";
+import type { BuildSelectedDatafileOptions } from "../builder";
 import type { Plugin } from "../cli";
 import { createCliInstance, parseJsonOption } from "../utils";
 import { getSelectedProjectExecution } from "../sets";
@@ -19,8 +19,8 @@ export const simulatePlugin: Plugin = {
   options: {
     value: { type: "string", description: "event payload as JSON" },
     attributes: { type: "string", description: "attributes as JSON" },
-    tag: { type: "string" },
-    target: { type: "string" },
+    tag: { type: "array", description: "include one or more tags" },
+    target: { type: "array", description: "include one or more Targets" },
     set: { type: "string" },
     json: { type: "boolean" },
   },
@@ -32,7 +32,9 @@ export const simulatePlugin: Plugin = {
       datasource: execution.datasource,
       options: parsed,
     };
-    const instance = createCliInstance(await buildDatafile(deps, parsed as BuildDatafileOptions));
+    const instance = createCliInstance(
+      await buildSelectedDatafile(deps, parsed as BuildSelectedDatafileOptions),
+    );
     try {
       const attributes = parseAttributesOption(parsed.attributes);
       for (const [name, value] of Object.entries(attributes))

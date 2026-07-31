@@ -98,16 +98,12 @@ export type Persist = SimplePersist | ComplexPersist | Persist[];
  */
 export type Source = string;
 
-export type SourceBase =
-  // longer dotted path
-  | { source: Source | NonEmptyArray<Source> }
-
-  // more specific sources
-  | { attribute: Source | NonEmptyArray<Source> } // can be dot-separated path
-  | { state: Source | NonEmptyArray<Source> } // internally in Effect's own transforms
-  | { effect: Source | NonEmptyArray<Source> }
-  | { payload: Source | NonEmptyArray<Source> } // @TODO: or more specific eventValue and attributeValue?
-  | { lookup: Source | NonEmptyArray<Source> };
+export type SourceKey = "source" | "attribute" | "state" | "effect" | "payload" | "lookup";
+export type SourceValue = Source | NonEmptyArray<Source>;
+type SourceSelection<K extends SourceKey> = Record<K, SourceValue> &
+  Partial<Record<Exclude<SourceKey, K>, never>>;
+export type SourceBase = { [K in SourceKey]: SourceSelection<K> }[SourceKey];
+export type OptionalSourceBase = SourceBase | Partial<Record<SourceKey, never>>;
 
 /**
  * Conditions
@@ -206,7 +202,7 @@ export type TransformType =
   | "decrement"
 
   // manipulations
-  | "concat" // @TODO: rename to `join`?
+  | "concat"
   | "remove"
   | "rename"
   | "set"
@@ -218,31 +214,40 @@ export type TransformType =
   | "toString"
   | "toBoolean"
 
-  // @TODO: consider later
-  // | "uppercase"
-  // | "lowercase"
-
   // complex
   | "spread"
   | "append";
 
-export interface TransformBase {
-  source?: Source | NonEmptyArray<Source>;
-  attribute?: Source | NonEmptyArray<Source>;
-  state?: Source | NonEmptyArray<Source>;
-  effect?: Source | NonEmptyArray<Source>;
-  payload?: Source | NonEmptyArray<Source>;
-  lookup?: Source | NonEmptyArray<Source>;
+export interface TransformCondition {
   conditions?: Conditions;
-}
-
-export type Transform = TransformBase & {
-  type: TransformType;
   target?: string;
-  targetMap?: Record<string, string> | Record<string, string>[];
+  targetMap?: Record<string, string> | NonEmptyArray<Record<string, string>>;
   value?: Value;
   separator?: string;
-};
+}
+
+type TransformWithOptionalSource = TransformCondition & OptionalSourceBase;
+type TransformWithRequiredInput = TransformCondition &
+  (SourceBase | ({ value: Value } & Partial<Record<SourceKey, never>>));
+
+export type Transform =
+  | (TransformWithOptionalSource & {
+      type: "increment" | "decrement";
+      target?: string;
+      value?: number;
+    })
+  | (TransformWithOptionalSource & { type: "concat"; target: string; separator?: string })
+  | (TransformCondition & { type: "remove"; target: string })
+  | (TransformCondition & {
+      type: "rename";
+      targetMap: Record<string, string> | NonEmptyArray<Record<string, string>>;
+    })
+  | (TransformWithRequiredInput & { type: "set"; target?: string })
+  | (TransformWithOptionalSource & {
+      type: "trim" | "toInteger" | "toDouble" | "toString" | "toBoolean";
+      target: string;
+    })
+  | (TransformWithRequiredInput & { type: "spread" | "append"; target?: string });
 
 /**
  * Attribute
@@ -423,6 +428,7 @@ export interface EventAssertion {
   actions?: Action[];
 
   expectedToBeValid?: boolean;
+  expectedToBeTracked?: boolean;
   expectedEvent?: Value;
   expectedDestinations?: DestinationName[];
   expectedDestinationsByTag?: Record<Tag, DestinationName[]>;

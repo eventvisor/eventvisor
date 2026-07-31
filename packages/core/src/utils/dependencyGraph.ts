@@ -65,7 +65,11 @@ function collectRuntimeReferences(value: unknown, references: Set<string>) {
         }
       });
     }
-    if (["value", "default", "examples", "const", "enum", "properties", "state"].includes(field)) {
+    if (
+      ["value", "default", "examples", "const", "enum", "properties", "state", "params"].includes(
+        field,
+      )
+    ) {
       continue;
     }
     collectRuntimeReferences(child, references);
@@ -103,6 +107,10 @@ export function getEntityReferences(
 
   if (type === "event") {
     Object.keys(entity.destinations || {}).forEach((key) => add(references, "destination", key));
+    const policy = entity.onValidationFailure;
+    if (policy && typeof policy === "object" && policy.action === "quarantine") {
+      add(references, "destination", policy.destination);
+    }
   }
   if (type === "effect") {
     if (Array.isArray(entity.on)) {

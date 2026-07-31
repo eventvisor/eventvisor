@@ -1,9 +1,12 @@
 import * as z from "zod";
 import { Dependencies } from "../dependencies";
+import { getSafePathSegments } from "@eventvisor/sdk/portable";
 
 // eslint-disable-next-line
 export function getSourceBaseSchema(deps: Dependencies) {
-  const source = z.string();
+  const source = z.string().refine((value) => getSafePathSegments(value) !== null, {
+    message: "Source paths must not be empty or contain __proto__, prototype, or constructor",
+  });
   const sourceUnion = z.union([source, z.array(source).min(1)]);
 
   // need .shape API from Zod, so cannot do .union() here
@@ -20,22 +23,18 @@ export function getSourceBaseSchema(deps: Dependencies) {
 
 const needOneOf = ["source", "attribute", "state", "effect", "payload", "lookup"];
 
-// @TODO: make return type better
-export function getSourceBaseRefine(): [any, any] {
+type SourceBase = z.infer<ReturnType<typeof getSourceBaseSchema>>;
+
+export function getSourceBaseRefine(): [
+  (data: SourceBase) => boolean,
+  { message: string; path: PropertyKey[] },
+] {
   return [
     (data) => {
-      const keys = Object.keys(data);
-
-      for (const key of keys) {
-        if (needOneOf.includes(key)) {
-          return true;
-        }
-      }
-
-      return false;
+      return needOneOf.filter((key) => typeof data[key] !== "undefined").length === 1;
     },
     {
-      message: "At least one source is required",
+      message: "Exactly one source is required",
       path: [],
     },
   ];

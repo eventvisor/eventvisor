@@ -24,7 +24,10 @@ function options(subcommand?: string) {
       eventsDirectoryPath: `${rootDirectoryPath}/events`,
     },
     datasource: {},
-    parsed: { _: subcommand ? ["catalog", subcommand] : ["catalog"] },
+    parsed: {
+      _: subcommand ? ["catalog", subcommand] : ["catalog"],
+      subcommand,
+    },
   } as any;
 }
 

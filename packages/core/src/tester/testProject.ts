@@ -1,6 +1,6 @@
 import { Dependencies } from "../dependencies";
 import { Plugin } from "../cli";
-import { buildDatafile } from "../builder";
+import { buildSelectedDatafile } from "../builder";
 import { prettyDuration } from "../utils";
 import { printTestResult } from "./printTestResult";
 import { executeTest } from "./executeTest";
@@ -20,8 +20,8 @@ export interface TestProjectOptions {
   onlyFailures?: boolean;
   quiet?: boolean;
   verbose?: boolean;
-  tag?: string;
-  target?: string;
+  tag?: string | string[];
+  target?: string | string[];
   set?: string;
 }
 
@@ -34,7 +34,10 @@ async function testSingleProject(
   console.log(CLI_FORMAT_BOLD, "Testing Eventvisor project");
   console.log(`  ${colorize("•", CLI_COLOR_CYAN)} Building test datafile`);
 
-  const datafileContent = await buildDatafile(deps, { tag: options.tag, target: options.target });
+  const datafileContent = await buildSelectedDatafile(deps, {
+    tag: options.tag,
+    target: options.target,
+  });
   const afterDatafileBuild = new Date();
   console.log(
     `  ${colorize("✔", 32)} Datafile built in ${afterDatafileBuild.getTime() - beforeDatafileBuild.getTime()}ms`,
@@ -50,6 +53,7 @@ async function testSingleProject(
   };
 
   let hasFailures = false;
+  let matchedSpecs = 0;
 
   const start = new Date();
 
@@ -58,6 +62,7 @@ async function testSingleProject(
     if (options.keyPattern && !test.includes(options.keyPattern)) {
       continue;
     }
+    matchedSpecs++;
 
     const testContent = await deps.datasource.readTest(test);
     const testResult = await executeTest({
@@ -91,6 +96,19 @@ async function testSingleProject(
         deps,
       });
     }
+  }
+
+  if (
+    matchedSpecs === 0 ||
+    (options.assertionPattern && totals.assertionsPassed + totals.assertionsFailed === 0)
+  ) {
+    hasFailures = true;
+    console.log(
+      CLI_FORMAT_RED,
+      matchedSpecs === 0
+        ? "No test specs matched the requested pattern"
+        : "No assertions matched the requested pattern",
+    );
   }
 
   console.log("");
@@ -151,8 +169,8 @@ export const testPlugin: Plugin = {
   command: "test",
   options: {
     set: { type: "string" },
-    tag: { type: "string" },
-    target: { type: "string" },
+    tag: { type: "array", description: "include one or more tags" },
+    target: { type: "array", description: "include one or more Targets" },
     keyPattern: { type: "string" },
     assertionPattern: { type: "string" },
     onlyFailures: { type: "boolean" },

@@ -14,7 +14,7 @@ export function createAmplitudeBrowserModule(
     name,
 
     transport: async ({ eventName, payload }) => {
-      amplitude.track(eventName, payload);
+      await Promise.resolve(amplitude.track(eventName, payload));
     },
   };
 }

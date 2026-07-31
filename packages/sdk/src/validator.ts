@@ -2,6 +2,7 @@ import { JSONSchema, Value } from "@eventvisor/types";
 
 import type { GetSourceResolver } from "./sourceResolver.js";
 import type { Logger } from "./logger.js";
+import { hasOwn, isPortableRegex, valuesAreEqual } from "./portable.js";
 
 export interface ValidatorOptions {
   logger: Logger;
@@ -120,7 +121,7 @@ function validateValue(
   }
 
   // Const validation
-  if (schema.const !== undefined && value !== schema.const) {
+  if (schema.const !== undefined && !valuesAreEqual(value, schema.const)) {
     errors.push({
       path,
       message: `Value must be exactly ${JSON.stringify(schema.const)}`,
@@ -131,7 +132,7 @@ function validateValue(
   }
 
   // Enum validation
-  if (schema.enum && !schema.enum.includes(value)) {
+  if (schema.enum && !schema.enum.some((candidate) => valuesAreEqual(candidate, value))) {
     errors.push({
       path,
       message: `Value must be one of: ${schema.enum.map((v) => JSON.stringify(v)).join(", ")}`,
@@ -167,7 +168,7 @@ function validateValue(
     // Validate required properties
     if (schema.required) {
       for (const requiredProp of schema.required) {
-        if (!(requiredProp in obj)) {
+        if (!hasOwn(obj, requiredProp)) {
           if (schema.properties?.[requiredProp]?.default !== undefined) {
             validatedObj[requiredProp] = schema.properties[requiredProp].default!;
           } else {
@@ -206,7 +207,7 @@ function validateValue(
     // Apply defaults for missing optional properties
     if (schema.properties) {
       for (const [prop, propSchema] of Object.entries(schema.properties)) {
-        if (!(prop in validatedObj) && propSchema.default !== undefined) {
+        if (!hasOwn(validatedObj, prop) && propSchema.default !== undefined) {
           validatedObj[prop] = propSchema.default;
         }
       }
@@ -309,6 +310,15 @@ function validateValue(
     }
 
     if (schema.pattern) {
+      if (!isPortableRegex(schema.pattern)) {
+        errors.push({
+          path,
+          message: `String pattern is not portable: ${schema.pattern}`,
+          schema,
+          value,
+        });
+        return undefined;
+      }
       const regex = new RegExp(schema.pattern);
       if (!regex.test(value)) {
         errors.push({
@@ -367,35 +377,6 @@ function validateValue(
   }
 
   return result;
-}
-
-function valuesAreEqual(left: Value, right: Value): boolean {
-  if (left === right) return true;
-  if (Array.isArray(left) && Array.isArray(right)) {
-    return (
-      left.length === right.length &&
-      left.every((value, index) => valuesAreEqual(value, right[index]))
-    );
-  }
-  if (
-    left &&
-    right &&
-    typeof left === "object" &&
-    typeof right === "object" &&
-    !Array.isArray(left) &&
-    !Array.isArray(right)
-  ) {
-    const leftKeys = Object.keys(left);
-    const rightKeys = Object.keys(right);
-    return (
-      leftKeys.length === rightKeys.length &&
-      leftKeys.every(
-        (key) =>
-          Object.prototype.hasOwnProperty.call(right, key) && valuesAreEqual(left[key], right[key]),
-      )
-    );
-  }
-  return false;
 }
 
 function validateType(expectedType: string, value: Value): boolean {

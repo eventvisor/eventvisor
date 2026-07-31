@@ -1,4 +1,5 @@
 import * as z from "zod";
+import { isPortableRegex } from "@eventvisor/sdk/portable";
 
 export const JSONZodSchema = getJSONSchema();
 
@@ -319,13 +320,10 @@ function validateStringConstraints(
         code: "INVALID_PATTERN_TYPE",
       });
     } else {
-      try {
-        new RegExp(schema.pattern);
-        // eslint-disable-next-line
-      } catch (e) {
+      if (!isPortableRegex(schema.pattern)) {
         errors.push({
           path: [...path, "pattern"],
-          message: `Invalid regex pattern: ${schema.pattern}`,
+          message: `Pattern is not valid in the portable cross-SDK subset: ${schema.pattern}`,
           code: "INVALID_REGEX_PATTERN",
         });
       }

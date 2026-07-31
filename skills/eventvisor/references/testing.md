@@ -47,7 +47,7 @@ assertions:
     expectedDestinations: []
 ```
 
-Event assertion fields: `description`, `matrix`, `withAttributes`, `withLookups`, `track`, `actions`, `expectedToBeValid`, `expectedEvent`, `expectedDestinations`, `expectedDestinationsByTag` (map of tag → destination list, for group assertions).
+Event assertion fields: `description`, `matrix`, `withAttributes`, `withLookups`, `track`, `actions`, `expectedToBeValid`, `expectedToBeTracked`, `expectedEvent`, `expectedDestinations`, `expectedDestinationsByTag` (map of tag → destination list, for group assertions). `expectedToBeValid` checks only the event schema. `expectedToBeTracked` checks whether the complete pipeline accepted the event.
 
 ## Attribute specs
 
@@ -115,6 +115,8 @@ Effect assertion fields: `description`, `matrix`, `withAttributes`, `withLookups
 ## Actions (all spec kinds)
 
 `actions` is an ordered list of `{type: track | setAttribute | removeAttribute, name, value?}` — use it whenever the scenario needs several SDK operations or ordering (set attribute, then track). `withAttributes` is shorthand for initial attributes when order doesn't matter. Event specs can use plain `track:` when a single track is the whole scenario.
+
+Event assertions require `track` or actions. Effect and destination assertions require actions. Every assertion requires at least one expectation. Key and assertion filters fail when they match nothing.
 
 ## Matrix assertions
 

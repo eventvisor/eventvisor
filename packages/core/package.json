@@ -38,8 +38,8 @@
     "@eventvisor/parsers": "0.26.0",
     "@eventvisor/sdk": "0.26.0",
     "@eventvisor/types": "0.26.0",
-    "axios": "^1.12.2",
-    "tar": "^7.5.20",
+    "axios": "^1.19.0",
+    "tar": "^7.5.22",
     "yargs": "^17.7.2",
     "zod": "^4.0.17"
   }

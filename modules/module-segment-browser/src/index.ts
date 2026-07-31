@@ -12,7 +12,7 @@ export function createSegmentBrowserModule(options: SegmentBrowserModuleOptions)
     name,
 
     transport: async ({ eventName, payload }) => {
-      analytics.track(eventName, payload);
+      await Promise.resolve(analytics.track(eventName, payload));
     },
   };
 }

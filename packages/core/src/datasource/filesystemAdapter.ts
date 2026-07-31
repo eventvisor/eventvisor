@@ -32,7 +32,11 @@ export function getAllEntityFilePathsRecursively(directoryPath, extension) {
     const file = files[i];
     const filePath = path.join(directoryPath, file);
 
-    if (fs.statSync(filePath).isDirectory()) {
+    const stats = fs.lstatSync(filePath);
+    if (stats.isSymbolicLink()) {
+      continue;
+    }
+    if (stats.isDirectory()) {
       entities = entities.concat(getAllEntityFilePathsRecursively(filePath, extension));
     } else if (file.endsWith(`.${extension}`)) {
       entities.push(filePath);
@@ -77,6 +81,15 @@ export class FilesystemAdapter extends Adapter {
   getEntityPath(entityType: EntityType, entityKey: string): string {
     const basePath = this.getEntityDirectoryPath(entityType);
 
+    if (
+      !entityKey ||
+      entityKey.includes("\\") ||
+      entityKey.includes("\0") ||
+      entityKey.split("/").some((segment) => !segment || segment === "." || segment === "..")
+    ) {
+      throw new Error(`Invalid ${entityType} key: ${entityKey}`);
+    }
+
     // taking care of windows paths
     const relativeEntityPath = entityKey.replace(/\//g, path.sep);
 
@@ -84,6 +97,14 @@ export class FilesystemAdapter extends Adapter {
     const resolvedBase = path.resolve(basePath);
     if (!entityPath.startsWith(`${resolvedBase}${path.sep}`)) {
       throw new Error(`Invalid ${entityType} key: ${entityKey}`);
+    }
+    let current = resolvedBase;
+    for (const segment of path.relative(resolvedBase, path.dirname(entityPath)).split(path.sep)) {
+      if (!segment || segment === ".") continue;
+      current = path.join(current, segment);
+      if (fs.existsSync(current) && fs.lstatSync(current).isSymbolicLink()) {
+        throw new Error(`Invalid ${entityType} key: ${entityKey}`);
+      }
     }
     return entityPath;
   }
@@ -240,7 +261,7 @@ export class FilesystemAdapter extends Adapter {
         "git",
         [
           "log",
-          "--name-only",
+          "--name-status",
           "--pretty=format:%h|%an|%aI",
           "--relative",
           "--no-merges",
@@ -319,7 +340,11 @@ export class FilesystemAdapter extends Adapter {
 
       const filePathLines = lines.slice(1);
       for (let j = 0; j < filePathLines.length; j++) {
-        const relativePath = filePathLines[j];
+        const columns = filePathLines[j].split("\t");
+        const status = columns[0];
+        const relativePath =
+          status.startsWith("R") || status.startsWith("C") ? columns[2] : columns[1] || columns[0];
+        if (!relativePath) continue;
         const absolutePath = path.join(this.rootDirectoryPath as string, relativePath);
         const entity = getEntityFromFilePath(absolutePath, this.config);
         if (entity) entities.push(entity);

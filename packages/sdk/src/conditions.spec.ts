@@ -206,12 +206,23 @@ describe("conditions", () => {
     ).resolves.toBe(false);
     await expect(
       matches(
+        { payload: "value", operator: "before", value: "2026-02-30T00:00:00Z" },
+        { value: "2026-02-28T00:00:00Z" },
+      ),
+    ).resolves.toBe(false);
+    await expect(
+      matches(
         { payload: "value", operator: "semverEquals", value: "invalid" },
         {
           value: "invalid",
         },
       ),
     ).resolves.toBe(false);
+    for (const version of ["v1.2.3", "1.2", "1.2.x", "01.2.3"]) {
+      await expect(
+        matches({ payload: "value", operator: "semverEquals", value: version }, { value: version }),
+      ).resolves.toBe(false);
+    }
   });
 
   it("caches malformed stringified conditions and clears the cache for a new datafile", async () => {

@@ -4,6 +4,7 @@ import { getEffectSchema } from "./effectSchema";
 import { getEventSchema } from "./eventSchema";
 import { getConditionsSchema } from "./conditionsSchema";
 import { getSampleSchema } from "./sampleSchema";
+import { getTransformsSchema } from "./transformsSchema";
 import type { Dependencies } from "../dependencies";
 
 function createDeps(): Dependencies {
@@ -123,6 +124,24 @@ describe("entity lint schemas", () => {
     expect(
       schema.safeParse({ payload: "version", operator: "semverEquals", value: "latest" }).success,
     ).toBe(false);
+    for (const value of ["2026-02-30T00:00:00Z", "v1.2.3", "1.2", "1.2.x", "01.2.3"]) {
+      const operator = value.includes("T") ? "after" : "semverEquals";
+      expect(schema.safeParse({ payload: "value", operator, value }).success).toBe(false);
+    }
+  });
+
+  it("requires one safe source and rejects transform fields that do not apply", () => {
+    const schema = getTransformsSchema(deps);
+    expect(
+      schema.safeParse([{ type: "set", target: "id", source: "id", payload: "id" }]).success,
+    ).toBe(false);
+    expect(
+      schema.safeParse([{ type: "set", target: "__proto__.polluted", value: true }]).success,
+    ).toBe(false);
+    expect(schema.safeParse([{ type: "trim", target: "name", separator: "," }]).success).toBe(
+      false,
+    );
+    expect(schema.safeParse([{ type: "set", target: "id", source: "id" }]).success).toBe(true);
   });
 
   it("validates primitive membership operands", () => {

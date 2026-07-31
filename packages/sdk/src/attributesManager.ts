@@ -51,7 +51,6 @@ export class AttributesManager {
     this.validator = validator;
     this.modulesManager = modulesManager;
 
-    // @TODO: initial attributes from SDK options
     this.attributesMap = {};
   }
 
@@ -85,6 +84,7 @@ export class AttributesManager {
 
     if (!attributeSchema) {
       this.logger.error(`Attribute schema not found`, {
+        code: "attribute_not_found",
         attributeName,
       });
 
@@ -95,7 +95,10 @@ export class AttributesManager {
      * Deprecated
      */
     if (attributeSchema.deprecated) {
-      this.logger.warn(`Attribute is deprecated`, { attributeName });
+      this.logger.warn(`Attribute is deprecated`, {
+        code: "attribute_deprecated",
+        attributeName,
+      });
     }
 
     /**
@@ -105,6 +108,7 @@ export class AttributesManager {
 
     if (!validationResult.valid) {
       this.logger.warn(`Attribute validation failed`, {
+        code: "attribute_validation_failed",
         attributeName,
         errors: validationResult.errors,
       });

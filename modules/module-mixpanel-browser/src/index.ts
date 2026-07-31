@@ -14,7 +14,7 @@ export function createMixpanelBrowserModule(
     name,
 
     transport: async ({ eventName, payload }) => {
-      mixpanel.track(eventName, payload);
+      await Promise.resolve(mixpanel.track(eventName, payload));
     },
   };
 }

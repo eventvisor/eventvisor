@@ -34,8 +34,8 @@ function App() {
 }
 
 function CheckoutButton() {
-  const { track, setAttribute, removeAttribute, getAttributeValue, isAttributeSet } =
-    useEventvisor();
+const { track, setAttribute, removeAttribute, getAttributeValue, isAttributeSet } =
+  useEventvisor();
 
   return (
     <button onClick={() => track("checkout_started", { source: "header" })}>
@@ -47,6 +47,8 @@ function CheckoutButton() {
 // escape hatch: the raw instance (setDatafile, on, diagnostics, spawn…)
 const instance = useEventvisorInstance();
 ```
+
+Use `useEventvisorAttribute(name)` for one reactive attribute value, or `useEventvisorAttributes()` for the reactive attribute map. Both hooks update after attribute changes, removals, and datafile updates.
 
 Facts that prevent the common mistakes:
 

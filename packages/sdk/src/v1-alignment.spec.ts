@@ -236,6 +236,104 @@ describe("Eventvisor public lifecycle", () => {
     expect(close).toHaveBeenCalledTimes(1);
   });
 
+  it("serializes attribute updates before later tracking operations", async () => {
+    let releaseLookup!: () => void;
+    const lookupReady = new Promise<void>((resolve) => {
+      releaseLookup = resolve;
+    });
+    const transport = jest.fn();
+    const instance = createEventvisor({
+      datafile: datafile({
+        attributes: {
+          userId: {
+            type: "string",
+            transforms: [{ type: "set", lookup: "slow.value" }],
+          },
+        },
+        events: {
+          viewed: { type: "object", requiredAttributes: ["userId"] },
+        },
+        destinations: { analytics: { transport: "transport" } },
+      }),
+      modules: [
+        {
+          name: "slow",
+          lookup: async () => {
+            await lookupReady;
+            return "resolved-user";
+          },
+        },
+        { name: "transport", transport },
+      ],
+      logLevel: "fatal",
+    });
+    const setting = instance.setAttribute("userId", "pending");
+    const tracking = instance.track("viewed", {});
+    await Promise.resolve();
+    expect(transport).not.toHaveBeenCalled();
+    releaseLookup();
+    await Promise.all([setting, tracking]);
+    expect(instance.getAttributeValue("userId")).toBe("resolved-user");
+    expect(transport).toHaveBeenCalledTimes(1);
+    await instance.close();
+  });
+
+  it("flushes a removed module before closing it", async () => {
+    const order: string[] = [];
+    const instance = createEventvisor({
+      modules: [
+        {
+          name: "queue",
+          flush: async () => void order.push("flush"),
+          close: async () => void order.push("close"),
+        },
+      ],
+    });
+    await instance.removeModule("queue");
+    expect(order).toEqual(["flush", "close"]);
+    await instance.close();
+  });
+
+  it("moves persisted values between conditional stores and clears every store on removal", async () => {
+    const local = new Map<string, any>();
+    const secure = new Map<string, any>();
+    const storageModule = (name: string, values: Map<string, any>) => ({
+      name,
+      readFromStorage: async ({ key }: any) => values.get(key) ?? null,
+      writeToStorage: async ({ key, value }: any) => void values.set(key, value),
+      removeFromStorage: async ({ key }: any) => void values.delete(key),
+    });
+    const instance = createEventvisor({
+      datafile: datafile({
+        attributes: {
+          profile: {
+            type: "object",
+            additionalProperties: true,
+            persist: [
+              {
+                storage: "secure",
+                conditions: { payload: "private", operator: "equals", value: true },
+              },
+              { storage: "local" },
+            ],
+          },
+        },
+      }),
+      modules: [storageModule("local", local), storageModule("secure", secure)],
+      logLevel: "fatal",
+    });
+    await instance.setAttribute("profile", { private: false });
+    expect(local.has("attributes_profile")).toBe(true);
+    expect(secure.has("attributes_profile")).toBe(false);
+    await instance.setAttribute("profile", { private: true });
+    expect(local.has("attributes_profile")).toBe(false);
+    expect(secure.has("attributes_profile")).toBe(true);
+    await instance.removeAttribute("profile");
+    expect(local.has("attributes_profile")).toBe(false);
+    expect(secure.has("attributes_profile")).toBe(false);
+    await instance.close();
+  });
+
   it("can deliver invalid events with validation details", async () => {
     const transport = jest.fn();
     const instance = createEventvisor({

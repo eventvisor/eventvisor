@@ -50,12 +50,25 @@ function catalog(description: string): Catalog {
     },
     entities: {
       events: {
-        "checkout/order": { description, type: "object", tags: ["web"], targets: ["web"] },
+        "checkout/order": {
+          description,
+          schema: "checkout",
+          tags: ["web"],
+          targets: ["web"],
+        },
       },
       attributes: {},
       destinations: {},
       effects: {},
-      schemas: { identifier: { description: "Identifier", type: "string", targets: ["web"] } },
+      schemas: {
+        identifier: { description: "Identifier", type: "string", targets: ["web"] },
+        checkout: {
+          description: "Checkout",
+          type: "object",
+          properties: { id: { schema: "identifier" } },
+          targets: ["web"],
+        },
+      },
       targets: { web: { description: "Web", includeEvents: "*" } },
       tests: { "events/checkout": { event: "checkout/order", assertions: [{ track: {} }] } },
     },
@@ -118,6 +131,10 @@ describe("exportCatalog", () => {
     expect(manifest.sets).toBe(false);
     expect(manifest.router).toBe("browser");
     expect(detail.entity.description).toBe("Root event");
+    expect(detail.effectiveSchema).toMatchObject({
+      type: "object",
+      properties: { id: { type: "string" } },
+    });
     expect(detail.tests).toHaveLength(1);
     expect(fs.existsSync(path.join(root, ".eventvisor-catalog"))).toBe(true);
     const schemaDetail = JSON.parse(

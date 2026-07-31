@@ -9,11 +9,18 @@ import { CLI_COLOR_CYAN, CLI_FORMAT_GREEN, colorize } from "../tester/cliFormat"
 
 export const DEFAULT_PROJECT = "yml";
 const REPOSITORY = "eventvisor/eventvisor";
-const BRANCH = "main";
-const TAR_URL = `https://codeload.github.com/${REPOSITORY}/tar.gz/${BRANCH}`;
+function getScaffoldRef() {
+  if (process.env.EVENTVISOR_SCAFFOLD_REF) return process.env.EVENTVISOR_SCAFFOLD_REF;
+  try {
+    const version = require(require.resolve("@eventvisor/cli/package.json")).version;
+    return `v${version}`;
+  } catch {
+    return "main";
+  }
+}
 
-function archiveProjectPath(project: string) {
-  return `eventvisor-${BRANCH}/projects/project-${project}/`;
+function isProjectArchiveEntry(entry: string, project: string) {
+  return entry.includes(`/projects/project-${project}/`);
 }
 
 export async function initProject(
@@ -28,13 +35,16 @@ export async function initProject(
 
   const temporary = fs.mkdtempSync(path.join(os.tmpdir(), "eventvisor-init-"));
   try {
-    const response = await axios.get(TAR_URL, { responseType: "stream" });
+    const ref = getScaffoldRef();
+    const response = await axios.get(`https://codeload.github.com/${REPOSITORY}/tar.gz/${ref}`, {
+      responseType: "stream",
+    });
     await new Promise<void>((resolve, reject) => {
       response.data
         .pipe(
           tar.x({
             C: temporary,
-            filter: (entry) => entry.startsWith(archiveProjectPath(project)),
+            filter: (entry) => isProjectArchiveEntry(entry, project),
             strip: 3,
           }),
         )

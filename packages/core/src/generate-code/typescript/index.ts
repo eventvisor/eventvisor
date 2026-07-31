@@ -53,6 +53,10 @@ export function getTypeScriptPropertyKey(name: string): string {
   return VALID_TYPESCRIPT_IDENTIFIER_REGEX.test(name) ? name : JSON.stringify(name);
 }
 
+function escapeDocComment(value: string): string {
+  return value.replace(/\*\//g, "* /").replace(/\r?\n/g, "\n * ");
+}
+
 function createUniqueInterfaceNames(entityNames: string[], suffix: string): Map<string, string> {
   const usedInterfaceNames = new Set<string>();
   const interfaceNames = new Map<string, string>();
@@ -117,7 +121,7 @@ export async function generateTypeScriptCodeForProject(
   let attributesContent = generatedAttributes
     .map(
       ({ entityName, code }) => `/**
- * ${entityName}
+ * ${escapeDocComment(entityName)}
  */
 ${code}
 `,
@@ -175,7 +179,7 @@ ${generatedAttributes
   let eventsContent = generatedEvents
     .map(
       ({ entityName, code }) => `/**
- * ${entityName}
+ * ${escapeDocComment(entityName)}
  */
 ${code}
 `,
@@ -249,7 +253,10 @@ export async function track<K extends keyof Events>(
  * Attribute
  */
 
-type SetAttributeHandler = (attributeName: string, value: Value) => void | Promise<void>;
+type SetAttributeHandler = (
+  attributeName: string,
+  value: Value,
+) => Value | null | undefined | Promise<Value | null | undefined>;
 
 let setAttributeHandler: SetAttributeHandler | null = null;
 
@@ -260,14 +267,19 @@ export function assignAttributeHandler(handler: SetAttributeHandler | null) {
 export async function setAttribute<K extends keyof Attributes>(
   attributeName: K,
   value: Attributes[K],
-): Promise<void> {
+): Promise<Value | null | undefined> {
+  let result: Value | null | undefined;
+
   if (instance) {
-    await instance.setAttribute(attributeName, value as unknown as Value);
+    result = await instance.setAttribute(attributeName, value as unknown as Value);
   }
 
   if (setAttributeHandler) {
-    await setAttributeHandler(attributeName, value as unknown as Value);
+    const handledResult = await setAttributeHandler(attributeName, value as unknown as Value);
+    if (typeof handledResult !== "undefined") result = handledResult;
   }
+
+  return result;
 }
 `;
 

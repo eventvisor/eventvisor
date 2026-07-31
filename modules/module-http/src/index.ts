@@ -26,6 +26,16 @@ function serializableEvent(event: TransportOptions) {
   };
 }
 
+function snapshotEvent(event: TransportOptions): TransportOptions {
+  return {
+    ...event,
+    payload: JSON.parse(JSON.stringify(event.payload)),
+    validation: event.validation
+      ? { valid: false, errors: event.validation.errors.map((entry) => ({ ...entry })) }
+      : undefined,
+  };
+}
+
 export function createHttpModule(options: HttpModuleOptions): EventvisorModule {
   if (!options || !options.url) throw new Error("HTTP module requires a URL.");
   const {
@@ -41,8 +51,23 @@ export function createHttpModule(options: HttpModuleOptions): EventvisorModule {
   } = options;
 
   if (!fetch) throw new Error("HTTP module requires a fetch implementation.");
-  if (batchSize < 1 || maxQueueSize < 1) {
-    throw new Error("HTTP module batchSize and maxQueueSize must be positive.");
+  if (
+    !Number.isInteger(batchSize) ||
+    batchSize < 1 ||
+    !Number.isInteger(maxQueueSize) ||
+    maxQueueSize < 1
+  ) {
+    throw new Error("HTTP module batchSize and maxQueueSize must be positive integers.");
+  }
+  if (
+    ![flushIntervalMs, maxRetries, retryDelayMs].every(
+      (value) => Number.isFinite(value) && value >= 0,
+    ) ||
+    !Number.isInteger(maxRetries)
+  ) {
+    throw new Error(
+      "HTTP module timing options must be finite and maxRetries must be a nonnegative integer.",
+    );
   }
 
   let queue: TransportOptions[] = [];
@@ -124,7 +149,7 @@ export function createHttpModule(options: HttpModuleOptions): EventvisorModule {
         });
         return;
       }
-      queue.push(event);
+      queue.push(snapshotEvent(event));
       if (queue.length >= batchSize) await flush(api);
     },
     flush,

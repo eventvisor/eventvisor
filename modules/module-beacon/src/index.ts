@@ -6,7 +6,7 @@ export interface BeaconModuleOptions {
   batchSize?: number;
   flushIntervalMs?: number;
   maxQueueSize?: number;
-  sendBeacon?: (url: string, data: string) => boolean;
+  sendBeacon?: (url: string, data: string | Blob) => boolean;
   fetch?: typeof globalThis.fetch;
   buildBody?: (events: TransportOptions[]) => unknown;
   lifecycleTarget?: Pick<Window, "addEventListener" | "removeEventListener">;
@@ -21,6 +21,16 @@ function serializableEvent(event: TransportOptions) {
     ...event,
     error: event.error
       ? { name: event.error.name, message: event.error.message, stack: event.error.stack }
+      : undefined,
+  };
+}
+
+function snapshotEvent(event: TransportOptions): TransportOptions {
+  return {
+    ...event,
+    payload: JSON.parse(JSON.stringify(event.payload)),
+    validation: event.validation
+      ? { valid: false, errors: event.validation.errors.map((entry) => ({ ...entry })) }
       : undefined,
   };
 }
@@ -42,8 +52,16 @@ export function createBeaconModule(options: BeaconModuleOptions): EventvisorModu
   if (!sendBeacon && !fetch) {
     throw new Error("Beacon module requires sendBeacon or fetch.");
   }
-  if (batchSize < 1 || maxQueueSize < 1) {
-    throw new Error("Beacon module batchSize and maxQueueSize must be positive.");
+  if (
+    !Number.isInteger(batchSize) ||
+    batchSize < 1 ||
+    !Number.isInteger(maxQueueSize) ||
+    maxQueueSize < 1
+  ) {
+    throw new Error("Beacon module batchSize and maxQueueSize must be positive integers.");
+  }
+  if (!Number.isFinite(flushIntervalMs) || flushIntervalMs < 0) {
+    throw new Error("Beacon module flushIntervalMs must be finite and nonnegative.");
   }
 
   let queue: TransportOptions[] = [];
@@ -56,7 +74,9 @@ export function createBeaconModule(options: BeaconModuleOptions): EventvisorModu
 
   async function send(url: string, events: TransportOptions[]) {
     const body = JSON.stringify(buildBody(events));
-    if (sendBeacon?.(url, body)) return;
+    const beaconBody =
+      typeof Blob === "undefined" ? body : new Blob([body], { type: "application/json" });
+    if (sendBeacon?.(url, beaconBody)) return;
     if (!fetch) throw new Error("sendBeacon rejected the payload and no fetch fallback exists");
     const response = await fetch(url, {
       method: "POST",
@@ -130,7 +150,7 @@ export function createBeaconModule(options: BeaconModuleOptions): EventvisorModu
         });
         return;
       }
-      queue.push(event);
+      queue.push(snapshotEvent(event));
       if (queue.length >= batchSize) await flush(api);
     },
     flush,

@@ -2,13 +2,13 @@ import * as z from "zod";
 
 import { Dependencies } from "../dependencies";
 import { getSourceBaseRefine, getSourceBaseSchema } from "./sourceSchema";
+import { getPortableDate, isPortableRegex } from "@eventvisor/sdk/portable";
 
 const semverPattern =
-  /^[v^~<>=]*?(\d+)(?:\.([x*]|\d+)(?:\.([x*]|\d+)(?:\.([x*]|\d+))?(?:-([\da-z-]+(?:\.[\da-z-]+)*))?(?:\+[\da-z-]+(?:\.[\da-z-]+)*)?)?)?$/i;
-const portableDatePattern =
-  /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d{1,3})?(?:Z|[+-]\d{2}:\d{2})$/;
+  /^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)(?:-((?:0|[1-9]\d*|\d*[A-Za-z-][0-9A-Za-z-]*)(?:\.(?:0|[1-9]\d*|\d*[A-Za-z-][0-9A-Za-z-]*))*))?(?:\+[0-9A-Za-z-]+(?:\.[0-9A-Za-z-]+)*)?$/;
 
 function getPortableRegexError(pattern: string, flags = "") {
+  if (isPortableRegex(pattern, flags)) return undefined;
   if (flags && (!/^[gims]+$/.test(flags) || new Set(flags).size !== flags.length)) {
     return "flags must contain unique characters from g, i, m, and s";
   }
@@ -81,7 +81,6 @@ export function getConditionsSchema(deps: Dependencies) {
       regexFlags: z.string().optional(),
     })
     .refine(...getSourceBaseRefine())
-    // @TODO: refine "value" type against each "operator"
     .refine(
       (data) => {
         if (data.operator === "exists" || data.operator === "notExists") {
@@ -168,8 +167,7 @@ export function getConditionsSchema(deps: Dependencies) {
         }
       }
       if (["before", "after"].includes(data.operator) && typeof data.value === "string") {
-        const date = new Date(data.value);
-        if (!portableDatePattern.test(data.value) || Number.isNaN(date.getTime())) {
+        if (!getPortableDate(data.value)) {
           ctx.addIssue({
             code: "custom",
             path: ["value"],

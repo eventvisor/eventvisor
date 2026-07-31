@@ -125,10 +125,12 @@ export function createTestInstance(options: CreateTestInstanceOptions): CreateTe
     lookupsMap[moduleName][lookupKey] = value;
   }
 
-  const allModuleNames = Array.from(handlerNames)
-    .concat(Array.from(transportNames))
-    .concat(Object.keys(lookupsMap))
-    .concat(Array.from(storageNames));
+  const allModuleNames = new Set(
+    Array.from(handlerNames)
+      .concat(Array.from(transportNames))
+      .concat(Object.keys(lookupsMap))
+      .concat(Array.from(storageNames)),
+  );
 
   for (const moduleName of allModuleNames) {
     const moduleObj: EventvisorModule = { name: moduleName };
@@ -163,6 +165,11 @@ export function createTestInstance(options: CreateTestInstanceOptions): CreateTe
 
         storageData[key] = value;
 
+        return Promise.resolve();
+      };
+
+      moduleObj.removeFromStorage = (options) => {
+        delete storageData[options.key];
         return Promise.resolve();
       };
     }

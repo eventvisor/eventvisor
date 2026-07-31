@@ -260,4 +260,18 @@ describe("SourceResolver", () => {
       "module1 lookup value: key.subkey",
     );
   });
+
+  it("fails closed for unsafe paths and ambiguous source objects", async () => {
+    expect(
+      await sourceResolver.resolve({ payload: "__proto__.polluted" } as any, {
+        payload: { safe: true },
+      }),
+    ).toBeNull();
+    expect(
+      await sourceResolver.resolve({ payload: "safe", attribute: "attribute1" } as any, {
+        payload: { safe: true },
+      }),
+    ).toBeNull();
+    expect(({} as any).polluted).toBeUndefined();
+  });
 });

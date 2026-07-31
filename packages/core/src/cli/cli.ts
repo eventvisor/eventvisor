@@ -17,7 +17,7 @@ export interface PluginHandlerOptions {
 }
 
 export interface Plugin {
-  command: string; // single word
+  command: string; // command declaration, optionally with yargs positionals
   handler: (options: PluginHandlerOptions) => Promise<void | boolean>;
   examples: {
     command: string; // full command usage
@@ -52,7 +52,11 @@ export interface RunnerOptions {
 export async function runCLI(runnerOptions: RunnerOptions): Promise<number> {
   const yargs = require("yargs");
 
-  let y = yargs(process.argv.slice(2)).usage("Usage: <command> [options]");
+  let y = yargs(process.argv.slice(2))
+    .usage("Usage: <command> [options]")
+    .strictCommands()
+    .strictOptions()
+    .exitProcess(false);
   const registeredSubcommands: string[] = [];
 
   const { rootDirectoryPath, projectConfig, datasource } = runnerOptions;
@@ -116,14 +120,19 @@ export async function runCLI(runnerOptions: RunnerOptions): Promise<number> {
     registerPlugin(plugin);
   }
 
-  // show help if no command is provided
-  y.command({
-    command: "*",
-    handler() {
-      y.showHelp();
-    },
-  });
+  if (process.argv.slice(2).length === 0) {
+    y.showHelp();
+    return exitCode;
+  }
 
-  await y.parseAsync();
+  try {
+    await y.parseAsync();
+  } catch (error) {
+    console.error(
+      CLI_FORMAT_RED,
+      `Error: ${error instanceof Error ? error.message : String(error)}`,
+    );
+    return 1;
+  }
   return exitCode;
 }

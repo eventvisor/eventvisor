@@ -95,62 +95,65 @@ export async function buildCatalog(
    */
   // events
   const eventFiles = await datasource.listEvents();
-
-  for (const entityName of eventFiles) {
-    const parsed = await datasource.readEvent(entityName);
-
-    result.entities.events[entityName] = {
-      ...parsed,
-      lastModified: getLastModifiedFromHistory(fullHistory, "event", entityName),
-    };
-  }
+  await Promise.all(
+    eventFiles.map(async (entityName) => {
+      result.entities.events[entityName] = {
+        ...(await datasource.readEvent(entityName)),
+        lastModified: getLastModifiedFromHistory(fullHistory, "event", entityName),
+      };
+    }),
+  );
 
   // destinations
   const destinationFiles = await datasource.listDestinations();
-  for (const entityName of destinationFiles) {
-    const parsed = await datasource.readDestination(entityName);
-
-    result.entities.destinations[entityName] = {
-      ...parsed,
-      lastModified: getLastModifiedFromHistory(fullHistory, "destination", entityName),
-    };
-  }
+  await Promise.all(
+    destinationFiles.map(async (entityName) => {
+      result.entities.destinations[entityName] = {
+        ...(await datasource.readDestination(entityName)),
+        lastModified: getLastModifiedFromHistory(fullHistory, "destination", entityName),
+      };
+    }),
+  );
 
   // effects
   const effectFiles = await datasource.listEffects();
-  for (const entityName of effectFiles) {
-    const parsed = await datasource.readEffect(entityName);
-
-    result.entities.effects[entityName] = {
-      ...parsed,
-      lastModified: getLastModifiedFromHistory(fullHistory, "effect", entityName),
-    };
-  }
+  await Promise.all(
+    effectFiles.map(async (entityName) => {
+      result.entities.effects[entityName] = {
+        ...(await datasource.readEffect(entityName)),
+        lastModified: getLastModifiedFromHistory(fullHistory, "effect", entityName),
+      };
+    }),
+  );
 
   // attributes
   const attributeFiles = await datasource.listAttributes();
-  for (const entityName of attributeFiles) {
-    const parsed = await datasource.readAttribute(entityName);
+  await Promise.all(
+    attributeFiles.map(async (entityName) => {
+      result.entities.attributes[entityName] = {
+        ...(await datasource.readAttribute(entityName)),
+        lastModified: getLastModifiedFromHistory(fullHistory, "attribute", entityName),
+      };
+    }),
+  );
 
-    result.entities.attributes[entityName] = {
-      ...parsed,
-      lastModified: getLastModifiedFromHistory(fullHistory, "attribute", entityName),
-    };
-  }
+  await Promise.all(
+    (await datasource.listSchemas()).map(async (entityName) => {
+      result.entities.schemas[entityName] = {
+        ...(await datasource.readSchema(entityName)),
+        lastModified: getLastModifiedFromHistory(fullHistory, "schema", entityName),
+      };
+    }),
+  );
 
-  for (const entityName of await datasource.listSchemas()) {
-    result.entities.schemas[entityName] = {
-      ...(await datasource.readSchema(entityName)),
-      lastModified: getLastModifiedFromHistory(fullHistory, "schema", entityName),
-    };
-  }
-
-  for (const entityName of await datasource.listTargets()) {
-    result.entities.targets[entityName] = {
-      ...(await datasource.readTarget(entityName)),
-      lastModified: getLastModifiedFromHistory(fullHistory, "target", entityName),
-    };
-  }
+  await Promise.all(
+    (await datasource.listTargets()).map(async (entityName) => {
+      result.entities.targets[entityName] = {
+        ...(await datasource.readTarget(entityName)),
+        lastModified: getLastModifiedFromHistory(fullHistory, "target", entityName),
+      };
+    }),
+  );
 
   for (const targetName of Object.keys(result.entities.targets)) {
     const datafile = await buildDatafile(deps, { target: targetName });
@@ -181,12 +184,14 @@ export async function buildCatalog(
     });
   }
 
-  for (const entityName of await datasource.listTests()) {
-    result.entities.tests[entityName] = {
-      ...(await datasource.readTest(entityName)),
-      key: entityName,
-    };
-  }
+  await Promise.all(
+    (await datasource.listTests()).map(async (entityName) => {
+      result.entities.tests[entityName] = {
+        ...(await datasource.readTest(entityName)),
+        key: entityName,
+      };
+    }),
+  );
 
   const collections = [
     "attributes",

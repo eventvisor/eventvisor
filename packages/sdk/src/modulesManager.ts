@@ -69,8 +69,6 @@ export interface EventvisorModule {
 
   lookup?: (options: LookupOptions, api: EventvisorModuleApi) => Promise<Value>;
 
-  // @TODO: transform?: (options: TransformOptions, deps: ModuleDependencies) => Promise<Value>;
-
   handle?: (options: HandleOptions, api: EventvisorModuleApi) => Promise<void>;
 
   transport?: (options: TransportOptions, api: EventvisorModuleApi) => Promise<void>;
@@ -96,7 +94,6 @@ export class ModulesManager {
   private logger: Logger;
   private options: ModulesManagerOptions;
 
-  // @TODO: can be optimized further by keeping only array of names, but keeping actual modules in an object
   private modules: EventvisorModule[];
   private diagnosticUnsubscribers: Record<string, (() => void)[]> = {};
 
@@ -180,6 +177,20 @@ export class ModulesManager {
 
     this.modules = this.modules.filter((module) => module.name !== name);
     this.clearDiagnosticSubscriptions(name);
+    if (module.flush) {
+      try {
+        await module.flush(this.getModuleApi(module.name));
+      } catch (error) {
+        this.options.reportDiagnostic({
+          level: "error",
+          code: "module_flush_failed",
+          message: `Module ${module.name} flush failed`,
+          details: {},
+          moduleName: module.name,
+          error,
+        });
+      }
+    }
     await this.closeModule(module);
   }
 
@@ -213,12 +224,20 @@ export class ModulesManager {
       try {
         return await moduleInstance.lookup({ key }, this.getModuleApi(moduleName));
       } catch (error) {
-        this.logger.error(`Error in lookup`, { moduleName, key, error });
+        this.logger.error(`Error in lookup`, {
+          code: "module_lookup_failed",
+          moduleName,
+          key,
+          error,
+        });
 
         return null;
       }
     }
-    this.logger.error(`Module "${moduleName}" not found with "lookup" function`);
+    this.logger.error(`Module "${moduleName}" not found with "lookup" function`, {
+      code: "module_lookup_not_found",
+      moduleName,
+    });
 
     return null;
   }
@@ -242,12 +261,20 @@ export class ModulesManager {
           this.getModuleApi(moduleName, track),
         );
       } catch (error) {
-        this.logger.error(`Error in handle`, { moduleName, effectName, error });
+        this.logger.error(`Error in handle`, {
+          code: "module_handler_failed",
+          moduleName,
+          effectName,
+          error,
+        });
         throw error;
       }
     }
 
-    this.logger.error(`Module "${moduleName}" not found with "handle" function`);
+    this.logger.error(`Module "${moduleName}" not found with "handle" function`, {
+      code: "module_handler_not_found",
+      moduleName,
+    });
     throw new Error(`Module "${moduleName}" not found with "handle" function`);
   }
 
@@ -269,6 +296,7 @@ export class ModulesManager {
         return await moduleInstance.transport(options, this.getModuleApi(moduleName));
       } catch (error) {
         this.logger.error(`Error in transport`, {
+          code: "module_transport_failed",
           moduleName,
           destinationName: options.destinationName,
           eventName: options.eventName,
@@ -279,7 +307,10 @@ export class ModulesManager {
       }
     }
 
-    this.logger.error(`Module "${moduleName}" not found with "transport" function`);
+    this.logger.error(`Module "${moduleName}" not found with "transport" function`, {
+      code: "module_transport_not_found",
+      moduleName,
+    });
   }
 
   async flush() {
@@ -309,13 +340,21 @@ export class ModulesManager {
       try {
         return await moduleInstance.readFromStorage({ key }, this.getModuleApi(moduleName));
       } catch (error) {
-        this.logger.error(`Error in readFromStorage`, { moduleName, key, error });
+        this.logger.error(`Error in readFromStorage`, {
+          code: "module_storage_read_failed",
+          moduleName,
+          key,
+          error,
+        });
 
         return null;
       }
     }
 
-    this.logger.error(`Module "${moduleName}" not found with "readFromStorage" function`);
+    this.logger.error(`Module "${moduleName}" not found with "readFromStorage" function`, {
+      code: "module_storage_read_not_found",
+      moduleName,
+    });
 
     return null;
   }
@@ -327,13 +366,22 @@ export class ModulesManager {
       try {
         return await moduleInstance.writeToStorage({ key, value }, this.getModuleApi(moduleName));
       } catch (error) {
-        this.logger.error(`Error in writeToStorage`, { moduleName, key, value, error });
+        this.logger.error(`Error in writeToStorage`, {
+          code: "module_storage_write_failed",
+          moduleName,
+          key,
+          value,
+          error,
+        });
 
         return;
       }
     }
 
-    this.logger.error(`Module "${moduleName}" not found with "writeToStorage" function`);
+    this.logger.error(`Module "${moduleName}" not found with "writeToStorage" function`, {
+      code: "module_storage_write_not_found",
+      moduleName,
+    });
 
     return;
   }
@@ -345,19 +393,32 @@ export class ModulesManager {
       try {
         return await moduleInstance.removeFromStorage({ key }, this.getModuleApi(moduleName));
       } catch (error) {
-        this.logger.error(`Error in removeFromStorage`, { moduleName, key, error });
+        this.logger.error(`Error in removeFromStorage`, {
+          code: "module_storage_remove_failed",
+          moduleName,
+          key,
+          error,
+        });
 
         return;
       }
     }
 
-    this.logger.error(`Module "${moduleName}" not found with "removeFromStorage" function`);
+    this.logger.error(`Module "${moduleName}" not found with "removeFromStorage" function`, {
+      code: "module_storage_remove_not_found",
+      moduleName,
+    });
 
     return;
   }
 
   async close() {
     await this.flush();
-    for (const module of [...this.modules]) await this.removeModule(module.name);
+    const modules = [...this.modules];
+    this.modules = [];
+    for (const module of modules) {
+      this.clearDiagnosticSubscriptions(module.name);
+      await this.closeModule(module);
+    }
   }
 }

@@ -71,6 +71,7 @@ export interface EntityDetail {
   type: CatalogEntityType;
   key: string;
   entity: Record<string, any>;
+  effectiveSchema?: Record<string, any>;
   sourcePath?: string;
   lastModified?: LastModified;
   relationships?: Record<string, string[]>;

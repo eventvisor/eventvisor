@@ -67,6 +67,21 @@ describe("createHttpModule", () => {
     );
   });
 
+  it("snapshots queued payloads before callers can mutate them", async () => {
+    const fetch = jest.fn().mockResolvedValue({ ok: true, status: 200 });
+    const module = createHttpModule({
+      url: "https://events.example",
+      batchSize: 10,
+      flushIntervalMs: 0,
+      fetch,
+    });
+    const queued = event();
+    await module.transport?.(queued, api());
+    (queued.payload as any).id = 2;
+    await module.flush?.(api());
+    expect(JSON.parse(fetch.mock.calls[0][1].body).events[0].payload).toEqual({ id: 1 });
+  });
+
   it("groups one flush by resolved URL and supports custom bodies and headers", async () => {
     const fetch = jest.fn().mockResolvedValue({ ok: true, status: 200 });
     const module = createHttpModule({

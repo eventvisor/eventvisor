@@ -230,6 +230,7 @@ describe("getTestSchema", () => {
               name: "userId",
             },
           ],
+          expectedToBeTracked: false,
         },
       ],
     });
@@ -264,6 +265,8 @@ describe("getTestSchema", () => {
             withAttributes: {
               userId: "123",
             },
+            track: {},
+            expectedToBeTracked: true,
           },
         ],
       },
@@ -271,7 +274,9 @@ describe("getTestSchema", () => {
         destination: "consoleSimple",
         assertions: [
           {
+            actions: [{ type: "track", name: "page_view", value: {} }],
             assertAfter: 10,
+            expectedToBeTransported: true,
           },
         ],
       },
@@ -279,6 +284,7 @@ describe("getTestSchema", () => {
         destination: "consoleSimple",
         assertions: [
           {
+            actions: [{ type: "track", name: "page_view", value: {} }],
             expectedBodies: [],
           },
         ],
@@ -287,6 +293,7 @@ describe("getTestSchema", () => {
         event: "page_view",
         assertions: [
           {
+            track: {},
             expectedDestinationsByTag: {
               marketing: ["console"],
             },

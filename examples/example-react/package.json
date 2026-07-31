@@ -14,6 +14,7 @@
     "@eventvisor/module-console": "0.26.0",
     "@eventvisor/module-localstorage": "0.26.0",
     "@eventvisor/module-pixel": "0.26.0",
+    "@eventvisor/react": "0.26.0",
     "@eventvisor/sdk": "0.26.0",
     "react": "^19.1.1",
     "react-dom": "^19.1.1"

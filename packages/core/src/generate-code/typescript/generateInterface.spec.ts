@@ -33,10 +33,10 @@ describe("generateInterface", () => {
       expect(result).toBe("export type GeneratedInterface = null");
     });
 
-    it("should generate type for schema without type (defaults to any)", () => {
+    it("should generate type for schema without type (defaults to unknown)", () => {
       const schema: JSONSchema = {};
       const result = generateInterface(schema, "GeneratedInterface");
-      expect(result).toBe("export type GeneratedInterface = any");
+      expect(result).toBe("export type GeneratedInterface = unknown");
     });
   });
 
@@ -93,7 +93,7 @@ describe("generateInterface", () => {
         properties: {},
       };
       const result = generateInterface(schema, "GeneratedInterface");
-      expect(result).toContain("Record<string, any>");
+      expect(result).toContain("Record<string, never>");
     });
 
     it("should generate type for object without properties", () => {
@@ -101,7 +101,7 @@ describe("generateInterface", () => {
         type: "object",
       };
       const result = generateInterface(schema, "GeneratedInterface");
-      expect(result).toContain("Record<string, any>");
+      expect(result).toContain("Record<string, never>");
     });
 
     it("should generate interface for object inferred from properties", () => {

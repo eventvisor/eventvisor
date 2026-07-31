@@ -97,7 +97,7 @@ describe("buildProject targets and sets", () => {
     expect(Object.keys(datafile.effects)).toEqual(["checkout"]);
   });
 
-  it("honours explicit target exclusions over dependency closure", async () => {
+  it("rejects target exclusions that remove runtime dependencies", async () => {
     const root = project();
     write(
       root,
@@ -110,9 +110,9 @@ describe("buildProject targets and sets", () => {
       "targets/web.yml",
       "description: Web\nincludeEvents: checkout\nexcludeDestinations: audit\n",
     );
-    const datafile = await buildDatafile(deps(root), { target: "web" });
-    expect(Object.keys(datafile.events)).toEqual(["checkout"]);
-    expect(Object.keys(datafile.destinations)).toEqual([]);
+    await expect(buildDatafile(deps(root), { target: "web" })).rejects.toThrow(
+      'Target "web" excludes required dependencies: destination:audit',
+    );
   });
 
   it("includes event and attribute triggers required by selected effects", async () => {

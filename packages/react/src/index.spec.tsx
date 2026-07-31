@@ -8,6 +8,8 @@ import {
   useEventvisorInstance,
   useEventvisorReady,
   useEventvisor,
+  useEventvisorAttribute,
+  useEventvisorAttributes,
 } from "./index.js";
 
 async function waitFor(ms: number) {
@@ -29,6 +31,40 @@ describe("React provider contracts", () => {
     expect(() => render(<Consumer />)).toThrow(
       "useEventvisorInstance must be used within EventvisorProvider",
     );
+  });
+
+  it("reacts to attribute changes and removals", async () => {
+    const instance = createEventvisor({
+      logLevel: "error",
+      datafile: {
+        schemaVersion: "1",
+        revision: "1",
+        attributes: { userId: { type: "string" } },
+        events: {},
+        destinations: {},
+        effects: {},
+      },
+    });
+    function Consumer() {
+      const userId = useEventvisorAttribute("userId");
+      const attributes = useEventvisorAttributes();
+      return <div>{`${userId || "missing"}:${Object.keys(attributes).length}`}</div>;
+    }
+    render(
+      <EventvisorProvider instance={instance}>
+        <Consumer />
+      </EventvisorProvider>,
+    );
+    expect(screen.getByText("missing:0")).toBeTruthy();
+    await act(async () => {
+      await instance.setAttribute("userId", "123");
+    });
+    expect(screen.getByText("123:1")).toBeTruthy();
+    await act(async () => {
+      await instance.removeAttribute("userId");
+    });
+    expect(screen.getByText("missing:0")).toBeTruthy();
+    await instance.close();
   });
 
   it("returns stable bound methods until the instance changes", () => {

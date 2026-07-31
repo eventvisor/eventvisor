@@ -3,6 +3,7 @@ tag: web
 includeEvents:
   - page_view
   - banner_*
+  - sdk_conformance
 includeAttributes: user*
 includeDestinations: console*
 includeEffects: inject_*

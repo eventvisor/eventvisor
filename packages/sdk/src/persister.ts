@@ -45,7 +45,6 @@ export async function findPersist(
 
 export async function initializeFromStorage({
   dataProvider,
-  conditionsChecker,
   modulesManager,
   storageKeyPrefix,
   getEntityNames,
@@ -67,20 +66,17 @@ export async function initializeFromStorage({
       continue;
     }
 
-    const persist = await findPersist({ persists, entityName, conditionsChecker, payload: {} });
-
-    if (!persist) {
-      continue;
-    }
-
-    // read from storage
-    const value = await modulesManager.readFromStorage(
-      persist.storage,
-      `${storageKeyPrefix}${entityName}`,
-    );
-
-    if (value !== null && value !== undefined) {
-      entityMap[entityName] = value;
+    // Conditions can depend on the persisted value, which is not available
+    // until it has been read. Read configured stores in declaration order.
+    for (const persist of persists) {
+      const value = await modulesManager.readFromStorage(
+        persist.storage,
+        `${storageKeyPrefix}${entityName}`,
+      );
+      if (value !== null && value !== undefined) {
+        entityMap[entityName] = value;
+        break;
+      }
     }
   }
 
@@ -122,6 +118,11 @@ export async function persistEntity({
     return;
   }
 
+  for (const candidate of persists) {
+    if (candidate.storage !== persist.storage) {
+      await modulesManager.removeFromStorage(candidate.storage, `${storageKeyPrefix}${entityName}`);
+    }
+  }
   await modulesManager.writeToStorage(persist.storage, `${storageKeyPrefix}${entityName}`, value);
 }
 
@@ -136,7 +137,6 @@ export interface RemoveEntityOptions {
 
 export async function removeEntity({
   dataProvider,
-  conditionsChecker,
   modulesManager,
   storageKeyPrefix,
   entityName,
@@ -152,11 +152,7 @@ export async function removeEntity({
     return;
   }
 
-  const persist = await findPersist({ persists, entityName, conditionsChecker, payload: {} });
-
-  if (!persist) {
-    return;
+  for (const storage of [...new Set(persists.map((persist) => persist.storage))]) {
+    await modulesManager.removeFromStorage(storage, `${storageKeyPrefix}${entityName}`);
   }
-
-  await modulesManager.removeFromStorage(persist.storage, `${storageKeyPrefix}${entityName}`);
 }

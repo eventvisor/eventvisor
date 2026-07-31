@@ -19,7 +19,7 @@ import * as path from "path";
 import { loadSchemas, resolveEntitySchema } from "../schemas";
 
 export interface BuildCLIOptions {
-  tag?: string;
+  tag?: string | string[];
   target?: string | string[];
   set?: string;
   revision?: string;
@@ -34,6 +34,54 @@ export interface BuildDatafileOptions {
   tag?: string;
   target?: string;
   revision?: string;
+}
+
+export interface BuildSelectedDatafileOptions {
+  tag?: string | string[];
+  target?: string | string[];
+  revision?: string;
+}
+
+function optionValues(value?: string | string[]): string[] {
+  if (!value) return [];
+  return Array.isArray(value) ? value : [value];
+}
+
+function mergeDatafiles(left: DatafileContent, right: DatafileContent): DatafileContent {
+  return {
+    ...left,
+    attributes: { ...left.attributes, ...right.attributes },
+    events: { ...left.events, ...right.events },
+    destinations: { ...left.destinations, ...right.destinations },
+    effects: { ...left.effects, ...right.effects },
+  };
+}
+
+export async function buildSelectedDatafile(
+  deps: Dependencies,
+  options: BuildSelectedDatafileOptions = {},
+): Promise<DatafileContent> {
+  const tags = optionValues(options.tag);
+  const targets = optionValues(options.target);
+  const selections: BuildDatafileOptions[] = [];
+  if (targets.length) {
+    for (const target of targets) {
+      if (tags.length)
+        tags.forEach((tag) => selections.push({ target, tag, revision: options.revision }));
+      else selections.push({ target, revision: options.revision });
+    }
+  } else if (tags.length) {
+    tags.forEach((tag) => selections.push({ tag, revision: options.revision }));
+  } else {
+    selections.push({ revision: options.revision });
+  }
+
+  let result: DatafileContent | undefined;
+  for (const selection of selections) {
+    const datafile = await buildDatafile(deps, selection);
+    result = result ? mergeDatafiles(result, datafile) : datafile;
+  }
+  return result as DatafileContent;
 }
 
 type Entities = {
@@ -125,7 +173,11 @@ function collectReferences(value: unknown, references: Record<string, Set<string
     // These fields contain user data or JSON Schema declarations. Keys such as
     // `attribute`, `effect`, and `source` inside them are literals, not runtime
     // references.
-    if (["value", "default", "examples", "const", "enum", "properties", "state"].includes(key)) {
+    if (
+      ["value", "default", "examples", "const", "enum", "properties", "state", "params"].includes(
+        key,
+      )
+    ) {
       continue;
     }
     collectReferences(child, references);
@@ -172,24 +224,83 @@ async function readEntities(deps: Dependencies): Promise<Entities> {
   return { attributes, events, destinations, effects } as Entities;
 }
 
-function stripMetadata<T extends { description?: string; tags?: Tag[] }>(entity: T): T {
-  const result = { ...entity };
-  delete result.description;
-  delete result.tags;
+function stripSchemaDescriptions(schema: any): any {
+  if (!schema || typeof schema !== "object") return schema;
+  const result = Array.isArray(schema) ? schema.map(stripSchemaDescriptions) : { ...schema };
+  if (!Array.isArray(result)) {
+    delete result.description;
+    if (result.properties) {
+      result.properties = Object.fromEntries(
+        Object.entries(result.properties).map(([key, value]) => [
+          key,
+          stripSchemaDescriptions(value),
+        ]),
+      );
+    }
+    if (result.items) result.items = stripSchemaDescriptions(result.items);
+  }
   return result;
 }
 
-function stringifyConditions(value: unknown): unknown {
-  if (Array.isArray(value)) return value.map(stringifyConditions);
-  if (!value || typeof value !== "object") return value;
-  return Object.fromEntries(
-    Object.entries(value as Record<string, unknown>).map(([key, child]) => [
-      key,
-      key === "conditions" && typeof child !== "string"
-        ? JSON.stringify(child)
-        : stringifyConditions(child),
-    ]),
-  );
+function stripMetadata<T extends { description?: string; tags?: Tag[]; promotable?: boolean }>(
+  entity: T,
+): T {
+  const result = stripSchemaDescriptions(entity);
+  delete result.description;
+  delete result.tags;
+  delete result.promotable;
+  if (Array.isArray(result.steps)) {
+    result.steps = result.steps.map((step) => {
+      const copy = { ...step };
+      delete copy.description;
+      return copy;
+    });
+  }
+  return result;
+}
+
+function stringifyKnownConditions(type: keyof Entities, entity: any): unknown {
+  const result = JSON.parse(JSON.stringify(entity));
+  const stringify = (holder: any) => {
+    if (holder?.conditions && typeof holder.conditions !== "string") {
+      holder.conditions = JSON.stringify(holder.conditions);
+    }
+  };
+  const transforms = (items: any) => (items || []).forEach(stringify);
+  const samples = (items: any) =>
+    (Array.isArray(items) ? items : items ? [items] : []).forEach(stringify);
+  const persists = (items: any) =>
+    (Array.isArray(items) ? items : items ? [items] : []).forEach((item) => {
+      if (typeof item === "object") stringify(item);
+    });
+
+  if (type === "attributes") {
+    transforms(result.transforms);
+    persists(result.persist);
+  } else if (type === "events") {
+    stringify(result);
+    stringify(result.skipValidation);
+    samples(result.sample);
+    transforms(result.transforms);
+    Object.values(result.destinations || {}).forEach((override: any) => {
+      if (!override || typeof override !== "object") return;
+      stringify(override);
+      samples(override.sample);
+      transforms(override.transforms);
+    });
+  } else if (type === "destinations") {
+    stringify(result);
+    samples(result.sample);
+    transforms(result.transforms);
+  } else if (type === "effects") {
+    stringify(result);
+    persists(result.persist);
+    (result.steps || []).forEach((step: any) => {
+      stringify(step);
+      transforms(step.transforms);
+    });
+  }
+  return result;
 }
 
 export async function buildDatafile(
@@ -240,6 +351,10 @@ export async function buildDatafile(
       }
     }
   }
+  const rootSelectedKeys = Object.fromEntries(
+    Object.entries(selectedKeys).map(([type, keys]) => [type, new Set(keys)]),
+  ) as Record<keyof Entities, Set<string>>;
+  const unsatisfiedDependencies = new Set<string>();
 
   // Include definitions referenced by selected entities. Explicit exclusions still win.
   let changed = true;
@@ -262,6 +377,10 @@ export async function buildDatafile(
     }
 
     selectedKeys.events.forEach((eventName) => {
+      const validationPolicy = entities.events[eventName].onValidationFailure;
+      if (typeof validationPolicy === "object" && validationPolicy.action === "quarantine") {
+        references.destinations.add(validationPolicy.destination);
+      }
       Object.keys(entities.events[eventName].destinations || {}).forEach((destinationName) =>
         references.destinations.add(destinationName),
       );
@@ -269,6 +388,12 @@ export async function buildDatafile(
         if (effectListensTo(effect, "event_tracked", eventName)) references.effects.add(effectName);
       }
     });
+    if (selectedKeys.events.size > 0) {
+      const policy = deps.projectConfig.onValidationFailure;
+      if (typeof policy === "object" && policy.action === "quarantine") {
+        references.destinations.add(policy.destination);
+      }
+    }
     selectedKeys.attributes.forEach((attributeName) => {
       for (const [effectName, effect] of Object.entries(entities.effects)) {
         if (effectListensTo(effect, "attribute_set", attributeName))
@@ -280,10 +405,10 @@ export async function buildDatafile(
       const effect = entities.effects[effectName];
       if (!effect || effect.archived) return;
       if (Array.isArray(effect.on)) {
-        if (effect.on.includes("event_tracked")) {
+        if (effect.on.includes("event_tracked") && rootSelectedKeys.effects.has(effectName)) {
           Object.keys(entities.events).forEach((eventName) => references.events.add(eventName));
         }
-        if (effect.on.includes("attribute_set")) {
+        if (effect.on.includes("attribute_set") && rootSelectedKeys.effects.has(effectName)) {
           Object.keys(entities.attributes).forEach((attributeName) =>
             references.attributes.add(attributeName),
           );
@@ -298,17 +423,26 @@ export async function buildDatafile(
 
     for (const type of ["attributes", "events", "destinations", "effects"] as const) {
       references[type].forEach((key) => {
-        if (
+        if (isExplicitlyExcluded(type, key, target, fields)) {
+          if (entities[type][key] && !entities[type][key].archived) {
+            unsatisfiedDependencies.add(`${type.slice(0, -1)}:${key}`);
+          }
+        } else if (
           entities[type][key] &&
           !entities[type][key].archived &&
-          !selectedKeys[type].has(key) &&
-          !isExplicitlyExcluded(type, key, target, fields)
+          !selectedKeys[type].has(key)
         ) {
           selectedKeys[type].add(key);
           changed = true;
         }
       });
     }
+  }
+
+  if (unsatisfiedDependencies.size > 0) {
+    throw new Error(
+      `Target "${options.target}" excludes required dependencies: ${[...unsatisfiedDependencies].sort().join(", ")}`,
+    );
   }
 
   const datafile: DatafileContent = {
@@ -330,7 +464,9 @@ export async function buildDatafile(
           : authoredEntity;
       const entity = stripMetadata(resolvedEntity);
       (datafile[type] as Record<string, unknown>)[key] =
-        (target?.stringify ?? deps.projectConfig.stringify) ? stringifyConditions(entity) : entity;
+        (target?.stringify ?? deps.projectConfig.stringify)
+          ? stringifyKnownConditions(type, entity)
+          : entity;
     });
   }
   return datafile;
@@ -348,7 +484,7 @@ async function buildExecution(deps: Dependencies, options: BuildCLIOptions) {
         ? [options.target]
         : [];
     if (targets.length > 1) throw new Error("Pass only one --target when using --json.");
-    const datafile = await buildDatafile(deps, {
+    const datafile = await buildSelectedDatafile(deps, {
       tag: options.tag,
       target: targets[0],
       revision: nextRevision,
@@ -372,7 +508,7 @@ async function buildExecution(deps: Dependencies, options: BuildCLIOptions) {
   }
   for (const target of targets) {
     const definition = await datasource.readTarget(target);
-    const datafile = await buildDatafile(deps, {
+    const datafile = await buildSelectedDatafile(deps, {
       tag: options.tag,
       target,
       revision: nextRevision,
@@ -434,7 +570,7 @@ export async function buildProject(deps: Dependencies, options: BuildCLIOptions 
 export const buildPlugin: Plugin = {
   command: "build",
   options: {
-    tag: { type: "string", description: "filter selected Target content by tag" },
+    tag: { type: "array", description: "filter selected Target content by one or more tags" },
     target: { type: "array", description: "build one or more targets" },
     set: { type: "string", description: "build a project set" },
     json: { type: "boolean", description: "print the datafile as JSON" },

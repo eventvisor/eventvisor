@@ -69,7 +69,7 @@ export class Bucketer {
       type = "and";
       sources = [sampleBy];
     } else {
-      this.logger.error("invalid sampleBy", { sampleBy });
+      this.logger.error("invalid sampleBy", { code: "sample_by_invalid", sampleBy });
 
       throw new Error("invalid sampleBy");
     }
@@ -114,7 +114,10 @@ export class Bucketer {
       const bucketKey = await this.getBucketKey(matchedSample.by, inputs);
 
       if (!bucketKey) {
-        this.logger.error("invalid sample by", { sampleBy: matchedSample.by });
+        this.logger.error("invalid sample by", {
+          code: "sample_by_invalid",
+          sampleBy: matchedSample.by,
+        });
         return { isSampled: false, matchedSample, bucketKey };
       }
 

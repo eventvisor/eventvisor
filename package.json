@@ -12,7 +12,9 @@
   "scripts": {
     "build": "lerna run build",
     "test": "lerna run test",
-    "test:browser": "npm run test:browser --workspace @eventvisor/catalog",
+    "test:browser": "npm run test:browser:catalog && npm run test:browser:examples",
+    "test:browser:catalog": "npm run test:browser --workspace @eventvisor/catalog",
+    "test:browser:examples": "playwright test --config examples/playwright.config.ts",
     "lint": "prettier examples/ packages/ modules/ projects/ --check && eslint . && lerna run lint",
     "typecheck": "lerna run typecheck",
     "bundle-sizes": "node scripts/bundle-sizes.mjs",
@@ -38,7 +40,7 @@
     "globals": "^17.7.0",
     "jest": "^30.4.2",
     "jest-environment-jsdom": "^30.4.1",
-    "lerna": "^9.0.7",
+    "lerna": "^10.0.0",
     "prettier": "^3.9.5",
     "rimraf": "^6.1.3",
     "terser": "^5.49.0",
@@ -47,6 +49,7 @@
   },
   "overrides": {
     "yaml": "^2.9.0",
-    "tar": "^7.5.20"
+    "tar": "^7.5.22",
+    "axios": "^1.19.0"
   }
 }

@@ -157,7 +157,7 @@ export function OverviewTab() {
   const entity = detail.entity;
   const hasSchema =
     detail.type === "event" || detail.type === "attribute" || detail.type === "schema";
-  const schema = hasSchema ? getSchemaPresentation(entity) : undefined;
+  const schema = hasSchema ? getSchemaPresentation(detail.effectiveSchema || entity) : undefined;
   const displayType = schema?.root.type || entity.type;
   const facts: Array<[string, unknown]> = [
     ["Level", entity.level],
@@ -189,10 +189,10 @@ export function OverviewTab() {
           {displayType ? (
             <OverviewMetaRow label="Type">
               <OverviewChip>
-                {schema?.root.schemaKey ? (
+                {typeof entity.schema === "string" ? (
                   <Link
                     className="text-primary hover:underline"
-                    to={getEntityRoute("schema", schema.root.schemaKey, set)}
+                    to={getEntityRoute("schema", entity.schema, set)}
                   >
                     {displayType}
                   </Link>

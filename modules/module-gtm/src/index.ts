@@ -6,13 +6,16 @@ export type GTMModuleOptions = {
 };
 
 export function createGTMModule(options: GTMModuleOptions = {}): EventvisorModule {
-  const { name = "gtm", dataLayer = (window as any).dataLayer } = options;
+  const { name = "gtm", dataLayer } = options;
 
   return {
     name,
 
     transport: async ({ eventName, payload }) => {
-      dataLayer.push({
+      const target =
+        dataLayer || (typeof window === "undefined" ? undefined : (window as any).dataLayer);
+      if (!target) throw new Error("GTM module requires a dataLayer.");
+      target.push({
         ...(payload as Record<string, any>),
         event: eventName,
       });

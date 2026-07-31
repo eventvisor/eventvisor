@@ -32,6 +32,7 @@ import { Bucketer } from "./bucketer.js";
 import { Transformer } from "./transformer.js";
 import { Validator } from "./validator.js";
 import { EffectsManager } from "./effectsManager.js";
+import { isTransportSafeValue } from "./portable.js";
 
 export interface EventvisorOptions {
   datafile?: DatafileInput;
@@ -59,13 +60,10 @@ export class Eventvisor {
   private readyPromise: Promise<void>;
   private diagnosticHandlers: EventvisorDiagnosticHandler[] = [];
   private closed = false;
+  private operationQueue: Promise<void> = Promise.resolve();
 
   constructor(options: EventvisorOptions = {}) {
-    /**
-     * Core instances without interdependencies
-     *
-     * @TODO: sort out this dependency mess!!
-     */
+    /** Core services that do not depend on another runtime service. */
     this.emitter = new Emitter();
     if (options.onDiagnostic) this.diagnosticHandlers.push(options.onDiagnostic);
     this.logger = createLogger({
@@ -80,15 +78,13 @@ export class Eventvisor {
       this.logger.error((error as Error).message, { code: "invalid_datafile", error });
     }
 
-    /**
-     * Instances with interdependencies
-     */
+    /** Runtime services are wired through lazy accessors where their responsibilities cross. */
     this.modulesManager = new ModulesManager({
       logger: this.logger,
       getRevision: () => this.getRevision(),
       onDiagnostic: (handler) => this.onDiagnostic(handler),
       reportDiagnostic: (diagnostic) => this.reportDiagnostic(diagnostic),
-      track: (eventName, payload) => this.track(eventName, payload),
+      track: (eventName, payload) => this.trackWithEffectChain(eventName, payload, []),
     });
 
     this.validator = new Validator({
@@ -217,20 +213,32 @@ export class Eventvisor {
     return this.logger.setLevel(level);
   }
 
-  async setDatafile(datafile: DatafileInput, replace = false) {
-    try {
-      const parsed = parseDatafile(datafile);
-      this.datafile = replace ? parsed : mergeDatafiles(this.datafile, parsed);
-      this.regexCache = {};
-      this.conditionsChecker.clearParsedConditions();
-      await Promise.all([this.effectsManager.refresh(), this.attributesManager.refresh()]);
-      this.emitter.trigger("datafile_set", { replaced: replace });
-    } catch (error) {
-      this.logger.error((error as Error).message || "Could not parse datafile", {
-        code: "invalid_datafile",
-        error,
-      });
-    }
+  private runOperation<T>(operation: () => Promise<T>): Promise<T> {
+    const result = this.operationQueue.then(operation, operation);
+    this.operationQueue = result.then(
+      () => undefined,
+      () => undefined,
+    );
+    return result;
+  }
+
+  setDatafile(datafile: DatafileInput, replace = false) {
+    return this.runOperation(async () => {
+      await this.onReady();
+      try {
+        const parsed = parseDatafile(datafile);
+        this.datafile = replace ? parsed : mergeDatafiles(this.datafile, parsed);
+        this.regexCache = {};
+        this.conditionsChecker.clearParsedConditions();
+        await Promise.all([this.effectsManager.refresh(), this.attributesManager.refresh()]);
+        this.emitter.trigger("datafile_set", { replaced: replace });
+      } catch (error) {
+        this.logger.error((error as Error).message || "Could not parse datafile", {
+          code: "invalid_datafile",
+          error,
+        });
+      }
+    });
   }
 
   private getAttribute(name: AttributeName) {
@@ -269,7 +277,11 @@ export class Eventvisor {
   /**
    * Attribute
    */
-  async setAttribute(attributeName: AttributeName, value: Value) {
+  setAttribute(attributeName: AttributeName, value: Value) {
+    return this.runOperation(() => this.setAttributeInternal(attributeName, value));
+  }
+
+  private async setAttributeInternal(attributeName: AttributeName, value: Value) {
     await this.onReady();
     const result = await this.attributesManager.setAttribute(attributeName, value);
 
@@ -297,9 +309,11 @@ export class Eventvisor {
     return this.attributesManager.isAttributeSet(attributeName);
   }
 
-  async removeAttribute(attributeName: AttributeName) {
-    await this.onReady();
-    return this.attributesManager.removeAttribute(attributeName);
+  removeAttribute(attributeName: AttributeName) {
+    return this.runOperation(async () => {
+      await this.onReady();
+      return this.attributesManager.removeAttribute(attributeName);
+    });
   }
 
   /**
@@ -310,11 +324,11 @@ export class Eventvisor {
   }
 
   removeModule(moduleName: ModuleName) {
-    return this.modulesManager.removeModule(moduleName);
+    return this.runOperation(() => this.modulesManager.removeModule(moduleName));
   }
 
-  async flush() {
-    await this.modulesManager.flush();
+  flush() {
+    return this.runOperation(() => this.modulesManager.flush());
   }
 
   private async quarantineInvalidEvent(
@@ -362,8 +376,8 @@ export class Eventvisor {
   /**
    * Event
    */
-  async track(eventName: EventName, value: Value): Promise<Value | null> {
-    return this.trackWithEffectChain(eventName, value, []);
+  track(eventName: EventName, value: Value): Promise<Value | null> {
+    return this.runOperation(() => this.trackWithEffectChain(eventName, value, []));
   }
 
   private async trackWithEffectChain(
@@ -378,9 +392,12 @@ export class Eventvisor {
     const eventSchema = this.getEvent(eventName);
 
     if (!eventSchema) {
-      this.logger.error(`Event schema not found in datafile`, { eventName });
+      this.logger.error(`Event schema not found in datafile`, {
+        code: "event_not_found",
+        eventName,
+      });
 
-      return null; // @TODO: allow to continue based on SDK instance options later
+      return null;
     }
 
     const eventLevel = eventSchema.level || "info";
@@ -389,7 +406,7 @@ export class Eventvisor {
      * Deprecated
      */
     if (eventSchema.deprecated) {
-      this.logger.warn(`Event is deprecated`, { eventName });
+      this.logger.warn(`Event is deprecated`, { code: "event_deprecated", eventName });
     }
 
     /**
@@ -426,6 +443,7 @@ export class Eventvisor {
       );
       if (missingAttributes.length > 0) {
         this.logger.warn("Event required attributes are not set", {
+          code: "required_attributes_missing",
           eventName,
           missingAttributes,
         });
@@ -447,6 +465,7 @@ export class Eventvisor {
           message,
         }));
         this.logger.warn(`Event validation failed`, {
+          code: "event_validation_failed",
           eventName,
           errors: validationResult.errors,
         });
@@ -474,7 +493,6 @@ export class Eventvisor {
      */
     if (eventSchema.conditions) {
       const isMatched = await this.conditionsChecker.allAreMatched(eventSchema.conditions, {
-        // @TODO: rename to eventPayload to be explicit?
         eventName,
         eventLevel,
         payload: validatedValue,
@@ -525,6 +543,14 @@ export class Eventvisor {
       });
     }
 
+    if (!isTransportSafeValue(transformedValue)) {
+      this.logger.error("Event transform produced a value that cannot be transported safely", {
+        code: "transform_output_invalid",
+        eventName,
+      });
+      return null;
+    }
+
     /**
      * Effects
      */
@@ -554,6 +580,7 @@ export class Eventvisor {
 
         if (!transportExists) {
           this.logger.error(`Destination has no transport`, {
+            code: "destination_transport_not_found",
             eventName,
             destinationName,
           });
@@ -684,8 +711,20 @@ export class Eventvisor {
             eventLevel,
             payload: transportBody,
             destinationName,
-            attributes: this.attributesManager.getAttributesMap(), // @TODO: check if needed
+            attributes: this.attributesManager.getAttributesMap(),
           });
+        }
+
+        if (!isTransportSafeValue(transportBody)) {
+          this.logger.error(
+            "Destination transform produced a value that cannot be transported safely",
+            {
+              code: "transform_output_invalid",
+              eventName,
+              destinationName,
+            },
+          );
+          return;
         }
 
         await this.modulesManager.transport(destination.transport, {
@@ -715,12 +754,19 @@ export class Eventvisor {
     return createEventvisor({ ...options, datafile: this.datafile });
   }
 
-  async close() {
-    if (this.closed) return;
-    this.closed = true;
-    await this.modulesManager.close();
-    this.emitter.clearAll();
-    this.diagnosticHandlers = [];
+  close() {
+    return this.runOperation(async () => {
+      if (this.closed) return;
+      this.closed = true;
+      try {
+        await this.onReady();
+      } catch {
+        // Initialization already reported its diagnostic. Continue cleanup.
+      }
+      await this.modulesManager.close();
+      this.emitter.clearAll();
+      this.diagnosticHandlers = [];
+    });
   }
 }
 

@@ -4,35 +4,7 @@ import type { SourceResolver } from "./sourceResolver.js";
 
 import { compareVersions } from "./compareVersions.js";
 import { Logger } from "./logger.js";
-
-const portableRegexFlagsPattern = /^[gims]+$/;
-const portableDatePattern =
-  /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d{1,3})?(?:Z|[+-]\d{2}:\d{2})$/;
-
-function isPortableRegex(pattern: string, flags = "") {
-  if (flags && (!portableRegexFlagsPattern.test(flags) || new Set(flags).size !== flags.length)) {
-    return false;
-  }
-
-  try {
-    new RegExp(pattern, flags);
-  } catch {
-    return false;
-  }
-
-  if (/\(\?/.test(pattern)) return false;
-  if (/\\(?:[1-9]|k<|k'|g<|g')/.test(pattern)) return false;
-  if (/(?:[?*+]|\{\d+(?:,\d*)?\})\+/.test(pattern)) return false;
-
-  return true;
-}
-
-function getPortableDate(value: unknown) {
-  if (value instanceof Date) return Number.isNaN(value.getTime()) ? null : value;
-  if (typeof value !== "string" || !portableDatePattern.test(value)) return null;
-  const date = new Date(value);
-  return Number.isNaN(date.getTime()) ? null : date;
-}
+import { getPortableDate, isPortableRegex } from "./portable.js";
 
 export type GetConditionsChecker = () => ConditionsChecker;
 export type GetRegex = (regexString: string, regexFlags?: string) => RegExp;
@@ -175,6 +147,7 @@ export class ConditionsChecker {
         return await this.isMatched(conditions, inputs);
       } catch (e) {
         this.logger.warn(e.message, {
+          code: "condition_evaluation_failed",
           error: e,
           details: {
             condition: conditions,
@@ -260,6 +233,7 @@ export class ConditionsChecker {
     } catch (e) {
       this.parsedConditions.set(conditions, null);
       this.logger.error("Error parsing conditions", {
+        code: "conditions_parse_failed",
         error: e,
         details: {
           conditions,

@@ -16,9 +16,9 @@ export function createDatadogBrowserModule(options: DatadogBrowserModuleOptions)
 
     transport: async ({ eventName, payload, error }) => {
       if (error) {
-        datadogRum.addError(error, payload);
+        await Promise.resolve(datadogRum.addError(error, payload));
       } else {
-        datadogRum.addAction(eventName, payload);
+        await Promise.resolve(datadogRum.addAction(eventName, payload));
       }
     },
   };

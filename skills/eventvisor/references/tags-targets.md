@@ -55,7 +55,7 @@ The builder keeps a selected datafile _usable_ by pulling in what selections nee
 - An included **effect** brings the events and attributes that can trigger it.
 - Included **events** retain their `requiredAttributes` and anything referenced through sources — `attribute: userId`, `source: attributes.userId`; a collection source like `source: attributes` retains the whole collection.
 - **Reusable Schemas** referenced by selected events/attributes are resolved and inlined (Schemas are build dependencies, not selectors — no include/exclude for them).
-- Explicit `exclude*` and `archived: true` always win over dependency retention.
+- `archived: true` always removes a definition. An explicit `exclude*` that conflicts with a required runtime dependency fails the build and reports the conflicting dependency.
 
 ### Building and consuming
 

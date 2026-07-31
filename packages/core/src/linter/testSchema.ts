@@ -36,13 +36,33 @@ export function getTestSchema(deps: Dependencies) {
       withAttributes: withAttributesSchema.optional(),
       withLookups: withLookupsSchema.optional(),
       track: z.any().optional(),
-      actions: z.array(actionSchema).optional(),
+      actions: z.array(actionSchema).min(1).optional(),
       expectedToBeValid: z.boolean().optional(),
+      expectedToBeTracked: z.boolean().optional(),
       expectedEvent: z.any().optional(),
       expectedDestinations: z.array(z.string()).optional(),
       expectedDestinationsByTag: z.record(z.string(), z.array(z.string())).optional(),
     })
-    .strict();
+    .strict()
+    .superRefine((assertion, ctx) => {
+      if (!Object.prototype.hasOwnProperty.call(assertion, "track") && !assertion.actions) {
+        ctx.addIssue({ code: "custom", message: "Event assertion requires track or actions" });
+      }
+      if (
+        ![
+          "expectedToBeValid",
+          "expectedToBeTracked",
+          "expectedEvent",
+          "expectedDestinations",
+          "expectedDestinationsByTag",
+        ].some((key) => key in assertion)
+      ) {
+        ctx.addIssue({
+          code: "custom",
+          message: "Event assertion requires at least one expectation",
+        });
+      }
+    });
 
   const effectAssertionSchema = z
     .object({
@@ -50,7 +70,7 @@ export function getTestSchema(deps: Dependencies) {
       matrix: matrixSchema.optional(),
       withAttributes: withAttributesSchema.optional(),
       withLookups: withLookupsSchema.optional(),
-      actions: z.array(actionSchema).optional(),
+      actions: z.array(actionSchema).min(1),
       expectedState: z.any().optional(),
       expectedToBeHandled: z.boolean().optional(),
       expectedToBeCalled: z
@@ -64,7 +84,16 @@ export function getTestSchema(deps: Dependencies) {
         )
         .optional(),
     })
-    .strict();
+    .strict()
+    .refine(
+      (assertion) =>
+        ["expectedState", "expectedToBeHandled", "expectedToBeCalled"].some(
+          (key) => key in assertion,
+        ),
+      {
+        message: "Effect assertion requires at least one expectation",
+      },
+    );
 
   const destinationAssertionSchema = z
     .object({
@@ -72,13 +101,28 @@ export function getTestSchema(deps: Dependencies) {
       matrix: matrixSchema.optional(),
       withAttributes: withAttributesSchema.optional(),
       withLookups: withLookupsSchema.optional(),
-      actions: z.array(actionSchema).optional(),
+      actions: z.array(actionSchema).min(1),
       assertAfter: z.number().int().min(0).optional(),
       expectedToBeTransported: z.boolean().optional(),
       expectedBody: z.any().optional(),
       expectedBodies: z.array(z.any()).optional(),
     })
-    .strict();
+    .strict()
+    .superRefine((assertion, ctx) => {
+      if (
+        !["expectedToBeTransported", "expectedBody", "expectedBodies"].some(
+          (key) => key in assertion,
+        )
+      ) {
+        ctx.addIssue({
+          code: "custom",
+          message: "Destination assertion requires at least one expectation",
+        });
+      }
+      if ("expectedBody" in assertion && "expectedBodies" in assertion) {
+        ctx.addIssue({ code: "custom", message: "Use expectedBody or expectedBodies, not both" });
+      }
+    });
 
   return z.union([
     z

@@ -7,7 +7,7 @@ import type { CatalogEntityType, CatalogIndex, EntityPath, EntitySummary } from 
 import { Badge, Button, EmptyState, EntityKey, PageHeader } from "../components/ui";
 import { matchesQuery } from "../listSearch";
 
-const LIST_INITIAL_LIMIT = 1000;
+const LIST_PAGE_SIZE = 100;
 const paths: EntityPath[] = [
   "events",
   "attributes",
@@ -186,7 +186,7 @@ export function ListPage() {
   const [params, setParams] = useSearchParams();
   const [index, setIndex] = React.useState<CatalogIndex>();
   const [error, setError] = React.useState("");
-  const [showAll, setShowAll] = React.useState(false);
+  const [visibleLimit, setVisibleLimit] = React.useState(LIST_PAGE_SIZE);
   const query = params.get("q") || "";
   const descending = params.get("sort") === "-name";
 
@@ -197,7 +197,7 @@ export function ListPage() {
       .then(setIndex)
       .catch((reason: Error) => setError(reason.message));
   }, [set]);
-  React.useEffect(() => setShowAll(false), [query, descending, entityPath, set]);
+  React.useEffect(() => setVisibleLimit(LIST_PAGE_SIZE), [query, descending, entityPath, set]);
 
   if (!paths.includes(entityPath as EntityPath)) return <Navigate to="events" replace />;
   const type = entityPathToType[entityPath as EntityPath];
@@ -213,7 +213,7 @@ export function ListPage() {
     .filter((entity) => matchesQuery(entity, query))
     .slice()
     .sort((left, right) => (descending ? -1 : 1) * left.key.localeCompare(right.key));
-  const visible = showAll ? filtered : filtered.slice(0, LIST_INITIAL_LIMIT);
+  const visible = filtered.slice(0, visibleLimit);
 
   return (
     <div className="space-y-4">
@@ -247,7 +247,9 @@ export function ListPage() {
       </div>
       <div className="space-y-4 px-6 pb-6 text-center">
         {visible.length < filtered.length ? (
-          <Button onClick={() => setShowAll(true)}>Show all {filtered.length}</Button>
+          <Button onClick={() => setVisibleLimit((limit) => limit + LIST_PAGE_SIZE)}>
+            Show {Math.min(LIST_PAGE_SIZE, filtered.length - visible.length)} more
+          </Button>
         ) : null}
         <p className="text-sm text-muted">
           Showing {visible.length} of {filtered.length} {entityLabels[type].plural.toLowerCase()}

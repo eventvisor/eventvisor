@@ -16,15 +16,19 @@ export function createSentryBrowserModule(options: SentryBrowserModuleOptions): 
 
     transport: async ({ eventName, eventLevel, payload, error }) => {
       if (error) {
-        Sentry.captureException(error, {
-          level: eventLevel,
-          extra: payload,
-        });
+        await Promise.resolve(
+          Sentry.captureException(error, {
+            level: eventLevel,
+            extra: payload,
+          }),
+        );
       } else {
-        Sentry.captureMessage(eventName, {
-          level: eventLevel,
-          extra: payload,
-        });
+        await Promise.resolve(
+          Sentry.captureMessage(eventName, {
+            level: eventLevel,
+            extra: payload,
+          }),
+        );
       }
     },
   };

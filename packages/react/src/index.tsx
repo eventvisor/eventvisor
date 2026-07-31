@@ -77,3 +77,47 @@ export function useEventvisor(): UseEventvisor {
     [instance],
   );
 }
+
+export function useEventvisorAttribute(name: AttributeName): Value | null {
+  const instance = useEventvisorInstance();
+  const [value, setValue] = React.useState<Value | null>(() => instance.getAttributeValue(name));
+
+  React.useEffect(() => {
+    setValue(instance.getAttributeValue(name));
+    const refresh = ({ attributeName }: { attributeName: AttributeName }) => {
+      if (attributeName === name) setValue(instance.getAttributeValue(name));
+    };
+    const unsubscribeSet = instance.on("attribute_set", refresh);
+    const unsubscribeRemoved = instance.on("attribute_removed", refresh);
+    const unsubscribeDatafile = instance.on("datafile_set", () =>
+      setValue(instance.getAttributeValue(name)),
+    );
+    return () => {
+      unsubscribeSet();
+      unsubscribeRemoved();
+      unsubscribeDatafile();
+    };
+  }, [instance, name]);
+
+  return value;
+}
+
+export function useEventvisorAttributes(): Record<string, Value> {
+  const instance = useEventvisorInstance();
+  const [attributes, setAttributes] = React.useState(() => instance.getAttributes());
+
+  React.useEffect(() => {
+    const refresh = () => setAttributes(instance.getAttributes());
+    refresh();
+    const unsubscribeSet = instance.on("attribute_set", refresh);
+    const unsubscribeRemoved = instance.on("attribute_removed", refresh);
+    const unsubscribeDatafile = instance.on("datafile_set", refresh);
+    return () => {
+      unsubscribeSet();
+      unsubscribeRemoved();
+      unsubscribeDatafile();
+    };
+  }, [instance]);
+
+  return attributes;
+}

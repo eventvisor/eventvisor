@@ -30,6 +30,17 @@ function CheckoutButton() {
 }
 ```
 
+Attribute hooks subscribe to SDK events and re-render only when the observed value changes:
+
+```tsx
+function UserSummary() {
+  const country = useEventvisorAttribute("country");
+  const { userId, plan } = useEventvisorAttributes(["userId", "plan"]);
+
+  return <span>{userId} · {plan} · {country}</span>;
+}
+```
+
 See the [React SDK documentation](https://eventvisor.org/docs/sdks/react/) for more information.
 
 ## License <!-- omit in toc -->

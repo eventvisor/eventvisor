@@ -47,7 +47,7 @@
     "@eventvisor/types": "0.26.0"
   },
   "peerDependencies": {
-    "react": ">=16.8.0"
+    "react": ">=16.8"
   },
   "devDependencies": {
     "@testing-library/jest-dom": "^6.9.1",

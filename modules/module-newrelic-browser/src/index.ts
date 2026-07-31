@@ -11,16 +11,18 @@ export type NewrelicBrowserModuleOptions = {
 export function createNewrelicBrowserModule(
   options: NewrelicBrowserModuleOptions = {},
 ): EventvisorModule {
-  const { name = "newrelic-browser", nr = (window as any).newrelic } = options;
+  const { name = "newrelic-browser", nr } = options;
 
   return {
     name,
 
     transport: async ({ eventName, payload, error }) => {
+      const client = nr || (typeof window === "undefined" ? undefined : (window as any).newrelic);
+      if (!client) throw new Error("New Relic browser module requires a New Relic client.");
       if (error) {
-        nr.noticeError(error, payload);
+        await Promise.resolve(client.noticeError(error, payload));
       } else {
-        nr.addPageAction(eventName, payload);
+        await Promise.resolve(client.addPageAction(eventName, payload));
       }
     },
   };

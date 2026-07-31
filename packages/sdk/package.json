@@ -16,6 +16,16 @@
       "require": "./cjs/index.js",
       "import": "./node-esm/index.js"
     },
+    "./portable": {
+      "types": "./cjs/portable.d.ts",
+      "require": "./cjs/portable.js",
+      "import": "./node-esm/portable.js"
+    },
+    "./validator": {
+      "types": "./cjs/validator.d.ts",
+      "require": "./cjs/validator.js",
+      "import": "./node-esm/validator.js"
+    },
     "./package.json": "./package.json"
   },
   "scripts": {

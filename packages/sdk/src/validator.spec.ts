@@ -298,6 +298,14 @@ describe("Validator", () => {
   });
 
   describe("Enum and Const Validation", () => {
+    it("compares object and array enum and const values structurally", async () => {
+      await expect(
+        validate({ enum: [{ id: 1, tags: ["a"] }] }, { id: 1, tags: ["a"] }, {}),
+      ).resolves.toMatchObject({ valid: true });
+      await expect(
+        validate({ const: { id: 1, tags: ["a"] } }, { id: 1, tags: ["b"] }, {}),
+      ).resolves.toMatchObject({ valid: false });
+    });
     it("should validate enum values", async () => {
       const schema: JSONSchema = {
         type: "string",

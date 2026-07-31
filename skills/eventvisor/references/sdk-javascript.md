@@ -47,7 +47,7 @@ eventvisor.getAttributes();
 eventvisor.isAttributeSet("userId");
 ```
 
-`track`, `setAttribute`, `removeAttribute`, `setDatafile`, `removeModule`, `flush`, and `close` are async. Await them whenever ordering or completion matters. Destination attempts begin in parallel. A `null` from `track` means governance dropped the event, not that an exception occurred.
+`track`, `setAttribute`, `removeAttribute`, `setDatafile`, `removeModule`, `flush`, and `close` are async. Public operations are processed in call order, including calls made before readiness. Await them when the application needs completion or a result. Destination attempts begin in parallel. A `null` from `track` means governance dropped the event, not that an exception occurred.
 
 Invalid attribute values are not set. Invalid event payloads follow `onValidationFailure`: drop by default, deliver with validation metadata, or route to quarantine. Validation failures produce diagnostics. Falsy values (`false`, `0`, `""`) are valid values.
 

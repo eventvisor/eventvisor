@@ -20,6 +20,7 @@ const schemaFields = new Set([
   "properties",
   "default",
   "examples",
+  "additionalProperties",
 ]);
 
 export async function loadSchemas(datasource: Datasource): Promise<Record<string, Schema>> {

@@ -1,11 +1,10 @@
 import * as fs from "fs";
 import * as path from "path";
-import type { DatafileContent } from "@eventvisor/types";
 
 import { generateTypeScriptCodeForProject } from "./typescript";
 import { Dependencies } from "../dependencies";
 import { Plugin } from "../cli";
-import { buildDatafile } from "../builder";
+import { buildSelectedDatafile } from "../builder";
 import { getProjectSetExecutions } from "../sets";
 import { printSetHeader } from "../sets";
 import { CLI_COLOR_CYAN, CLI_FORMAT_BOLD, colorize } from "../tester/cliFormat";
@@ -51,33 +50,10 @@ export async function generateCodeForProject(
   }
 
   if (cliOptions.language === "typescript") {
-    const selections = [
-      ...(Array.isArray(cliOptions.tag)
-        ? cliOptions.tag
-        : cliOptions.tag
-          ? [cliOptions.tag]
-          : []
-      ).map((tag) => ({ tag })),
-      ...(Array.isArray(cliOptions.target)
-        ? cliOptions.target
-        : cliOptions.target
-          ? [cliOptions.target]
-          : []
-      ).map((target) => ({ target })),
-    ];
-    let selectedDatafile: DatafileContent | undefined;
-    for (const selection of selections) {
-      const datafile = await buildDatafile(deps, selection);
-      selectedDatafile = selectedDatafile
-        ? {
-            ...selectedDatafile,
-            attributes: { ...selectedDatafile.attributes, ...datafile.attributes },
-            events: { ...selectedDatafile.events, ...datafile.events },
-            destinations: { ...selectedDatafile.destinations, ...datafile.destinations },
-            effects: { ...selectedDatafile.effects, ...datafile.effects },
-          }
-        : datafile;
-    }
+    const hasSelection = cliOptions.tag || cliOptions.target;
+    const selectedDatafile = hasSelection
+      ? await buildSelectedDatafile(deps, { tag: cliOptions.tag, target: cliOptions.target })
+      : undefined;
     return await generateTypeScriptCodeForProject(deps, absolutePath, selectedDatafile);
   }
 

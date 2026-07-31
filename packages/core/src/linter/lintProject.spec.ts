@@ -79,6 +79,9 @@ describe("lintProject", () => {
       event: "page_view",
       assertions: [
         {
+          track: {
+            url: "https://example.com",
+          },
           expectedDestinationsByTag: {
             marketing: ["console"],
           },

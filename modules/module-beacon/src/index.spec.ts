@@ -4,6 +4,15 @@ function api() {
   return { reportDiagnostic: jest.fn() } as any;
 }
 
+function blobText(blob: Blob): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(String(reader.result));
+    reader.onerror = () => reject(reader.error);
+    reader.readAsText(blob);
+  });
+}
+
 function event(name = "viewed") {
   return {
     destinationName: "analytics",
@@ -26,8 +35,27 @@ describe("createBeaconModule", () => {
     await module.transport?.(event("one"), moduleApi);
     await module.transport?.(event("two"), moduleApi);
     expect(sendBeacon).toHaveBeenCalledTimes(1);
-    const body = JSON.parse(sendBeacon.mock.calls[0][1]);
+    const sent = sendBeacon.mock.calls[0][1];
+    expect(sent).toBeInstanceOf(Blob);
+    const body = JSON.parse(sent instanceof Blob ? await blobText(sent) : sent);
     expect(body.events.map((item) => item.eventName)).toEqual(["one", "two"]);
+  });
+
+  it("snapshots queued payloads before callers can mutate them", async () => {
+    const sendBeacon = jest.fn().mockReturnValue(true);
+    const module = createBeaconModule({
+      url: "https://events.example",
+      batchSize: 10,
+      flushIntervalMs: 0,
+      sendBeacon,
+    });
+    const queued = event();
+    await module.transport?.(queued, api());
+    (queued.payload as any).id = 2;
+    await module.flush?.(api());
+    const sent = sendBeacon.mock.calls[0][1];
+    const body = JSON.parse(sent instanceof Blob ? await blobText(sent) : sent);
+    expect(body.events[0].payload).toEqual({ id: 1 });
   });
 
   it("falls back to keepalive fetch when sendBeacon rejects a payload", async () => {

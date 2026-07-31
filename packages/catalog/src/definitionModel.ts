@@ -21,6 +21,7 @@ const schemaKeys = new Set([
   "schema",
   "const",
   "default",
+  "additionalProperties",
   "description",
   "enum",
   "examples",
@@ -185,6 +186,7 @@ const commonFields = new Set([
   "lastModified",
   "tags",
   "targets",
+  "effectiveSchema",
 ]);
 
 const structuralFields = new Set(["destinations", "steps", "transforms"]);

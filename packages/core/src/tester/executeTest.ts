@@ -4,6 +4,7 @@ import type { TestProjectOptions } from "./testProject";
 import type { Dependencies } from "../dependencies";
 import { createTestInstance } from "./createTestInstance";
 import { expandAssertions } from "./matrix";
+import { validate } from "@eventvisor/sdk/validator";
 
 export interface TestAssertionResult {
   passed: boolean;
@@ -59,11 +60,18 @@ async function setAttributes(
 }
 
 async function runActions(e: ReturnType<typeof createTestInstance>["e"], actions?: Action[]) {
+  const tracked: Array<{ name: string; input: Value; output: Value | null }> = [];
   for (const action of actions || []) {
-    if (action.type === "track") await e.track(action.name, action.value);
-    else if (action.type === "setAttribute") await e.setAttribute(action.name, action.value);
+    if (action.type === "track") {
+      tracked.push({
+        name: action.name,
+        input: action.value,
+        output: await e.track(action.name, action.value),
+      });
+    } else if (action.type === "setAttribute") await e.setAttribute(action.name, action.value);
     else await e.removeAttribute(action.name);
   }
+  return tracked;
 }
 
 function createResult(expanded: ReturnType<typeof expandAssertions>[number]): TestAssertionResult {
@@ -102,12 +110,23 @@ export async function executeTest(options: ExecuteTestOptions): Promise<TestResu
       await setAttributes(e, assertion.withAttributes);
 
       if ("attribute" in test) {
+        let validationResult;
         if (Object.prototype.hasOwnProperty.call(assertion, "setAttribute")) {
+          validationResult = await validate(
+            datafileContent.attributes[test.attribute],
+            assertion.setAttribute,
+            {},
+          );
           await e.setAttribute(test.attribute, assertion.setAttribute);
         }
         const isSet = e.isAttributeSet(test.attribute);
         if (typeof assertion.expectedToBeValid === "boolean") {
-          addComparison(result, "expectedToBeValid", assertion.expectedToBeValid, isSet);
+          addComparison(
+            result,
+            "expectedToBeValid",
+            assertion.expectedToBeValid,
+            validationResult?.valid ?? false,
+          );
         }
         if (typeof assertion.expectedToBeSet === "boolean") {
           addComparison(result, "expectedToBeSet", assertion.expectedToBeSet, isSet);
@@ -121,13 +140,39 @@ export async function executeTest(options: ExecuteTestOptions): Promise<TestResu
           );
         }
       } else if ("event" in test) {
+        const actionTracks = await runActions(e, assertion.actions);
         let tracked: Value | null = null;
+        let input: Value | undefined;
         if (Object.prototype.hasOwnProperty.call(assertion, "track")) {
+          input = assertion.track;
           tracked = await e.track(test.event, assertion.track);
+        } else {
+          const subject = [...actionTracks].reverse().find((entry) => entry.name === test.event);
+          if (subject) {
+            input = subject.input;
+            tracked = subject.output;
+          }
         }
-        await runActions(e, assertion.actions);
         if (typeof assertion.expectedToBeValid === "boolean") {
-          addComparison(result, "expectedToBeValid", assertion.expectedToBeValid, tracked !== null);
+          const event = datafileContent.events[test.event];
+          const validationResult =
+            event && typeof input !== "undefined"
+              ? await validate(event, input, {})
+              : { valid: false };
+          addComparison(
+            result,
+            "expectedToBeValid",
+            assertion.expectedToBeValid,
+            validationResult.valid,
+          );
+        }
+        if (typeof assertion.expectedToBeTracked === "boolean") {
+          addComparison(
+            result,
+            "expectedToBeTracked",
+            assertion.expectedToBeTracked,
+            tracked !== null,
+          );
         }
         if (Object.prototype.hasOwnProperty.call(assertion, "expectedEvent")) {
           addComparison(result, "expectedEvent", assertion.expectedEvent, tracked);

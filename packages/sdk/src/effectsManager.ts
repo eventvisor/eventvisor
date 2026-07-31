@@ -181,6 +181,7 @@ export class EffectsManager {
               );
             } catch (handlerError) {
               this.logger.error(`Effect handler error`, {
+                code: "effect_handler_failed",
                 effectName,
                 step,
                 error: handlerError,
