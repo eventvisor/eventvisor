@@ -167,15 +167,24 @@ export async function testProject(
 
 export const testPlugin: Plugin = {
   command: "test",
+  description: "run project test specifications",
   options: {
-    set: { type: "string" },
+    set: { type: "string", description: "test a project Set" },
     tag: { type: "array", description: "include one or more tags" },
     target: { type: "array", description: "include one or more Targets" },
-    keyPattern: { type: "string" },
-    assertionPattern: { type: "string" },
-    onlyFailures: { type: "boolean" },
-    quiet: { type: "boolean" },
-    verbose: { type: "boolean" },
+    keyPattern: { type: "string", alias: "key-pattern", description: "filter test keys" },
+    assertionPattern: {
+      type: "string",
+      alias: "assertion-pattern",
+      description: "filter assertion descriptions",
+    },
+    onlyFailures: {
+      type: "boolean",
+      alias: "only-failures",
+      description: "print only failed assertions",
+    },
+    quiet: { type: "boolean", description: "suppress assertion output" },
+    verbose: { type: "boolean", description: "print expanded assertion details" },
   },
   handler: async function ({ rootDirectoryPath, projectConfig, datasource, parsed }) {
     return testProject(
@@ -188,5 +197,8 @@ export const testPlugin: Plugin = {
       parsed as TestProjectOptions,
     );
   },
-  examples: [],
+  examples: [
+    { command: "test", description: "run every project test" },
+    { command: "test --target web --only-failures", description: "test one Target" },
+  ],
 };

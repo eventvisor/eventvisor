@@ -4,6 +4,9 @@
 install:
 	npm ci
 
+clean:
+	npm run clean
+
 build:
 	npm run build
 	make print-size
@@ -17,6 +20,9 @@ test-browser:
 typecheck:
 	npm run typecheck
 
+dependency-check:
+	npm run dependency-check
+
 lint:
 	npm run lint
 
@@ -24,7 +30,7 @@ format:
 	npx prettier examples/ packages/ modules/ projects/ --write
 	npx eslint . --fix
 
-check: build test lint typecheck release-check
+check: clean build test lint typecheck test-browser dependency-check release-check
 
 release-check: build
 	npm run release-check

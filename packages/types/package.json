@@ -1,7 +1,7 @@
 {
   "name": "@eventvisor/types",
   "version": "0.26.0",
-  "description": "Common Typescript types for Eventvisor",
+  "description": "Shared TypeScript contracts for Eventvisor",
   "main": "src/index.js",
   "module": "src/index.js",
   "types": "src/index.d.ts",
@@ -14,7 +14,8 @@
       "types": "./src/index.d.ts",
       "import": "./src/index.js",
       "require": "./src/index.js"
-    }
+    },
+    "./package.json": "./package.json"
   },
   "scripts": {
     "transpile": "echo 'Nothing to transpile'",
@@ -29,7 +30,12 @@
     "url": "https://fahad19.com"
   },
   "homepage": "https://eventvisor.org",
-  "keywords": [],
+  "keywords": [
+    "analytics",
+    "eventvisor",
+    "typescript",
+    "types"
+  ],
   "repository": {
     "type": "git",
     "url": "https://github.com/eventvisor/eventvisor.git"

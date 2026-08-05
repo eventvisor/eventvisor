@@ -10,6 +10,7 @@
     "examples/*"
   ],
   "scripts": {
+    "clean": "node scripts/clean.mjs",
     "build": "lerna run build",
     "test": "lerna run test",
     "test:browser": "npm run test:browser:catalog && npm run test:browser:examples",
@@ -18,8 +19,13 @@
     "lint": "prettier examples/ packages/ modules/ projects/ --check && eslint . && lerna run lint",
     "typecheck": "lerna run typecheck",
     "bundle-sizes": "node scripts/bundle-sizes.mjs",
+    "licenses:check": "node scripts/check-licenses.mjs",
+    "dependency-check": "npm run licenses:check && npm audit --omit=dev --audit-level=high",
     "release-check": "node scripts/release-check.mjs",
-    "check": "npm run build && npm test && npm run lint && npm run typecheck && npm run release-check"
+    "check": "npm run clean && npm run build && npm test && npm run lint && npm run typecheck && npm run test:browser && npm run dependency-check && npm run release-check"
+  },
+  "engines": {
+    "node": ">=24"
   },
   "author": {
     "name": "Fahad Heylaal",

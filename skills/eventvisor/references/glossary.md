@@ -19,7 +19,7 @@
 | **Transform**             | A declarative data manipulation (set/remove/rename/concat/spread/append/trim/to*/increment/decrement) applied to payloads, bodies, attribute values, or effect state.              |
 | **Sampling**              | Deterministic per-identity bucketing (`by` + `percentage`/`range`) that keeps a consistent subset of users' events.                                                                |
 | **Filtering**             | Dropping events categorically via conditions (vs sampling's percentage).                                                                                                           |
-| **Tag**                   | A label on entities; each configured tag builds its own datafile.                                                                                                                  |
+| **Tag**                   | Reusable selection metadata on entities. Targets can select definitions by tag.                                                                                                    |
 | **Target**                | A named, dependency-aware datafile selection (`targets/*.yml`) with include/exclude patterns and tag criteria.                                                                     |
 | **Set**                   | An isolated sub-project under `sets/<name>/` (often used as environments); commands take `--set`.                                                                                  |
 | **Level**                 | Event severity (`fatal`…`debug`) transports can branch on.                                                                                                                         |

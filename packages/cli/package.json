@@ -1,7 +1,7 @@
 {
   "name": "@eventvisor/cli",
   "version": "0.26.0",
-  "description": "CLI package of Eventvisor",
+  "description": "Command line tools for Eventvisor projects",
   "main": "bin.js",
   "types": "lib/index.d.ts",
   "files": [
@@ -20,7 +20,15 @@
     "lint": "eslint src"
   },
   "homepage": "https://eventvisor.org",
-  "keywords": [],
+  "keywords": [
+    "analytics",
+    "cli",
+    "eventvisor",
+    "governance"
+  ],
+  "engines": {
+    "node": ">=24"
+  },
   "repository": {
     "type": "git",
     "url": "https://github.com/eventvisor/eventvisor.git"

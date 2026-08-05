@@ -6,6 +6,7 @@ import { buildDependencyGraph, entityId, invertDependencyGraph } from "../utils/
 
 export const findUsagePlugin: Plugin = {
   command: "find-usage [entityType] [key]",
+  description: "find entity references and unused definitions",
   options: {
     json: { type: "boolean", description: "print JSON" },
     pretty: { type: "boolean", description: "pretty print JSON" },

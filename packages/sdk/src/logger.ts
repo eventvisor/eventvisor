@@ -38,7 +38,7 @@ export const defaultLogHandler: LogHandler = function defaultLogHandler(
     method = "info";
   } else if (level === "warn") {
     method = "warn";
-  } else if (level === "error") {
+  } else if (level === "error" || level === "fatal") {
     method = "error";
   }
 

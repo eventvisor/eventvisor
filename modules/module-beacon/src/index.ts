@@ -91,10 +91,20 @@ export function createBeaconModule(options: BeaconModuleOptions): EventvisorModu
     while (queue.length > 0) {
       const batch = queue.splice(0, batchSize);
       const byUrl = new Map<string, TransportOptions[]>();
-      batch.forEach((event) => {
-        const url = resolveUrl(event);
-        byUrl.set(url, [...(byUrl.get(url) || []), event]);
-      });
+      for (const event of batch) {
+        try {
+          const url = resolveUrl(event);
+          byUrl.set(url, [...(byUrl.get(url) || []), event]);
+        } catch (error) {
+          api.reportDiagnostic({
+            level: "error",
+            code: "beacon_url_resolution_failed",
+            message: "Beacon delivery URL could not be resolved",
+            details: { eventName: event.eventName, destinationName: event.destinationName },
+            error,
+          });
+        }
+      }
       await Promise.all(
         [...byUrl].map(async ([url, events]) => {
           try {
@@ -122,8 +132,20 @@ export function createBeaconModule(options: BeaconModuleOptions): EventvisorModu
     await flushing;
   }
 
+  function flushInBackground(api: EventvisorModuleApi) {
+    void flush(api).catch((error) => {
+      api.reportDiagnostic({
+        level: "error",
+        code: "beacon_flush_failed",
+        message: "Beacon background flush failed",
+        details: {},
+        error,
+      });
+    });
+  }
+
   const flushOnPageExit = () => {
-    if (moduleApi) void flush(moduleApi);
+    if (moduleApi) flushInBackground(moduleApi);
   };
   const flushWhenHidden = () => {
     if (visibilityDocument?.visibilityState === "hidden") flushOnPageExit();
@@ -136,7 +158,7 @@ export function createBeaconModule(options: BeaconModuleOptions): EventvisorModu
       lifecycleTarget?.addEventListener("pagehide", flushOnPageExit);
       visibilityDocument?.addEventListener("visibilitychange", flushWhenHidden);
       if (flushIntervalMs > 0) {
-        timer = setInterval(() => void flush(api), flushIntervalMs);
+        timer = setInterval(() => flushInBackground(api), flushIntervalMs);
         (timer as ReturnType<typeof setInterval> & { unref?: () => void }).unref?.();
       }
     },

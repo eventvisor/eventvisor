@@ -40,6 +40,13 @@ function collectTargets(value) {
   return Object.values(value).flatMap(collectTargets);
 }
 
+function collectExportTargets(exports) {
+  if (!exports || typeof exports !== "object") return [];
+  return Object.entries(exports).flatMap(([subpath, target]) =>
+    collectTargets(target).map((value) => [`export ${subpath}`, value]),
+  );
+}
+
 try {
   mkdirSync(modulesRoot, { recursive: true });
   const manifests = [];
@@ -47,6 +54,23 @@ try {
   for (const directory of packageDirectories) {
     const manifest = JSON.parse(readFileSync(join(directory, "package.json"), "utf8"));
     if (manifest.private) continue;
+
+    const requiredMetadata = [
+      "description",
+      "repository",
+      "homepage",
+      "bugs",
+      "license",
+      "author",
+      "keywords",
+    ];
+    const missingMetadata = requiredMetadata.filter(
+      (field) =>
+        !manifest[field] || (Array.isArray(manifest[field]) && manifest[field].length === 0),
+    );
+    if (missingMetadata.length > 0) {
+      throw new Error(`${manifest.name} is missing package metadata: ${missingMetadata.join(", ")}`);
+    }
 
     const output = JSON.parse(
       execFileSync("npm", ["pack", "--json", "--pack-destination", temporaryRoot], {
@@ -73,10 +97,7 @@ try {
       ["module", manifest.module],
       ["types", manifest.types],
       ...Object.entries(manifest.bin || {}).map(([name, value]) => [`bin ${name}`, value]),
-      ...collectTargets(manifest.exports?.["."]).map((value) => ["root export", value]),
-      ...(manifest.exports?.["./package.json"]
-        ? [["package.json export", manifest.exports["./package.json"]]]
-        : []),
+      ...collectExportTargets(manifest.exports),
     ]) {
       if (typeof target === "string" && !packedFiles.has(target.replace(/^\.\//, ""))) {
         throw new Error(`${manifest.name} ${label} target ${target} is missing from the package.`);
@@ -99,6 +120,9 @@ try {
       if (!manifest.peerDependencies?.["@eventvisor/sdk"]) {
         throw new Error(`${manifest.name} must declare @eventvisor/sdk as a peer dependency.`);
       }
+      if (!/<2(?:\.0\.0)?(?:\s|$)/.test(manifest.peerDependencies["@eventvisor/sdk"])) {
+        throw new Error(`${manifest.name} must reject incompatible future SDK major versions.`);
+      }
     }
 
     for (const dependency of Object.keys({
@@ -117,15 +141,11 @@ try {
     ["-e", `for (const name of ${JSON.stringify(runtimePackages)}) require(name);`],
     { cwd: temporaryRoot, stdio: "inherit" },
   );
-  execFileSync(
-    process.execPath,
-    [
-      "--input-type=module",
-      "-e",
-      "await import('@eventvisor/sdk'); await import('@eventvisor/react')",
-    ],
-    { cwd: temporaryRoot, stdio: "inherit" },
-  );
+  execFileSync(process.execPath, ["--input-type=module", "-e", `
+    for (const name of ${JSON.stringify(runtimePackages)}) await import(name);
+    await import('@eventvisor/sdk/portable');
+    await import('@eventvisor/sdk/validator');
+  `], { cwd: temporaryRoot, stdio: "inherit" });
 
   const consumerRoot = join(temporaryRoot, "typescript-consumer");
   mkdirSync(consumerRoot);
@@ -137,11 +157,20 @@ try {
     [
       'import { createEventvisor, type Eventvisor, type EventvisorOptions } from "@eventvisor/sdk";',
       'import { EventvisorProvider } from "@eventvisor/react";',
+      'import { useEventvisorAttribute, useEventvisorAttributes } from "@eventvisor/react";',
+      'import * as portable from "@eventvisor/sdk/portable";',
+      'import { validate } from "@eventvisor/sdk/validator";',
       'import type { Parser } from "@eventvisor/parsers";',
+      ...manifests
+        .filter(({ name }) => name.startsWith("@eventvisor/module-"))
+        .map(({ name }, index) => `import * as module${index} from "${name}";`),
       "const options: EventvisorOptions = {};",
       "const eventvisor: Eventvisor = createEventvisor(options);",
       'const parser: Parser = "yml";',
-      "void eventvisor; void EventvisorProvider; void parser;",
+      "void eventvisor; void EventvisorProvider; void useEventvisorAttribute; void useEventvisorAttributes; void portable; void validate; void parser;",
+      ...manifests
+        .filter(({ name }) => name.startsWith("@eventvisor/module-"))
+        .map((_, index) => `void module${index};`),
     ].join("\n"),
   );
   writeFileSync(

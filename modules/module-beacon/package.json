@@ -30,7 +30,12 @@
     "name": "Fahad Heylaal",
     "url": "https://fahad19.com"
   },
-  "keywords": [],
+  "keywords": [
+    "analytics",
+    "eventvisor",
+    "module",
+    "beacon"
+  ],
   "homepage": "https://eventvisor.org",
   "repository": {
     "type": "git",
@@ -45,7 +50,7 @@
   },
   "license": "MIT",
   "peerDependencies": {
-    "@eventvisor/sdk": ">=0.26.0"
+    "@eventvisor/sdk": ">=1.0.0 <2"
   },
   "devDependencies": {
     "@eventvisor/sdk": "0.26.0"

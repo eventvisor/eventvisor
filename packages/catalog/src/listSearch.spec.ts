@@ -1,5 +1,5 @@
 import type { EntitySummary } from "./types";
-import { matchesQuery, parseQuery } from "./listSearch";
+import { createQueryMatcher, matchesQuery, parseQuery } from "./listSearch";
 
 const event: EntitySummary = {
   key: "checkout/order_submitted",
@@ -37,4 +37,27 @@ describe("Catalog list search", () => {
   it("rejects unknown qualifiers instead of silently ignoring them", () => {
     expect(matchesQuery(event, "unknown:anything")).toBe(false);
   });
+});
+
+describe("Catalog list search at scale", () => {
+  it.each([10_000, 50_000])(
+    "filters %i entity summaries without reparsing the query",
+    (entityCount) => {
+      const entities = Array.from({ length: entityCount }, (_, index) => ({
+        key: `checkout.event.${String(index).padStart(5, "0")}`,
+        description: index % 10 === 0 ? "Completed checkout" : "Storefront event",
+        tags: [index % 2 === 0 ? "web" : "backend"],
+        targets: [index % 2 === 0 ? "storefront" : "services"],
+        schemaType: "object",
+      }));
+      const started = performance.now();
+      const matches = entities.filter(
+        createQueryMatcher('checkout tag:web target:storefront "completed checkout"'),
+      );
+      const duration = performance.now() - started;
+
+      expect(matches).toHaveLength(entityCount / 10);
+      expect(duration).toBeLessThan(2_000);
+    },
+  );
 });

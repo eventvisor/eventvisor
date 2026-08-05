@@ -59,13 +59,15 @@ export async function benchmarkEvent(
 
 export const benchmarkPlugin: Plugin = {
   command: "benchmark <event>",
+  description: "benchmark event evaluation",
   options: {
     n: { type: "number", description: "number of evaluations", alias: "iterations" },
     value: { type: "string", description: "event payload as JSON" },
+    attributes: { type: "string", description: "attributes as JSON" },
     tag: { type: "array", description: "include one or more tags" },
     target: { type: "array", description: "include one or more Targets" },
-    set: { type: "string" },
-    json: { type: "boolean" },
+    set: { type: "string", description: "select a project Set" },
+    json: { type: "boolean", description: "print JSON output" },
   },
   handler: async ({ rootDirectoryPath, projectConfig, datasource, parsed }) => {
     const execution = await getSelectedProjectExecution(projectConfig, datasource, parsed.set);
@@ -80,6 +82,17 @@ export const benchmarkPlugin: Plugin = {
     );
     try {
       const value = parseJsonOption<Value>(parsed.value, {}, "Event value");
+      const attributes = parseJsonOption<Record<string, Value>>(
+        parsed.attributes,
+        {},
+        "Attributes",
+      );
+      if (!attributes || typeof attributes !== "object" || Array.isArray(attributes)) {
+        throw new Error("Attributes must be a JSON object.");
+      }
+      for (const [name, attributeValue] of Object.entries(attributes)) {
+        await instance.setAttribute(name, attributeValue);
+      }
       const iterations = parsed.n ?? 1_000_000;
       if (!Number.isInteger(iterations) || iterations <= 0)
         throw new Error("Iterations must be a positive integer.");
@@ -119,5 +132,9 @@ export const benchmarkPlugin: Plugin = {
   },
   examples: [
     { command: "benchmark page_view -n 1000000", description: "benchmark event tracking" },
+    {
+      command: 'benchmark purchase -n 1000000 --attributes=\'{"userId":"123"}\'',
+      description: "benchmark with attributes",
+    },
   ],
 };

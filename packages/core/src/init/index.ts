@@ -71,6 +71,7 @@ export async function initProject(
 
 export const initPlugin: Plugin = {
   command: "init",
+  description: "create an Eventvisor project",
   options: {
     project: { type: "string", description: "project scaffold name" },
     force: { type: "boolean", description: "overwrite files in a non-empty directory" },

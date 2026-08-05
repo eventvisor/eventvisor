@@ -5,7 +5,7 @@ import { fetchIndex } from "../api";
 import { decodeRouteSegment, entityLabels, entityPathToType, getEntityRoute } from "../entityTypes";
 import type { CatalogEntityType, CatalogIndex, EntityPath, EntitySummary } from "../types";
 import { Badge, Button, EmptyState, EntityKey, PageHeader } from "../components/ui";
-import { matchesQuery } from "../listSearch";
+import { createQueryMatcher } from "../listSearch";
 
 const LIST_PAGE_SIZE = 100;
 const paths: EntityPath[] = [
@@ -188,7 +188,10 @@ export function ListPage() {
   const [error, setError] = React.useState("");
   const [visibleLimit, setVisibleLimit] = React.useState(LIST_PAGE_SIZE);
   const query = params.get("q") || "";
+  const deferredQuery = React.useDeferredValue(query);
   const descending = params.get("sort") === "-name";
+  const validPath = paths.includes(entityPath as EntityPath);
+  const type = validPath ? entityPathToType[entityPath as EntityPath] : "event";
 
   React.useEffect(() => {
     setIndex(undefined);
@@ -199,8 +202,18 @@ export function ListPage() {
   }, [set]);
   React.useEffect(() => setVisibleLimit(LIST_PAGE_SIZE), [query, descending, entityPath, set]);
 
-  if (!paths.includes(entityPath as EntityPath)) return <Navigate to="events" replace />;
-  const type = entityPathToType[entityPath as EntityPath];
+  const filtered = React.useMemo(() => {
+    if (!index) return [];
+    const matches = createQueryMatcher(deferredQuery);
+    return index.entities[type]
+      .filter(matches)
+      .slice()
+      .sort((left, right) => (descending ? -1 : 1) * left.key.localeCompare(right.key));
+  }, [deferredQuery, descending, index, type]);
+  const hints = React.useMemo(() => (index ? getHints(index, type) : []), [index, type]);
+  const visible = filtered.slice(0, visibleLimit);
+
+  if (!validPath) return <Navigate to="events" replace />;
   if (error) return <EmptyState title="Unable to load catalog index" description={error} />;
   if (!index)
     return (
@@ -208,12 +221,6 @@ export function ListPage() {
         Loading {entityLabels[type].plural.toLowerCase()}...
       </div>
     );
-
-  const filtered = index.entities[type]
-    .filter((entity) => matchesQuery(entity, query))
-    .slice()
-    .sort((left, right) => (descending ? -1 : 1) * left.key.localeCompare(right.key));
-  const visible = filtered.slice(0, visibleLimit);
 
   return (
     <div className="space-y-4">
@@ -223,7 +230,7 @@ export function ListPage() {
           <SearchControls
             query={query}
             label={entityLabels[type].plural}
-            hints={getHints(index, type)}
+            hints={hints}
             params={params}
             setParams={setParams}
           />

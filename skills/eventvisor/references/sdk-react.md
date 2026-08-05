@@ -59,7 +59,7 @@ Facts that prevent the common mistakes:
 
 ## React Native
 
-Same two packages, same API. Add a `TextEncoder` polyfill if the runtime lacks it (`fastestsmallesttextencoderdecoder`).
+Same two packages and the same API. Deterministic bucketing does not require a `TextEncoder` polyfill.
 
 ## Typed usage
 

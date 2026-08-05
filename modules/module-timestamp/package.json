@@ -32,7 +32,12 @@
     "url": "https://fahad19.com"
   },
   "homepage": "https://eventvisor.org",
-  "keywords": [],
+  "keywords": [
+    "analytics",
+    "eventvisor",
+    "module",
+    "timestamp"
+  ],
   "repository": {
     "type": "git",
     "url": "https://github.com/eventvisor/eventvisor.git"
@@ -45,7 +50,7 @@
     "url": "https://github.com/eventvisor/eventvisor/issues"
   },
   "peerDependencies": {
-    "@eventvisor/sdk": ">=0.26.0"
+    "@eventvisor/sdk": ">=1.0.0 <2"
   },
   "devDependencies": {
     "@eventvisor/sdk": "0.26.0"

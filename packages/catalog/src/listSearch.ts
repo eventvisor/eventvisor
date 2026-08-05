@@ -29,20 +29,26 @@ function matchesQualifier(entity: EntitySummary, key: string, value: string) {
   return false;
 }
 
-export function matchesQuery(entity: EntitySummary, query: string) {
+export function createQueryMatcher(query: string) {
   const parsed = parseQuery(query.trim().toLowerCase());
-  if (!parsed.qualifiers.every(({ key, value }) => matchesQualifier(entity, key, value)))
-    return false;
-  const haystack = [
-    entity.key,
-    entity.description || "",
-    entity.schemaType || "",
-    entity.level || "",
-    entity.transport || "",
-    ...(entity.tags || []),
-    ...(entity.targets || []),
-  ]
-    .join(" ")
-    .toLowerCase();
-  return parsed.terms.every((term) => haystack.includes(term));
+  return (entity: EntitySummary) => {
+    if (!parsed.qualifiers.every(({ key, value }) => matchesQualifier(entity, key, value)))
+      return false;
+    const haystack = [
+      entity.key,
+      entity.description || "",
+      entity.schemaType || "",
+      entity.level || "",
+      entity.transport || "",
+      ...(entity.tags || []),
+      ...(entity.targets || []),
+    ]
+      .join(" ")
+      .toLowerCase();
+    return parsed.terms.every((term) => haystack.includes(term));
+  };
+}
+
+export function matchesQuery(entity: EntitySummary, query: string) {
+  return createQueryMatcher(query)(entity);
 }

@@ -36,10 +36,10 @@ describe("SDK v1 conformance", () => {
 
   it.each(fixture.validation)(
     "preserves validation case $name",
-    async ({ schema, value, valid }) => {
-      await expect(validate(schema as JSONSchema, value as Value, {})).resolves.toEqual(
-        expect.objectContaining({ valid }),
-      );
+    async ({ schema, value, valid, expectedValue }) => {
+      const result = await validate(schema as JSONSchema, value as Value, {});
+      expect(result).toEqual(expect.objectContaining({ valid }));
+      if (expectedValue !== undefined) expect(result.value).toEqual(expectedValue);
     },
   );
 });

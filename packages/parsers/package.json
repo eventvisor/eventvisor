@@ -20,6 +20,12 @@
     "url": "https://fahad19.com"
   },
   "homepage": "https://eventvisor.org",
+  "keywords": [
+    "analytics",
+    "eventvisor",
+    "json",
+    "yaml"
+  ],
   "repository": {
     "type": "git",
     "url": "https://github.com/eventvisor/eventvisor.git"

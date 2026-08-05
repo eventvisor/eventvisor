@@ -113,4 +113,21 @@ describe("createHttpModule", () => {
       "must be positive",
     );
   });
+
+  it("reports dynamic URL failures without rejecting a flush", async () => {
+    const moduleApi = api();
+    const module = createHttpModule({
+      url: () => {
+        throw new Error("URL unavailable");
+      },
+      batchSize: 10,
+      flushIntervalMs: 0,
+      fetch: jest.fn(),
+    });
+    await module.transport?.(event(), moduleApi);
+    await expect(module.flush?.(moduleApi)).resolves.toBeUndefined();
+    expect(moduleApi.reportDiagnostic).toHaveBeenCalledWith(
+      expect.objectContaining({ code: "http_url_resolution_failed" }),
+    );
+  });
 });

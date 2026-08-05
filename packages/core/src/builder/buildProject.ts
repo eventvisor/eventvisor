@@ -569,20 +569,32 @@ export async function buildProject(deps: Dependencies, options: BuildCLIOptions 
 
 export const buildPlugin: Plugin = {
   command: "build",
+  description: "build Target datafiles",
   options: {
     tag: { type: "array", description: "filter selected Target content by one or more tags" },
     target: { type: "array", description: "build one or more targets" },
     set: { type: "string", description: "build a project set" },
     json: { type: "boolean", description: "print the datafile as JSON" },
     pretty: { type: "boolean", description: "pretty print JSON" },
-    revision: { type: "string" },
-    revisionFromHash: { type: "boolean" },
-    datafilesDir: { type: "string" },
+    revision: { type: "string", description: "set an explicit datafile revision" },
+    revisionFromHash: {
+      type: "boolean",
+      description: "derive each datafile revision from its content",
+      alias: "revision-from-hash",
+    },
+    datafilesDir: {
+      type: "string",
+      description: "write datafiles to this directory",
+      alias: "datafiles-dir",
+    },
   },
   handler: async ({ rootDirectoryPath, projectConfig, datasource, parsed }) =>
     buildProject(
       { rootDirectoryPath, projectConfig, datasource, options: parsed },
       parsed as BuildCLIOptions,
     ),
-  examples: [],
+  examples: [
+    { command: "build", description: "build every configured Target" },
+    { command: "build --target web --target backend", description: "build selected Targets" },
+  ],
 };

@@ -35,7 +35,7 @@ Attribute hooks subscribe to SDK events and re-render only when the observed val
 ```tsx
 function UserSummary() {
   const country = useEventvisorAttribute("country");
-  const { userId, plan } = useEventvisorAttributes(["userId", "plan"]);
+  const { userId, plan } = useEventvisorAttributes();
 
   return <span>{userId} · {plan} · {country}</span>;
 }

@@ -38,6 +38,7 @@ function getIgnoredCatalogWatchPaths(deps: Dependencies) {
 
 export const catalogPlugin: Plugin = {
   command: "catalog [subcommand]",
+  description: "export or serve the project Catalog",
   handler: async function (options) {
     const { rootDirectoryPath, projectConfig, datasource, parsed } = options;
     const deps: Dependencies = { rootDirectoryPath, projectConfig, datasource, options: parsed };
@@ -121,7 +122,7 @@ export const catalogPlugin: Plugin = {
     return true;
   },
   options: {
-    subcommand: { type: "string", description: "export or serve" },
+    subcommand: { type: "string", description: "export or serve", choices: ["export", "serve"] },
     port: { type: "number", alias: "p", description: "catalog server port" },
     "out-dir": { type: "string", description: "catalog output directory" },
     assets: { type: "boolean", description: "copy the Catalog UI assets" },

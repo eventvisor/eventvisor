@@ -16,13 +16,14 @@ export function parseAttributesOption(input: unknown): Record<string, Value> {
 
 export const simulatePlugin: Plugin = {
   command: "simulate <event>",
+  description: "simulate one event through the runtime pipeline",
   options: {
     value: { type: "string", description: "event payload as JSON" },
     attributes: { type: "string", description: "attributes as JSON" },
     tag: { type: "array", description: "include one or more tags" },
     target: { type: "array", description: "include one or more Targets" },
-    set: { type: "string" },
-    json: { type: "boolean" },
+    set: { type: "string", description: "select a project Set" },
+    json: { type: "boolean", description: "print JSON output" },
   },
   handler: async ({ rootDirectoryPath, projectConfig, datasource, parsed }) => {
     const execution = await getSelectedProjectExecution(projectConfig, datasource, parsed.set);

@@ -149,4 +149,21 @@ describe("createBeaconModule", () => {
       expect.any(Function),
     );
   });
+
+  it("reports dynamic URL failures without rejecting a flush", async () => {
+    const moduleApi = api();
+    const module = createBeaconModule({
+      url: () => {
+        throw new Error("URL unavailable");
+      },
+      batchSize: 10,
+      flushIntervalMs: 0,
+      sendBeacon: jest.fn(),
+    });
+    await module.transport?.(event(), moduleApi);
+    await expect(module.flush?.(moduleApi)).resolves.toBeUndefined();
+    expect(moduleApi.reportDiagnostic).toHaveBeenCalledWith(
+      expect.objectContaining({ code: "beacon_url_resolution_failed" }),
+    );
+  });
 });

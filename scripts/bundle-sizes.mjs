@@ -18,10 +18,12 @@ const libraries = [
   },
   ...[
     "amplitude-browser",
+    "beacon",
     "console",
     "datadog-browser",
     "ga4",
     "gtm",
+    "http",
     "localstorage",
     "mixpanel-browser",
     "newrelic-browser",

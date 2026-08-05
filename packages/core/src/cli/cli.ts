@@ -18,6 +18,7 @@ export interface PluginHandlerOptions {
 
 export interface Plugin {
   command: string; // command declaration, optionally with yargs positionals
+  description: string;
   handler: (options: PluginHandlerOptions) => Promise<void | boolean>;
   examples: {
     command: string; // full command usage
@@ -30,6 +31,7 @@ export interface Plugin {
       description?: string;
       alias?: string;
       demandOption?: boolean;
+      choices?: readonly string[];
     }
   >;
 }
@@ -50,10 +52,17 @@ export interface RunnerOptions {
 }
 
 export async function runCLI(runnerOptions: RunnerOptions): Promise<number> {
-  const yargs = require("yargs");
+  const yargs = require("yargs/yargs");
 
   let y = yargs(process.argv.slice(2))
-    .usage("Usage: <command> [options]")
+    .scriptName("eventvisor")
+    .usage("Usage: $0 <command> [options]")
+    .option("root-directory-path", {
+      type: "string",
+      alias: ["rootDirectoryPath", "projectDirectoryPath"],
+      description: "Eventvisor project directory",
+    })
+    .alias("h", "help")
     .strictCommands()
     .strictOptions()
     .exitProcess(false);
@@ -63,7 +72,7 @@ export async function runCLI(runnerOptions: RunnerOptions): Promise<number> {
 
   let exitCode = 0;
 
-  function registerPlugin(plugin: Plugin) {
+  function registerPlugin(plugin: Plugin, requiresProject = false) {
     const subcommand = plugin.command.split(" ")[0];
 
     if (registeredSubcommands.includes(subcommand)) {
@@ -73,9 +82,30 @@ export async function runCLI(runnerOptions: RunnerOptions): Promise<number> {
 
     y = y.command({
       command: plugin.command,
-      builder: plugin.options || {},
+      describe: plugin.description,
+      builder: (commandYargs: any) => {
+        commandYargs.options(plugin.options || {});
+
+        for (const match of plugin.command.matchAll(/([<[])([^>\]]+)[>\]]/g)) {
+          const [, opening, name] = match;
+          const configured = plugin.options?.[name];
+          commandYargs.positional(name, {
+            type: configured?.type || "string",
+            description: configured?.description,
+            choices: configured?.choices,
+            demandOption: opening === "<",
+          });
+        }
+
+        return commandYargs;
+      },
       handler: async function (parsed: ParsedOptions) {
         try {
+          if (requiresProject && (!projectConfig || !datasource)) {
+            throw new Error(
+              `No Eventvisor project found at ${rootDirectoryPath}. Run eventvisor init or choose a project with --root-directory-path.`,
+            );
+          }
           const result = await plugin.handler({
             rootDirectoryPath,
             projectConfig,
@@ -101,19 +131,11 @@ export async function runCLI(runnerOptions: RunnerOptions): Promise<number> {
     registeredSubcommands.push(subcommand);
   }
 
-  // non project-based plugins
-  if (!projectConfig) {
-    for (const plugin of nonProjectPlugins) {
-      registerPlugin(plugin);
-    }
-  }
+  for (const plugin of nonProjectPlugins) registerPlugin(plugin);
 
-  // project-based plugins
-  if (projectConfig) {
-    for (const plugin of [...projectBasedPlugins, ...(projectConfig.plugins || [])]) {
-      registerPlugin(plugin);
-    }
-  }
+  // Built in commands are always registered so help works outside a project.
+  for (const plugin of projectBasedPlugins) registerPlugin(plugin, true);
+  for (const plugin of projectConfig?.plugins || []) registerPlugin(plugin, true);
 
   // common plugins
   for (const plugin of commonPlugins) {

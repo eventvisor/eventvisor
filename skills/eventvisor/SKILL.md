@@ -27,7 +27,7 @@ Eventvisor is used by engineers, data/analytics teams, product managers, and mar
 
 **If there is no `eventvisor.config.js`** anywhere in the working tree, there is no Eventvisor project yet. If the user is in an **application repo** consuming Eventvisor, this is SDK work — see [Application integration](#application-integration-sdk--modules); author definitions in the project repo, not here. If they want a new project, **ask a few setup questions before scaffolding** — these choices shape every file written afterwards:
 
-1. **Who consumes the data → tags?** One app (a single `web` or `all` tag is fine) or several surfaces/teams (a tag per consumer — `web`, `mobile`, `backend`, or per microfrontend)? Tags drive which datafile each app loads.
+1. **Who consumes the data?** Define one Target for each application, service, team, or microfrontend. Tags can label reusable groups of definitions that Targets select.
 2. **Environments?** Most projects ship one tree (environment can be an ordinary attribute). If development/staging/production need **independent definitions and datafiles**, use Sets — see [sets.md](references/sets.md) before committing to this.
 3. **Where should events go → destinations?** Console only to start, or third-party vendors (GA4, Segment, Sentry, …), or a custom backend? This decides which modules the apps must install.
 4. **What identifies a user?** `userId`, `deviceId`, or both — these become the first attributes and the recommended sampling identity.

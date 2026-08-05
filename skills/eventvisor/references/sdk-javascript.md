@@ -114,5 +114,5 @@ Always `close()` what you create — especially in tests and server processes.
 ## Environment notes
 
 - **Node.js**: identical API — fetch/read the datafile however you like.
-- **Old browsers / React Native**: may need a `TextEncoder` polyfill (`fastestsmallesttextencoderdecoder`).
+- **Old browsers / React Native**: deterministic bucketing includes portable UTF-8 handling and does not require `TextEncoder`.
 - **Typed usage**: prefer generated bindings for compile-checked event keys and payload types — [code-generation.md](code-generation.md).

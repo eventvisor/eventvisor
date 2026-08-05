@@ -11,7 +11,38 @@
  * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-const createBuffer = (val) => new TextEncoder().encode(val);
+function createBuffer(value: string): number[] {
+  const bytes: number[] = [];
+  for (let index = 0; index < value.length; index++) {
+    let codePoint = value.charCodeAt(index);
+    if (codePoint >= 0xd800 && codePoint <= 0xdbff && index + 1 < value.length) {
+      const next = value.charCodeAt(index + 1);
+      if (next >= 0xdc00 && next <= 0xdfff) {
+        codePoint = 0x10000 + ((codePoint - 0xd800) << 10) + (next - 0xdc00);
+        index++;
+      }
+    }
+
+    if (codePoint < 0x80) bytes.push(codePoint);
+    else if (codePoint < 0x800) {
+      bytes.push(0xc0 | (codePoint >> 6), 0x80 | (codePoint & 0x3f));
+    } else if (codePoint < 0x10000) {
+      bytes.push(
+        0xe0 | (codePoint >> 12),
+        0x80 | ((codePoint >> 6) & 0x3f),
+        0x80 | (codePoint & 0x3f),
+      );
+    } else {
+      bytes.push(
+        0xf0 | (codePoint >> 18),
+        0x80 | ((codePoint >> 12) & 0x3f),
+        0x80 | ((codePoint >> 6) & 0x3f),
+        0x80 | (codePoint & 0x3f),
+      );
+    }
+  }
+  return bytes;
+}
 
 export function MurmurHashV3(key, seed) {
   if (typeof key === "string") key = createBuffer(key);

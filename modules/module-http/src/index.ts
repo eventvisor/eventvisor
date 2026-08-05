@@ -100,10 +100,20 @@ export function createHttpModule(options: HttpModuleOptions): EventvisorModule {
     while (queue.length > 0) {
       const batch = queue.splice(0, batchSize);
       const byUrl = new Map<string, TransportOptions[]>();
-      batch.forEach((event) => {
-        const url = resolveUrl(event);
-        byUrl.set(url, [...(byUrl.get(url) || []), event]);
-      });
+      for (const event of batch) {
+        try {
+          const url = resolveUrl(event);
+          byUrl.set(url, [...(byUrl.get(url) || []), event]);
+        } catch (error) {
+          api.reportDiagnostic({
+            level: "error",
+            code: "http_url_resolution_failed",
+            message: "HTTP delivery URL could not be resolved",
+            details: { eventName: event.eventName, destinationName: event.destinationName },
+            error,
+          });
+        }
+      }
       await Promise.all(
         [...byUrl].map(async ([url, events]) => {
           try {
@@ -131,11 +141,23 @@ export function createHttpModule(options: HttpModuleOptions): EventvisorModule {
     await flushing;
   }
 
+  function flushInBackground(api: EventvisorModuleApi) {
+    void flush(api).catch((error) => {
+      api.reportDiagnostic({
+        level: "error",
+        code: "http_flush_failed",
+        message: "HTTP background flush failed",
+        details: {},
+        error,
+      });
+    });
+  }
+
   return {
     name,
     setup(api) {
       if (flushIntervalMs > 0) {
-        timer = setInterval(() => void flush(api), flushIntervalMs);
+        timer = setInterval(() => flushInBackground(api), flushIntervalMs);
         (timer as ReturnType<typeof setInterval> & { unref?: () => void }).unref?.();
       }
     },

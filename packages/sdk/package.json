@@ -1,7 +1,7 @@
 {
   "name": "@eventvisor/sdk",
   "version": "0.26.0",
-  "description": "Eventvisor SDK for Node.js and the browser",
+  "description": "Event governance SDK for browsers, Node.js, and React Native",
   "main": "cjs/index.js",
   "module": "esm/index.js",
   "files": [
@@ -41,7 +41,12 @@
     "url": "https://fahad19.com"
   },
   "homepage": "https://eventvisor.org",
-  "keywords": [],
+  "keywords": [
+    "analytics",
+    "eventvisor",
+    "governance",
+    "tracking"
+  ],
   "repository": {
     "type": "git",
     "url": "https://github.com/eventvisor/eventvisor.git"

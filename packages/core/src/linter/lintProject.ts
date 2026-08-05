@@ -404,6 +404,7 @@ export async function lintProject(
 
 export const lintPlugin: Plugin = {
   command: "lint",
+  description: "validate project definitions and dependencies",
   options: {
     set: { type: "string" },
     keyPattern: { type: "string" },

@@ -1,6 +1,25 @@
 {
   "name": "@eventvisor/catalog",
   "version": "0.26.0",
+  "description": "Static project Catalog for Eventvisor",
+  "homepage": "https://eventvisor.org",
+  "keywords": [
+    "analytics",
+    "catalog",
+    "eventvisor",
+    "governance"
+  ],
+  "author": {
+    "name": "Fahad Heylaal",
+    "url": "https://fahad19.com"
+  },
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/eventvisor/eventvisor/issues"
+  },
+  "engines": {
+    "node": ">=24"
+  },
   "files": [
     "dist"
   ],

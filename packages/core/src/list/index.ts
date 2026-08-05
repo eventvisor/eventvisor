@@ -35,6 +35,7 @@ export async function listEntities(datasource: Datasource, type: EntityType, key
 
 export const listPlugin: Plugin = {
   command: "list <entityType>",
+  description: "list project entities",
   options: {
     keyPattern: { type: "string", description: "filter entity keys" },
     json: { type: "boolean", description: "print JSON" },

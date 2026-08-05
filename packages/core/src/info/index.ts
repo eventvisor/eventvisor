@@ -5,6 +5,7 @@ import { CLI_FORMAT_BOLD } from "../tester/cliFormat";
 
 export const infoPlugin: Plugin = {
   command: "info <entityType> <key>",
+  description: "show one project entity",
   options: {
     json: { type: "boolean", description: "print compact JSON" },
     pretty: { type: "boolean", description: "pretty print JSON" },

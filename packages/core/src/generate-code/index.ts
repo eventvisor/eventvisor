@@ -62,6 +62,7 @@ export async function generateCodeForProject(
 
 export const generateCodePlugin: Plugin = {
   command: "generate-code",
+  description: "generate typed project code",
   options: {
     language: { type: "string", demandOption: true },
     outDir: { type: "string", demandOption: true },

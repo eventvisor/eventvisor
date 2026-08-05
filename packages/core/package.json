@@ -1,7 +1,7 @@
 {
   "name": "@eventvisor/core",
   "version": "0.26.0",
-  "description": "Core package of Eventvisor for Node.js usage",
+  "description": "Project building, testing, linting, and Catalog tools for Eventvisor",
   "main": "lib/index.js",
   "types": "lib/index.d.ts",
   "files": [
@@ -20,7 +20,15 @@
     "url": "https://fahad19.com"
   },
   "homepage": "https://eventvisor.org",
-  "keywords": [],
+  "keywords": [
+    "analytics",
+    "eventvisor",
+    "governance",
+    "tracking-plan"
+  ],
+  "engines": {
+    "node": ">=24"
+  },
   "repository": {
     "type": "git",
     "url": "https://github.com/eventvisor/eventvisor.git"

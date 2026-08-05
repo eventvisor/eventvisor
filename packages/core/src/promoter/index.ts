@@ -345,6 +345,7 @@ export async function promoteProjectSets(deps: Dependencies, options: PromoteOpt
 
 export const promotePlugin: Plugin = {
   command: "promote",
+  description: "preview or apply a Set promotion",
   options: {
     from: { type: "string", description: "source set", demandOption: true },
     to: { type: "string", description: "destination set", demandOption: true },

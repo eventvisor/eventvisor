@@ -10,7 +10,7 @@
     "show-config": "eventvisor config",
     "start": "npm run build && eventvisor catalog serve",
     "simulate": "eventvisor simulate page_view --value='{\"url\":\"https://example.com\"}'",
-    "benchmark": "eventvisor benchmark page_view -n 10000 --value='{\"url\":\"https://example.com\"}'"
+    "benchmark": "eventvisor benchmark sdk_conformance --target=web-checkout -n 1000000 --attributes='{\"country\":\"NL\",\"userId\":\"benchmark-user\"}' --value='{\"kind\":\"purchase\",\"amount\":42,\"version\":\"3.0.0\",\"occurredAt\":\"2026-01-01T00:00:00Z\",\"customer\":{\"name\":\" Benchmark User \",\"legacyId\":\"legacy-1\"},\"labels\":[\"benchmark\"],\"metadata\":{\"source\":\"project-1\"}}'"
   },
   "dependencies": {
     "@eventvisor/cli": "0.26.0"
