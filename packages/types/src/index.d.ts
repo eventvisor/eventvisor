@@ -6,6 +6,9 @@ export type ObjectValue = { [key: string]: Value };
 export type Value = PrimitiveValue | ObjectValue | Value[];
 
 export interface JSONSchema {
+  // Reference a reusable project Schema by key.
+  schema?: SchemaKey;
+
   // Basic metadata
   description?: string;
 
@@ -32,11 +35,15 @@ export interface JSONSchema {
   // Object validation keywords
   required?: string[];
   properties?: { [key: string]: JSONSchema };
+  additionalProperties?: boolean;
 
   // Annotations
   default?: Value;
   examples?: Value[];
 }
+
+export type SchemaKey = string;
+export type Schema = JSONSchema & { promotable?: boolean };
 
 /**
  * Common aliases
@@ -44,6 +51,31 @@ export interface JSONSchema {
 export type Percentage = number; // 0 to 100 (up to 3 decimal places)
 
 export type Tag = string;
+export type NonEmptyArray<T> = [T, ...T[]];
+
+export type TargetKey = string;
+export type TargetPatterns = "*" | string | NonEmptyArray<string>;
+export type TargetTags =
+  NonEmptyArray<Tag> | { or: NonEmptyArray<Tag> } | { and: NonEmptyArray<Tag> };
+
+export interface Target {
+  key?: TargetKey;
+  description: string;
+  tag?: Tag;
+  tags?: TargetTags;
+  includeEvents?: TargetPatterns;
+  excludeEvents?: TargetPatterns;
+  includeAttributes?: TargetPatterns;
+  excludeAttributes?: TargetPatterns;
+  includeDestinations?: TargetPatterns;
+  excludeDestinations?: TargetPatterns;
+  includeEffects?: TargetPatterns;
+  excludeEffects?: TargetPatterns;
+  pretty?: boolean;
+  stringify?: boolean;
+  revisionFromHash?: boolean;
+  promotable?: boolean;
+}
 
 export type Inputs = Record<string, Value>;
 
@@ -56,7 +88,7 @@ export type SimplePersist = StorageName;
 
 export interface ComplexPersist {
   storage: StorageName;
-  conditions?: Condition | Condition[];
+  conditions?: Conditions;
 }
 
 export type Persist = SimplePersist | ComplexPersist | Persist[];
@@ -66,16 +98,12 @@ export type Persist = SimplePersist | ComplexPersist | Persist[];
  */
 export type Source = string;
 
-export type SourceBase =
-  // longer dotted path
-  | { source: Source | Source[] }
-
-  // more specific sources
-  | { attribute: Source | Source[] } // can be dot-separated path
-  | { state: Source | Source[] } // internally in Effect's own transforms
-  | { effect: Source | Source[] }
-  | { payload: Source | Source[] } // @TODO: or more specific eventValue and attributeValue?
-  | { lookup: Source | Source[] };
+export type SourceKey = "source" | "attribute" | "state" | "effect" | "payload" | "lookup";
+export type SourceValue = Source | NonEmptyArray<Source>;
+type SourceSelection<K extends SourceKey> = Record<K, SourceValue> &
+  Partial<Record<Exclude<SourceKey, K>, never>>;
+export type SourceBase = { [K in SourceKey]: SourceSelection<K> }[SourceKey];
+export type OptionalSourceBase = SourceBase | Partial<Record<SourceKey, never>>;
 
 /**
  * Conditions
@@ -125,28 +153,30 @@ export type ConditionOperator =
 export type PlainCondition = SourceBase & {
   operator: ConditionOperator;
   value?: Value;
+  /** Unique portable flags: g, i, m, and s. Regex operators only. */
   regexFlags?: string;
 };
 
 export interface AndCondition {
-  and: Condition[];
+  and: NonEmptyArray<Condition>;
 }
 
 export interface OrCondition {
-  or: Condition[];
+  or: NonEmptyArray<Condition>;
 }
 
 export interface NotCondition {
-  not: Condition[];
+  not: NonEmptyArray<Condition>;
 }
 
 export type Condition = PlainCondition | AndCondition | OrCondition | NotCondition | string;
+export type Conditions = Condition | NonEmptyArray<Condition>;
 
 /**
  * Sample
  */
 export type SampleBySingle = Source | SourceBase;
-export type SampleByMultiple = SampleBySingle[];
+export type SampleByMultiple = NonEmptyArray<SampleBySingle>;
 export interface SampleByOr {
   or: SampleByMultiple;
 }
@@ -156,7 +186,7 @@ export type SampleRange = [Percentage, Percentage];
 
 export interface Sample {
   by: SampleBy;
-  conditions?: Condition | Condition[];
+  conditions?: Conditions;
 
   // either of them is required
   percentage?: Percentage;
@@ -172,7 +202,7 @@ export type TransformType =
   | "decrement"
 
   // manipulations
-  | "concat" // @TODO: rename to `join`?
+  | "concat"
   | "remove"
   | "rename"
   | "set"
@@ -184,30 +214,46 @@ export type TransformType =
   | "toString"
   | "toBoolean"
 
-  // @TODO: consider later
-  // | "uppercase"
-  // | "lowercase"
-
   // complex
   | "spread"
   | "append";
 
-export type Transform = Partial<SourceBase> & {
-  type: TransformType;
+export interface TransformCondition {
+  conditions?: Conditions;
   target?: string;
-  targetMap?: Record<string, string> | Record<string, string>[];
-
+  targetMap?: Record<string, string> | NonEmptyArray<Record<string, string>>;
   value?: Value;
-
-  // additional params for certain transform types
   separator?: string;
-  [key: string]: any;
-};
+}
+
+type TransformWithOptionalSource = TransformCondition & OptionalSourceBase;
+type TransformWithRequiredInput = TransformCondition &
+  (SourceBase | ({ value: Value } & Partial<Record<SourceKey, never>>));
+
+export type Transform =
+  | (TransformWithOptionalSource & {
+      type: "increment" | "decrement";
+      target?: string;
+      value?: number;
+    })
+  | (TransformWithOptionalSource & { type: "concat"; target: string; separator?: string })
+  | (TransformCondition & { type: "remove"; target: string })
+  | (TransformCondition & {
+      type: "rename";
+      targetMap: Record<string, string> | NonEmptyArray<Record<string, string>>;
+    })
+  | (TransformWithRequiredInput & { type: "set"; target?: string })
+  | (TransformWithOptionalSource & {
+      type: "trim" | "toInteger" | "toDouble" | "toString" | "toBoolean";
+      target: string;
+    })
+  | (TransformWithRequiredInput & { type: "spread" | "append"; target?: string });
 
 /**
  * Attribute
  */
 export type Attribute = JSONSchema & {
+  promotable?: boolean;
   archived?: boolean;
   deprecated?: boolean;
   description?: string;
@@ -225,7 +271,7 @@ export type AttributeName = string;
 export type PlainDestinationOverride = boolean;
 
 export interface ComplexDestinationOverride {
-  conditions?: Condition | Condition[];
+  conditions?: Conditions;
   sample?: Sample | Sample[];
   transforms?: Transform[];
 }
@@ -234,19 +280,21 @@ export type DestinationOverride = PlainDestinationOverride | ComplexDestinationO
 
 export type EventLevel = "fatal" | "error" | "warning" | "log" | "info" | "debug";
 
+export type OnValidationFailure =
+  "drop" | "deliverWithWarning" | { action: "quarantine"; destination: DestinationName };
+
 export type Event = JSONSchema & {
+  promotable?: boolean;
   archived?: boolean;
   deprecated?: boolean;
   description?: string;
   tags?: Tag[];
 
-  // @TODO: meta
-  // @TODO: conitnueOnValidationFailure?: boolean;
-
-  skipValidation?: boolean | { conditions: Condition | Condition[] };
+  skipValidation?: boolean | { conditions: Conditions };
+  onValidationFailure?: OnValidationFailure;
   level?: EventLevel;
   requiredAttributes?: string[];
-  conditions?: Condition | Condition[];
+  conditions?: Conditions;
   sample?: Sample | Sample[];
   transforms?: Transform[];
   destinations?: {
@@ -260,12 +308,13 @@ export type EventName = string;
  * Destination
  */
 export interface Destination {
+  promotable?: boolean;
   archived?: boolean;
   description?: string;
   tags?: Tag[];
 
   transport: string;
-  conditions?: Condition | Condition[];
+  conditions?: Conditions;
   sample?: Sample | Sample[];
   transforms?: Transform[];
 }
@@ -285,20 +334,21 @@ export type EffectOn = EffectOnType[] | EffectOnRecord;
 export interface Step {
   description?: string;
   handler?: string;
-  conditions?: Condition | Condition[];
-  params?: Record<string, any>;
+  conditions?: Conditions;
+  params?: Record<string, Value>;
   transforms?: Transform[];
   continueOnError?: boolean;
 }
 
 export interface Effect {
+  promotable?: boolean;
   archived?: boolean;
   description?: string;
   tags?: Tag[];
 
   on: EffectOn;
   state?: Value;
-  conditions?: Condition | Condition[];
+  conditions?: Conditions;
   steps?: Step[];
   persist?: Persist;
 }
@@ -310,7 +360,9 @@ export type EffectName = string;
  */
 export interface DatafileContent {
   schemaVersion: string;
+  eventvisorVersion?: string;
   revision: string;
+  onValidationFailure?: OnValidationFailure;
   attributes: {
     [key: AttributeName]: Attribute;
   };
@@ -328,7 +380,8 @@ export interface DatafileContent {
 /**
  * Others
  */
-export type EntityType = "attribute" | "event" | "destination" | "state" | "effect" | "test";
+export type EntityType =
+  "attribute" | "event" | "destination" | "effect" | "schema" | "target" | "test";
 
 /**
  * Test
@@ -340,9 +393,11 @@ export interface Action {
 }
 
 export type WithLookups = Record<string, Value>; // key is "<moduleName>.<additionalKey>"
+export type AssertionMatrix = Record<string, NonEmptyArray<Value>>;
 
 // Attribute
 export interface AttributeAssertion {
+  matrix?: AssertionMatrix;
   description?: string;
   setAttribute?: Value;
   withLookups?: {
@@ -355,35 +410,40 @@ export interface AttributeAssertion {
 }
 
 export interface AttributeTest {
+  promotable?: boolean;
+  key?: string;
   attribute: AttributeName;
-  assertions: AttributeAssertion[];
+  assertions: NonEmptyArray<AttributeAssertion>;
 }
 
 // Event
 export interface EventAssertion {
+  matrix?: AssertionMatrix;
   description?: string;
   withAttributes?: {
     [key: AttributeName]: Value;
   };
   withLookups?: WithLookups;
-  at?: Percentage; // @TODO: implement
   track?: Value;
   actions?: Action[];
 
   expectedToBeValid?: boolean;
-  expectedToContinue?: boolean;
+  expectedToBeTracked?: boolean;
   expectedEvent?: Value;
   expectedDestinations?: DestinationName[];
   expectedDestinationsByTag?: Record<Tag, DestinationName[]>;
 }
 
 export interface EventTest {
+  promotable?: boolean;
+  key?: string;
   event: EventName;
-  assertions: EventAssertion[];
+  assertions: NonEmptyArray<EventAssertion>;
 }
 
 // Effect
 export interface EffectAssertion {
+  matrix?: AssertionMatrix;
   description?: string;
   withAttributes?: {
     [key: AttributeName]: Value;
@@ -401,12 +461,15 @@ export interface EffectAssertion {
 }
 
 export interface EffectTest {
+  promotable?: boolean;
+  key?: string;
   effect: EffectName;
-  assertions: EffectAssertion[];
+  assertions: NonEmptyArray<EffectAssertion>;
 }
 
 // Destination
 export interface DestinationAssertion {
+  matrix?: AssertionMatrix;
   description?: string;
   withAttributes?: {
     [key: AttributeName]: Value;
@@ -420,15 +483,14 @@ export interface DestinationAssertion {
   expectedToBeTransported?: boolean;
   expectedBody?: Value;
 
-  // @TODO: batch
   expectedBodies?: Value[];
-  expectedToBeBatched?: boolean;
-  expectedBatchedCount?: number;
 }
 
 export interface DestinationTest {
+  promotable?: boolean;
+  key?: string;
   destination: DestinationName;
-  assertions: DestinationAssertion[];
+  assertions: NonEmptyArray<DestinationAssertion>;
 }
 
 // Combined
@@ -448,6 +510,9 @@ export interface LastModified {
 export interface Catalog {
   projectConfig: {
     tags: string[];
+    sets: boolean;
+    set?: string;
+    availableSets?: string[];
   };
 
   links?: {
@@ -455,31 +520,42 @@ export interface Catalog {
     event: string;
     destination: string;
     effect: string;
+    schema: string;
+    target: string;
+    test: string;
     commit: string;
   };
 
   entities: {
+    schemas: Record<SchemaKey, Schema & { lastModified?: LastModified; targets?: TargetKey[] }>;
     attributes: {
       [key: AttributeName]: Attribute & {
         lastModified?: LastModified;
+        targets?: TargetKey[];
       };
     };
     events: {
       [key: EventName]: Event & {
         lastModified?: LastModified;
+        targets?: TargetKey[];
       };
     };
     destinations: {
       [key: DestinationName]: Destination & {
         lastModified?: LastModified;
+        targets?: TargetKey[];
       };
     };
     effects: {
       [key: EffectName]: Effect & {
         lastModified?: LastModified;
+        targets?: TargetKey[];
       };
     };
+    targets: Record<TargetKey, Target & { lastModified?: LastModified }>;
+    tests: Record<TestName, Test>;
   };
+  usages: Record<string, { type: EntityType; key: string }[]>;
 }
 
 export interface HistoryEntity {

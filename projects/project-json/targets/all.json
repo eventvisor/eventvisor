@@ -1,0 +1,7 @@
+{
+  "description": "All project entities",
+  "includeEvents": "*",
+  "includeAttributes": "*",
+  "includeDestinations": "*",
+  "includeEffects": "*"
+}

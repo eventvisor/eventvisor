@@ -1,0 +1,12 @@
+description: Web application datafile
+tag: web
+includeEvents:
+  - page_view
+  - signup_completed
+includeAttributes:
+  - userId
+  - deviceId
+  - country
+  - consentAnalytics
+includeDestinations: browserConsole
+includeEffects: welcome_banner

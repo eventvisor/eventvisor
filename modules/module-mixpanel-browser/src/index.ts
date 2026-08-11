@@ -1,18 +1,20 @@
-import type { Module } from "@eventvisor/sdk";
+import type { EventvisorModule } from "@eventvisor/sdk";
 
 export type MixpanelBrowserModuleOptions = {
   name?: string;
-  mixpanel: any; // @TODO: type this later
+  mixpanel: { track: (eventName: string, payload: unknown) => unknown };
 };
 
-export function createMixpanelBrowserModule(options: MixpanelBrowserModuleOptions): Module {
+export function createMixpanelBrowserModule(
+  options: MixpanelBrowserModuleOptions,
+): EventvisorModule {
   const { name = "mixpanel-browser", mixpanel } = options;
 
   return {
     name,
 
     transport: async ({ eventName, payload }) => {
-      mixpanel.track(eventName, payload);
+      await Promise.resolve(mixpanel.track(eventName, payload));
     },
   };
 }

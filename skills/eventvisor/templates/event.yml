@@ -1,0 +1,41 @@
+# events/<key>.yml — file path (minus extension) is the event key
+description: What this event records and when apps track it
+tags: [web] # must exist in eventvisor.config.js `tags`
+
+type: object
+properties:
+  url:
+    type: string
+    description: The URL of the page
+  title:
+    type: string
+required: [url]
+
+# --- optional fields, delete what you don't need ---
+
+# level: info                    # fatal | error | warning | log | info | debug
+
+# requiredAttributes: [userId]   # must be set via setAttribute before tracking
+
+# conditions:                    # filter: unmatched -> event dropped entirely
+#   - payload: url
+#     operator: startsWith
+#     value: https://
+
+# sample:                        # keep only a consistent bucket of users
+#   by: attributes.userId
+#   percentage: 10
+
+# transforms:                    # reshape payload once, for all destinations
+#   - type: rename
+#     targetMap:
+#       title: pageTitle
+
+# skipValidation:                # bypass validation conditionally (use sparingly)
+#   conditions:
+#     - attribute: environment
+#       operator: equals
+#       value: production
+
+# deprecated: true               # SDKs warn on track, still works
+# archived: true                 # removed from datafiles

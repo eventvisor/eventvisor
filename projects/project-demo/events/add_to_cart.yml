@@ -1,0 +1,12 @@
+description: A product was added to the cart
+tags: [all, storefront, checkout]
+type: object
+properties:
+  productId:
+    schema: identifier
+  quantity:
+    type: integer
+    minimum: 1
+  unitPrice:
+    schema: money
+required: [productId, quantity, unitPrice]

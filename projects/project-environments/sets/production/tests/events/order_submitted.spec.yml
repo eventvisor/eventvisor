@@ -1,0 +1,12 @@
+event: order_submitted
+assertions:
+  - description: marks production orders
+    track:
+      orderId: order-production-1
+      total: 149
+    expectedToBeValid: true
+    expectedEvent:
+      orderId: order-production-1
+      total: 149
+      releaseLane: production
+    expectedDestinations: [console]

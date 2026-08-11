@@ -1,10 +1,10 @@
-import { createTimestampModule } from "./index";
-import { ModuleDependencies } from "@eventvisor/sdk";
+import { createTimestampModule } from "./index.js";
+import { EventvisorModuleApi } from "@eventvisor/sdk";
 
 describe("createTimestampModule", () => {
   it("should create a module", async () => {
     const module = createTimestampModule();
-    const dependencies = {} as ModuleDependencies; // it's fine because we're not using the dependencies in this module
+    const dependencies = {} as EventvisorModuleApi; // it's fine because we're not using the dependencies in this module
 
     expect(module.name).toEqual("timestamp");
 

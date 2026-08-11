@@ -1,13 +1,12 @@
 import type { Source, SourceBase, Value, Inputs } from "@eventvisor/types";
 
-import type { ModulesManager } from "./modulesManager";
-import type { Logger } from "./logger";
-import type { AttributesManager } from "./attributesManager";
-import type { EffectsManager } from "./effectsManager";
+import type { ModulesManager } from "./modulesManager.js";
+import type { Logger } from "./logger.js";
+import type { AttributesManager } from "./attributesManager.js";
+import type { EffectsManager } from "./effectsManager.js";
+import { getSafePathSegments, hasOwn } from "./portable.js";
 
 export type GetSourceResolver = () => SourceResolver;
-
-const SOURCE_PATH_SEPARATOR = ".";
 
 export interface SourceResolverOptions {
   logger: Logger;
@@ -28,7 +27,12 @@ export type SourceOrigin = SourcePath & {
 
 function findValueAtPath(obj: any, path: string[]): any {
   return path.reduce((acc, part) => {
-    if (acc === null || acc === undefined) {
+    if (
+      acc === null ||
+      acc === undefined ||
+      !getSafePathSegments(part) ||
+      (typeof acc === "object" && !hasOwn(acc, part))
+    ) {
       return undefined;
     }
 
@@ -36,7 +40,6 @@ function findValueAtPath(obj: any, path: string[]): any {
   }, obj);
 }
 
-// @TODO: redo it with a better approach
 export class SourceResolver {
   private logger: Logger;
 
@@ -53,8 +56,9 @@ export class SourceResolver {
     this.effectsManager = effectsManager;
   }
 
-  getPath(p: string): SourcePath {
-    const parts = p.split(SOURCE_PATH_SEPARATOR);
+  getPath(p: string): SourcePath | null {
+    const parts = getSafePathSegments(p);
+    if (!parts) return null;
 
     return {
       name: parts[0],
@@ -65,68 +69,33 @@ export class SourceResolver {
 
   getOrigin(source: Source | Partial<SourceBase>): SourceOrigin | SourceOrigin[] | null {
     if (typeof source === "string") {
-      const parts = source.split(SOURCE_PATH_SEPARATOR);
+      const parts = getSafePathSegments(source);
+      if (!parts) return null;
       const originType = parts[0] as SourceOrigin["originType"];
-
-      // @TODO: validate type as one of known types
 
       return {
         originType,
-        name: parts[1],
+        name: parts[1] || "",
         path: parts.slice(2),
         fullKey: source,
       };
     }
 
-    // @TODO: fix it better
-    if ("source" in source) {
-      return this.getOrigin(source.source as string);
-    }
+    const originTypes = ["source", "attribute", "state", "effect", "payload", "lookup"] as const;
+    const selected = originTypes.filter((originType) => typeof source[originType] !== "undefined");
+    if (selected.length !== 1) return null;
 
-    if ("source" in source) {
-      return this.getOrigin(source.source as string);
-    }
-
-    if ("attribute" in source) {
-      return {
-        originType: "attribute",
-        ...this.getPath(source.attribute as string), // @TODO: consider array of strings here
-      };
-    }
-
-    if ("effect" in source) {
-      return {
-        originType: "effect",
-        ...this.getPath(source.effect as string),
-      };
-    }
-
-    if ("payload" in source) {
-      if (Array.isArray(source.payload)) {
-        return source.payload.map((p) => ({
-          originType: "payload",
-          ...this.getPath(p as string),
-        }));
-      } else {
-        return {
-          originType: "payload",
-          ...this.getPath(source.payload as string),
-        };
-      }
-    }
-
-    if ("lookup" in source) {
-      return {
-        originType: "lookup",
-        ...this.getPath(source.lookup as string),
-      };
-    }
-
-    if ("state" in source) {
-      return {
-        originType: "state",
-        ...this.getPath(source.state as string),
-      };
+    for (const originType of originTypes) {
+      const value = source[originType];
+      if (typeof value === "undefined") continue;
+      const values = Array.isArray(value) ? value : [value];
+      const origins = values.map((entry) => {
+        if (originType === "source") return this.getOrigin(entry) as SourceOrigin;
+        const sourcePath = this.getPath(entry);
+        return sourcePath ? ({ originType, ...sourcePath } as SourceOrigin) : null;
+      });
+      if (origins.some((origin) => origin === null)) return null;
+      return Array.isArray(value) ? (origins as SourceOrigin[]) : origins[0];
     }
 
     return null;
@@ -185,21 +154,12 @@ export class SourceResolver {
       return this.modulesManager.lookup(origin.fullKey);
     }
 
-    // if (origin.originType === "payload" && inputs.payload) {
-    //   return findValueAtPath(inputs.payload, [...origin.path, ...[origin.name]]); // @TODO: make it better
-    // }
-
-    // if (origin.originType === "attributes" && inputs.attributes) {
-    //   const p = [...origin.path, ...[origin.name]].filter(Boolean);
-    //   return findValueAtPath(inputs["attributes"], p); // @TODO: make it better
-    // }
-
-    // handle any other input that is not known early
+    // Resolve payload and any additional operation-specific inputs.
     if (typeof inputs[origin.originType] !== "undefined") {
       return findValueAtPath(
         inputs[origin.originType],
         [...[origin.name, ...origin.path]].filter(Boolean),
-      ); // @TODO: make it better
+      );
     }
 
     return null;

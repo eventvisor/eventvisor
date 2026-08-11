@@ -1,8 +1,9 @@
-import type { Value, Transform, Inputs } from "@eventvisor/types";
+import type { Value, Transform, Inputs, SourceBase } from "@eventvisor/types";
 
-import type { Logger } from "./logger";
-import type { ConditionsChecker } from "./conditions";
-import type { SourceResolver } from "./sourceResolver";
+import type { Logger } from "./logger.js";
+import type { ConditionsChecker } from "./conditions.js";
+import type { SourceResolver } from "./sourceResolver.js";
+import { getSafePathSegments, hasOwn } from "./portable.js";
 
 export type GetTransformer = () => Transformer;
 
@@ -44,22 +45,25 @@ export class Transformer {
       /**
        * Source value
        */
-      let sourceValue = await this.sourceResolver.resolve(transform, inputs);
+      let sourceValue = await this.sourceResolver.resolve(transform as Partial<SourceBase>, inputs);
 
-      // when Transform has no source, but only target
+      // A target identifies the existing value to transform when no explicit
+      // source is present. `value` remains an operand for transforms such as
+      // increment/decrement and a literal input for set/append/spread.
       if (sourceValue === null || sourceValue === undefined) {
-        if (transform.target) {
-          sourceValue = await this.sourceResolver.resolve(
-            {
-              payload: transform.target,
-            },
-            typeof inputs.payload === "undefined"
-              ? {
-                  ...inputs,
-                  payload: value,
-                }
-              : inputs,
-          );
+        if (transform.type === "increment" || transform.type === "decrement") {
+          sourceValue = transform.target
+            ? Transformer.getValueAtPath(result, transform.target)
+            : result;
+        } else if (
+          transform.target &&
+          transform.type !== "set" &&
+          transform.type !== "append" &&
+          transform.type !== "spread"
+        ) {
+          sourceValue = Transformer.getValueAtPath(result, transform.target);
+        } else if ("value" in transform) {
+          sourceValue = transform.value;
         }
       }
 
@@ -104,9 +108,27 @@ export class Transformer {
 
           // to other types
           if (transform.type === "toInteger") {
-            result = Transformer.setValueAtPath(result, target, parseInt(String(sourceValue)));
+            const converted = Number.parseInt(String(sourceValue), 10);
+            if (Number.isFinite(converted)) {
+              result = Transformer.setValueAtPath(result, target, converted);
+            } else {
+              this.logger.warn("Transform conversion failed", {
+                code: "transform_conversion_failed",
+                transformType: transform.type,
+                target,
+              });
+            }
           } else if (transform.type === "toDouble") {
-            result = Transformer.setValueAtPath(result, target, parseFloat(String(sourceValue)));
+            const converted = Number.parseFloat(String(sourceValue));
+            if (Number.isFinite(converted)) {
+              result = Transformer.setValueAtPath(result, target, converted);
+            } else {
+              this.logger.warn("Transform conversion failed", {
+                code: "transform_conversion_failed",
+                transformType: transform.type,
+                target,
+              });
+            }
           } else if (transform.type === "toString") {
             result = Transformer.setValueAtPath(result, target, String(sourceValue) || "");
           } else if (transform.type === "toBoolean") {
@@ -127,13 +149,35 @@ export class Transformer {
         if (transform.type === "set") {
           if ("value" in transform) {
             result = transform.value;
+          } else if (sourceValue !== null && typeof sourceValue !== "undefined") {
+            result = sourceValue;
           }
         }
       }
 
       if (transform.type === "spread") {
+        if (!sourceValue || typeof sourceValue !== "object" || Array.isArray(sourceValue)) {
+          this.logger.warn("Transform spread requires an object", {
+            code: "transform_invalid_input",
+            transformType: transform.type,
+          });
+          continue;
+        }
         if (transform.target) {
           const currentTargetValue = Transformer.getValueAtPath(result, transform.target);
+          if (
+            currentTargetValue !== undefined &&
+            (!currentTargetValue ||
+              typeof currentTargetValue !== "object" ||
+              Array.isArray(currentTargetValue))
+          ) {
+            this.logger.warn("Transform spread target must be an object", {
+              code: "transform_invalid_target",
+              transformType: transform.type,
+              target: transform.target,
+            });
+            continue;
+          }
           result = Transformer.setValueAtPath(result, transform.target, {
             ...((currentTargetValue as object) || {}),
             ...((sourceValue as object) || {}),
@@ -146,22 +190,53 @@ export class Transformer {
         }
       }
 
+      if (transform.type === "append") {
+        if (transform.target) {
+          const current = Transformer.getValueAtPath(result, transform.target);
+          const values = Array.isArray(current) ? current : [];
+          result = Transformer.setValueAtPath(
+            result,
+            transform.target,
+            values.concat([sourceValue]),
+          );
+        } else {
+          const values = Array.isArray(result) ? result : [];
+          result = values.concat([sourceValue]);
+        }
+      }
+
       // mathematical
       if (transform.type === "increment") {
         const by = typeof transform.value === "number" ? transform.value : 1;
+        const input = Number(sourceValue);
+        if (!Number.isFinite(input) || !Number.isFinite(by)) {
+          this.logger.warn("Transform arithmetic requires finite numbers", {
+            code: "transform_invalid_input",
+            transformType: transform.type,
+          });
+          continue;
+        }
 
         if (transform.target) {
-          result = Transformer.setValueAtPath(result, transform.target, Number(sourceValue) + by);
+          result = Transformer.setValueAtPath(result, transform.target, input + by);
         } else {
-          result = (result as number) + by;
+          result = input + by;
         }
       } else if (transform.type === "decrement") {
         const by = typeof transform.value === "number" ? transform.value : 1;
+        const input = Number(sourceValue);
+        if (!Number.isFinite(input) || !Number.isFinite(by)) {
+          this.logger.warn("Transform arithmetic requires finite numbers", {
+            code: "transform_invalid_input",
+            transformType: transform.type,
+          });
+          continue;
+        }
 
         if (transform.target) {
-          result = Transformer.setValueAtPath(result, transform.target, Number(sourceValue) - by);
+          result = Transformer.setValueAtPath(result, transform.target, input - by);
         } else {
-          result = (result as number) - by;
+          result = input - by;
         }
       }
 
@@ -213,13 +288,14 @@ export class Transformer {
     const result = JSON.parse(JSON.stringify(obj));
 
     // Remove old property
-    const oldKeys = oldKey.split(".");
+    const oldKeys = getSafePathSegments(oldKey);
+    if (!oldKeys || !getSafePathSegments(newKey)) return obj;
     let current = result;
 
     // Navigate to parent of old property
     for (let i = 0; i < oldKeys.length - 1; i++) {
       const key = oldKeys[i];
-      if (current[key] === undefined) return result;
+      if (!current || typeof current !== "object" || !hasOwn(current, key)) return result;
       current = current[key];
     }
 
@@ -232,16 +308,15 @@ export class Transformer {
 
   // Helper function to get value at path
   public static getValueAtPath(obj: any, path: string): any {
-    if (!path || typeof path !== "string") return undefined;
-
-    const keys = path.split(".");
+    const keys = getSafePathSegments(path);
+    if (!keys) return undefined;
     let current = obj;
 
     for (const key of keys) {
       if (current === null || current === undefined) return undefined;
-      if (typeof current === "object" && !Array.isArray(current)) {
+      if (typeof current === "object" && !Array.isArray(current) && hasOwn(current, key)) {
         current = (current as any)[key];
-      } else if (Array.isArray(current) && /^\d+$/.test(key)) {
+      } else if (Array.isArray(current) && /^\d+$/.test(key) && hasOwn(current, key)) {
         current = current[parseInt(key)];
       } else {
         return undefined;
@@ -253,18 +328,19 @@ export class Transformer {
 
   // Helper function to set value at path
   public static setValueAtPath(obj: any, path: string, value: any): any {
-    if (!path || typeof path !== "string") return obj;
+    const keys = getSafePathSegments(path);
+    if (!keys) return obj;
     if (obj === null || obj === undefined) return obj;
 
     // Create a copy to avoid mutating the original
     const result = JSON.parse(JSON.stringify(obj));
-    const keys = path.split(".");
     let current = result as any;
 
     // Navigate to the parent of the target path
     for (let i = 0; i < keys.length - 1; i++) {
       const key = keys[i];
-      if (current[key] === undefined) {
+      if (!current || typeof current !== "object") return obj;
+      if (!hasOwn(current, key)) {
         // Create nested object or array as needed
         if (/^\d+$/.test(keys[i + 1])) {
           current[key] = [];
@@ -284,18 +360,18 @@ export class Transformer {
 
   // Helper function to remove value at path
   public static removeValueAt(obj: any, path: string): any {
-    if (!path || typeof path !== "string") return obj;
+    const keys = getSafePathSegments(path);
+    if (!keys) return obj;
     if (obj === null || obj === undefined) return obj;
 
     // Create a copy to avoid mutating the original
     const result = JSON.parse(JSON.stringify(obj));
-    const keys = path.split(".");
     let current = result as any;
 
     // Navigate to the parent of the target path
     for (let i = 0; i < keys.length - 1; i++) {
       const key = keys[i];
-      if (current[key] === undefined) {
+      if (!current || typeof current !== "object" || !hasOwn(current, key)) {
         return result; // Path doesn't exist, nothing to remove
       }
       current = current[key];

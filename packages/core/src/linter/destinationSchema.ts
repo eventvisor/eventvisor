@@ -10,6 +10,7 @@ export function getDestinationSchema(deps: Dependencies) {
   return z
     .object({
       archived: z.boolean().optional(),
+      promotable: z.boolean().optional(),
       description: z.string(),
       tags: getTagsSchema(deps),
 

@@ -1,0 +1,31 @@
+event: checkout_completed
+assertions:
+  - description: consented production sessions are routed
+    withAttributes:
+      consentAnalytics: true
+    track:
+      orderId: production-order-1
+      currency: EUR
+      total: 129
+    expectedToBeValid: true
+    expectedEvent:
+      orderId: production-order-1
+      currency: EUR
+      total: 129
+      releaseLane: production
+    expectedDestinations: [analytics]
+
+  - description: production sessions without consent are not routed
+    withAttributes:
+      consentAnalytics: false
+    track:
+      orderId: production-order-2
+      currency: USD
+      total: 139
+    expectedToBeValid: true
+    expectedEvent:
+      orderId: production-order-2
+      currency: USD
+      total: 139
+      releaseLane: production
+    expectedDestinations: []

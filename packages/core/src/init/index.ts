@@ -1,65 +1,90 @@
 import axios from "axios";
+import * as fs from "fs";
+import * as os from "os";
+import * as path from "path";
 import * as tar from "tar";
 
-import { Plugin } from "../cli";
+import type { Plugin } from "../cli";
+import { CLI_COLOR_CYAN, CLI_FORMAT_GREEN, colorize } from "../tester/cliFormat";
 
 export const DEFAULT_PROJECT = "yml";
-
-export const PROJECTS_ORG_NAME = "eventvisor";
-export const PROJECTS_REPO_NAME = "eventvisor";
-export const PROJECTS_BRANCH_NAME = "main";
-
-export const PROJECTS_TAR_URL = `https://codeload.github.com/${PROJECTS_ORG_NAME}/${PROJECTS_REPO_NAME}/tar.gz/${PROJECTS_BRANCH_NAME}`;
-
-function getProjectPath(projectName: string) {
-  return `${PROJECTS_REPO_NAME}-${PROJECTS_BRANCH_NAME}/projects/project-${projectName}/`;
+const REPOSITORY = "eventvisor/eventvisor";
+function getScaffoldRef() {
+  if (process.env.EVENTVISOR_SCAFFOLD_REF) return process.env.EVENTVISOR_SCAFFOLD_REF;
+  try {
+    const version = require(require.resolve("@eventvisor/cli/package.json")).version;
+    return `v${version}`;
+  } catch {
+    return "main";
+  }
 }
 
-export function initProject(
+function isProjectArchiveEntry(entry: string, project: string) {
+  return entry.includes(`/projects/project-${project}/`);
+}
+
+export async function initProject(
   directoryPath: string,
-  projectName: string = DEFAULT_PROJECT,
+  project = DEFAULT_PROJECT,
+  force = false,
 ): Promise<boolean> {
-  return new Promise(function (resolve) {
-    axios.get(PROJECTS_TAR_URL, { responseType: "stream" }).then((response) => {
+  fs.mkdirSync(directoryPath, { recursive: true });
+  if (!force && fs.readdirSync(directoryPath).length > 0) {
+    throw new Error(`Directory ${directoryPath} is not empty. Pass --force to overwrite files.`);
+  }
+
+  const temporary = fs.mkdtempSync(path.join(os.tmpdir(), "eventvisor-init-"));
+  try {
+    const ref = getScaffoldRef();
+    const response = await axios.get(`https://codeload.github.com/${REPOSITORY}/tar.gz/${ref}`, {
+      responseType: "stream",
+    });
+    await new Promise<void>((resolve, reject) => {
       response.data
         .pipe(
           tar.x({
-            C: directoryPath,
-            filter: (path) => path.indexOf(getProjectPath(projectName)) === 0,
+            C: temporary,
+            filter: (entry) => isProjectArchiveEntry(entry, project),
             strip: 3,
           }),
         )
-        .on("error", (e) => {
-          console.error(e);
-
-          resolve(false);
-        })
-        .on("finish", () => {
-          console.log(`Project scaffolded in ${directoryPath}`);
-          console.log(``);
-          console.log(`Please run "npm install" in the directory above.`);
-
-          resolve(true);
-        });
+        .once("error", reject)
+        .once("finish", resolve);
     });
-  });
+    if (fs.readdirSync(temporary).length === 0) {
+      throw new Error(`Unknown project scaffold "${project}".`);
+    }
+    fs.cpSync(temporary, directoryPath, { recursive: true, force });
+    console.log("");
+    console.log(CLI_FORMAT_GREEN, "Eventvisor project scaffolded");
+    console.log(`  ${colorize("Directory", CLI_COLOR_CYAN)}: ${directoryPath}`);
+    console.log("");
+    console.log('Run "npm install" to install its dependencies.');
+    console.log("");
+    return true;
+  } catch (error) {
+    throw new Error(`Could not initialize Eventvisor project: ${(error as Error).message}`);
+  } finally {
+    fs.rmSync(temporary, { recursive: true, force: true });
+  }
 }
 
 export const initPlugin: Plugin = {
   command: "init",
-  handler: async function (options) {
-    const { rootDirectoryPath, parsed } = options;
-
-    await initProject(rootDirectoryPath, parsed.project);
+  description: "create an Eventvisor project",
+  options: {
+    project: { type: "string", description: "project scaffold name" },
+    force: { type: "boolean", description: "overwrite files in a non-empty directory" },
   },
+  handler: async ({ rootDirectoryPath, parsed }) =>
+    initProject(rootDirectoryPath, parsed.project, parsed.force),
   examples: [
+    { command: "init", description: "scaffold a project in the current directory" },
+    { command: "init --project=yml", description: "scaffold a named example project" },
+    { command: "init --project=demo", description: "scaffold the e-commerce demo project" },
     {
-      command: "init",
-      description: "scaffold a new project in current directory",
-    },
-    {
-      command: "init --project=projectName",
-      description: "scaffold a new project in current directory from known example",
+      command: "init --project=environments",
+      description: "scaffold a project using Sets as environments",
     },
   ],
 };

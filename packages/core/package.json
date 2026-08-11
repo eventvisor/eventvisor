@@ -1,21 +1,34 @@
 {
   "name": "@eventvisor/core",
   "version": "0.26.0",
-  "description": "Core package of Eventvisor for Node.js usage",
+  "description": "Project building, testing, linting, and Catalog tools for Eventvisor",
   "main": "lib/index.js",
   "types": "lib/index.d.ts",
+  "files": [
+    "lib"
+  ],
   "scripts": {
     "transpile": "rimraf lib && tsc --project tsconfig.cjs.json",
     "dist": "echo 'Nothing to dist here'",
     "build": "npm run transpile",
-    "test": "jest --config jest.config.js --verbose --coverage"
+    "typecheck": "tsc --project tsconfig.typecheck.json",
+    "test": "jest --config jest.config.js --verbose --coverage",
+    "lint": "eslint src"
   },
   "author": {
     "name": "Fahad Heylaal",
     "url": "https://fahad19.com"
   },
   "homepage": "https://eventvisor.org",
-  "keywords": [],
+  "keywords": [
+    "analytics",
+    "eventvisor",
+    "governance",
+    "tracking-plan"
+  ],
+  "engines": {
+    "node": ">=24"
+  },
   "repository": {
     "type": "git",
     "url": "https://github.com/eventvisor/eventvisor.git"
@@ -30,12 +43,11 @@
   "license": "MIT",
   "dependencies": {
     "@eventvisor/catalog": "0.26.0",
+    "@eventvisor/parsers": "0.26.0",
     "@eventvisor/sdk": "0.26.0",
     "@eventvisor/types": "0.26.0",
-    "axios": "^1.12.2",
-    "chalk": "^5.6.0",
-    "js-yaml": "^4.1.0",
-    "tar": "^7.4.3",
+    "axios": "^1.19.0",
+    "tar": "^7.5.22",
     "yargs": "^17.7.2",
     "zod": "^4.0.17"
   }

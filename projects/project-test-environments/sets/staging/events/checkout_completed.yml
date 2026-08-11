@@ -1,0 +1,19 @@
+description: Checkout completed in staging
+tags: [all, checkout]
+type: object
+properties:
+  orderId:
+    type: string
+  currency:
+    type: string
+    enum: [EUR, USD]
+  total:
+    type: number
+    minimum: 0
+  releaseLane:
+    type: string
+required: [orderId, currency, total]
+transforms:
+  - type: set
+    target: releaseLane
+    value: staging

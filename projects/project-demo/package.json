@@ -1,0 +1,17 @@
+{
+  "name": "@eventvisor/project-demo",
+  "private": true,
+  "version": "0.26.0",
+  "description": "Reference Eventvisor project for an e-commerce application",
+  "scripts": {
+    "lint": "eventvisor lint",
+    "build": "eventvisor build && eventvisor catalog export",
+    "test": "eventvisor test",
+    "catalog": "eventvisor catalog serve",
+    "generate-code": "eventvisor generate-code --language typescript --out-dir src/generated",
+    "simulate": "eventvisor simulate order_completed --value='{\"orderId\":\"order-123\",\"total\":129.95,\"itemCount\":3}' --attributes='{\"userId\":\"user-123\",\"currency\":\"EUR\",\"consentAnalytics\":true}'"
+  },
+  "dependencies": {
+    "@eventvisor/cli": "0.26.0"
+  }
+}

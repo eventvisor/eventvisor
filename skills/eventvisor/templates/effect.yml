@@ -1,0 +1,37 @@
+# effects/<name>.yml — declarative side-effect handled by app modules
+description: What this effect does and when
+tags: [web]
+
+on: # trigger(s)
+  event_tracked:
+    - page_view
+  # attribute_set:
+  #   - gdprConsent
+
+state: # optional internal state
+  done: false
+
+conditions: # gate before steps run (can read state)
+  - state: done
+    operator: equals
+    value: false
+
+steps:
+  - description: do the side-effect
+    handler: pixel # module installed in the app
+    params:
+      snippet: |
+        <script>
+          console.log("Injected from {{ payload.url }}");
+        </script>
+      selector: body
+    # continueOnError: true      # default: a failing step stops the rest
+
+  - description: remember it ran
+    transforms: # step transforms mutate STATE, not the payload
+      - type: set
+        target: done
+        value: true
+
+# persist: localstorage          # state survives restarts (module required in app)
+# archived: true

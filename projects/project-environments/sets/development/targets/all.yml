@@ -1,0 +1,5 @@
+description: Complete development datafile
+includeEvents: "*"
+includeAttributes: "*"
+includeDestinations: "*"
+includeEffects: "*"

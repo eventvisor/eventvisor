@@ -1,0 +1,13 @@
+description: A page was viewed
+tags:
+  - all
+  - web
+
+type: object
+properties:
+  url:
+    type: string
+  title:
+    type: string
+required:
+  - url

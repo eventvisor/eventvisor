@@ -66,7 +66,7 @@ describe("semantic lint validation", () => {
     );
   });
 
-  it("reports invalid payload paths and unsupported source arrays", () => {
+  it("validates every entry in source arrays", () => {
     const issues = getSemanticIssues(
       "attribute",
       {
@@ -84,7 +84,7 @@ describe("semantic lint validation", () => {
           },
           {
             type: "set",
-            source: ["payload.userId"],
+            source: ["payload.userId", "payload.unknownField"],
             target: "copy",
           },
         ],
@@ -95,9 +95,35 @@ describe("semantic lint validation", () => {
     expect(issues.map((issue) => issue.message)).toEqual(
       expect.arrayContaining([
         'Payload reference "unknownField" references payload path "unknownField" that is not defined in the referenced schema',
-        'The "source" field does not support arrays; use "payload" for multi-source payload references',
+        'Source "payload.unknownField" references payload path "unknownField" that is not defined in the referenced schema',
       ]),
     );
+  });
+
+  it("accepts arrays for every direct source shorthand", () => {
+    const issues = getSemanticIssues(
+      "effect",
+      {
+        description: "Array sources",
+        tags: ["web"],
+        on: { event_tracked: ["page_view"] },
+        state: { count: 1, total: 2 },
+        steps: [
+          {
+            transforms: [
+              { type: "concat", source: ["eventName", "attributeName"], target: "count" },
+              { type: "concat", attribute: ["userId", "userId"], target: "count" },
+              { type: "concat", effect: ["sync_user.synced", "sync_user.synced"], target: "count" },
+              { type: "concat", state: ["count", "total"], target: "count" },
+              { type: "concat", lookup: ["browser.one", "browser.two"], target: "count" },
+            ],
+          },
+        ],
+      },
+      createContext(),
+    );
+
+    expect(issues).toHaveLength(0);
   });
 
   it("reports invalid transform targets against declared schema paths", () => {

@@ -1,4 +1,4 @@
-import { Transformer } from "./transformer";
+import { Transformer } from "./transformer.js";
 
 describe("Transformer static methods", () => {
   describe("getValueAtPath", () => {

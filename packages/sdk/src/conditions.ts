@@ -1,12 +1,13 @@
 import type { PlainCondition, Condition, Inputs } from "@eventvisor/types";
 
-import type { GetRegex } from "./datafileReader";
-import type { SourceResolver } from "./sourceResolver";
+import type { SourceResolver } from "./sourceResolver.js";
 
-import { compareVersions } from "./compareVersions";
-import { Logger } from "./logger";
+import { compareVersions } from "./compareVersions.js";
+import { Logger } from "./logger.js";
+import { getPortableDate, isPortableRegex } from "./portable.js";
 
 export type GetConditionsChecker = () => ConditionsChecker;
+export type GetRegex = (regexString: string, regexFlags?: string) => RegExp;
 
 export interface ConditionsCheckerOptions {
   getRegex: GetRegex;
@@ -18,6 +19,7 @@ export class ConditionsChecker {
   private getRegex: GetRegex;
   private sourceResolver: SourceResolver;
   private logger: Logger;
+  private parsedConditions = new Map<string, Condition | Condition[] | null>();
 
   constructor(options: ConditionsCheckerOptions) {
     this.getRegex = options.getRegex;
@@ -30,27 +32,30 @@ export class ConditionsChecker {
 
     const sourceValue = await this.sourceResolver.resolve(condition, inputs);
 
-    if (operator === "equals") {
+    if (operator === "exists") {
+      return typeof sourceValue !== "undefined";
+    } else if (operator === "notExists") {
+      return typeof sourceValue === "undefined";
+    } else if (operator === "equals") {
       return sourceValue === value;
     } else if (operator === "notEquals") {
       return sourceValue !== value;
     } else if (operator === "before" || operator === "after") {
       // date comparisons
-      const valueInContext = sourceValue as string | Date;
+      const dateInContext = getPortableDate(sourceValue);
+      const dateInCondition = getPortableDate(value);
 
-      const dateInContext =
-        valueInContext instanceof Date ? valueInContext : new Date(valueInContext);
-      const dateInCondition = value instanceof Date ? value : new Date(value as string);
+      if (!dateInContext || !dateInCondition) return false;
 
       return operator === "before"
         ? dateInContext < dateInCondition
         : dateInContext > dateInCondition;
     } else if (
       Array.isArray(value) &&
-      (["string", "number"].indexOf(typeof sourceValue) !== -1 || sourceValue === null)
+      (["string", "number", "boolean"].indexOf(typeof sourceValue) !== -1 || sourceValue === null)
     ) {
       // in / notIn (where condition value is an array)
-      const valueInContext = sourceValue as string;
+      const valueInContext = sourceValue as string | number | boolean | null;
 
       if (operator === "in") {
         return value.indexOf(valueInContext) !== -1;
@@ -82,10 +87,14 @@ export class ConditionsChecker {
       } else if (operator === "semverLessThanOrEquals") {
         return compareVersions(valueInContext, value) <= 0;
       } else if (operator === "matches") {
+        if (!isPortableRegex(value, regexFlags || "")) return false;
         const regex = this.getRegex(value, regexFlags || "");
+        regex.lastIndex = 0;
         return regex.test(valueInContext);
       } else if (operator === "notMatches") {
+        if (!isPortableRegex(value, regexFlags || "")) return false;
         const regex = this.getRegex(value, regexFlags || "");
+        regex.lastIndex = 0;
         return !regex.test(valueInContext);
       }
     } else if (typeof sourceValue === "number" && typeof value === "number") {
@@ -101,19 +110,18 @@ export class ConditionsChecker {
       } else if (operator === "lessThanOrEquals") {
         return valueInContext <= value;
       }
-    } else if (operator === "exists") {
-      // @TODO: may require extra care for null values
-      return typeof sourceValue !== "undefined";
-    } else if (operator === "notExists") {
-      return typeof sourceValue === "undefined";
-    } else if (Array.isArray(sourceValue) && typeof value === "string") {
+    } else if (
+      Array.isArray(sourceValue) &&
+      (["string", "number", "boolean"].indexOf(typeof value) !== -1 || value === null)
+    ) {
       // includes / notIncludes (where context value is an array)
-      const valueInContext = sourceValue as string[];
+      const valueInContext = sourceValue as Array<string | number | boolean | null>;
+      const expected = value as string | number | boolean | null;
 
       if (operator === "includes") {
-        return valueInContext.indexOf(value) > -1;
+        return valueInContext.indexOf(expected) > -1;
       } else if (operator === "notIncludes") {
-        return valueInContext.indexOf(value) === -1;
+        return valueInContext.indexOf(expected) === -1;
       }
     }
 
@@ -132,11 +140,14 @@ export class ConditionsChecker {
       return false;
     }
 
+    if (!conditions || typeof conditions !== "object") return false;
+
     if ("operator" in conditions) {
       try {
-        return this.isMatched(conditions, inputs);
+        return await this.isMatched(conditions, inputs);
       } catch (e) {
         this.logger.warn(e.message, {
+          code: "condition_evaluation_failed",
           error: e,
           details: {
             condition: conditions,
@@ -148,6 +159,7 @@ export class ConditionsChecker {
     }
 
     if ("and" in conditions && Array.isArray(conditions.and)) {
+      if (conditions.and.length === 0) return false;
       for (const c of conditions.and) {
         if (!(await this._allAreMatched(c, inputs))) {
           return false; // If any condition fails, return false
@@ -166,15 +178,17 @@ export class ConditionsChecker {
     }
 
     if ("not" in conditions && Array.isArray(conditions.not)) {
+      if (conditions.not.length === 0) return false;
       for (const c of conditions.not) {
-        if (await this._allAreMatched(c, inputs)) {
-          return false; // If any condition passes, return false (since this is NOT)
+        if (!(await this._allAreMatched(c, inputs))) {
+          return true;
         }
       }
-      return true; // No conditions passed, which is what we want for NOT
+      return false;
     }
 
     if (Array.isArray(conditions)) {
+      if (conditions.length === 0) return false;
       let result = true;
       for (const c of conditions) {
         if (!(await this._allAreMatched(c, inputs))) {
@@ -208,10 +222,18 @@ export class ConditionsChecker {
       return conditions;
     }
 
+    if (this.parsedConditions.has(conditions)) {
+      return this.parsedConditions.get(conditions) || conditions;
+    }
+
     try {
-      return JSON.parse(conditions);
+      const parsed = JSON.parse(conditions) as Condition | Condition[];
+      this.parsedConditions.set(conditions, parsed);
+      return parsed;
     } catch (e) {
+      this.parsedConditions.set(conditions, null);
       this.logger.error("Error parsing conditions", {
+        code: "conditions_parse_failed",
         error: e,
         details: {
           conditions,
@@ -220,5 +242,9 @@ export class ConditionsChecker {
 
       return conditions;
     }
+  }
+
+  clearParsedConditions() {
+    this.parsedConditions.clear();
   }
 }

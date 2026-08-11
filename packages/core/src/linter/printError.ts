@@ -1,7 +1,6 @@
 import * as path from "path";
 
 import * as z from "zod";
-import chalk from "chalk";
 
 import { ProjectConfig, CustomParser } from "../config";
 
@@ -26,8 +25,12 @@ function getFilePath(options: PrintErrorOptions) {
     directoryPath = projectConfig.destinationsDirectoryPath;
   } else if (entityType === "effect") {
     directoryPath = projectConfig.effectsDirectoryPath;
+  } else if (entityType === "schema") {
+    directoryPath = projectConfig.schemasDirectoryPath;
   } else if (entityType === "test") {
     directoryPath = projectConfig.testsDirectoryPath;
+  } else if (entityType === "target") {
+    directoryPath = projectConfig.targetsDirectoryPath;
   } else {
     throw new Error(`Unknown entity type: ${entityType}`);
   }
@@ -47,7 +50,7 @@ export function printError(options: PrintErrorOptions) {
 
   console.log("\n");
 
-  console.log(chalk.bold.red.underline(getFilePath(options)));
+  console.log(`\u001b[1;31;4m${getFilePath(options)}\u001b[0m`);
 
   console.log(prefixLines(z.prettifyError(error), "  "));
 }

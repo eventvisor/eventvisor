@@ -1,0 +1,12 @@
+event: order_submitted
+assertions:
+  - description: marks development orders
+    track:
+      orderId: order-dev-1
+      total: 49.95
+    expectedToBeValid: true
+    expectedEvent:
+      orderId: order-dev-1
+      total: 49.95
+      releaseLane: development
+    expectedDestinations: [console]

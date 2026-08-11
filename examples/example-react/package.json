@@ -6,7 +6,7 @@
     "build:eventvisor": "eventvisor build",
     "build": "npm run build:eventvisor && vite build",
     "dev": "npm run build:eventvisor && vite",
-    "test": "echo 'Nothing to test'",
+    "test": "npm run lint",
     "lint": "eventvisor lint",
     "preview": "vite preview"
   },
@@ -14,13 +14,14 @@
     "@eventvisor/module-console": "0.26.0",
     "@eventvisor/module-localstorage": "0.26.0",
     "@eventvisor/module-pixel": "0.26.0",
+    "@eventvisor/react": "0.26.0",
     "@eventvisor/sdk": "0.26.0",
     "react": "^19.1.1",
     "react-dom": "^19.1.1"
   },
   "devDependencies": {
     "@eventvisor/cli": "0.26.0",
-    "@vitejs/plugin-react": "^5.0.3",
-    "vite": "^7.1.7"
+    "@vitejs/plugin-react": "^6.0.3",
+    "vite": "^8.1.5"
   }
 }

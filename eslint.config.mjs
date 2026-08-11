@@ -9,8 +9,11 @@ export default [
     ignores: [
       // directories
       "**/dist/",
+      "**/cjs/",
       "**/datafiles/",
       "**/lib/",
+      "**/esm/",
+      "**/node-esm/",
       "**/coverage/",
       "**/out/",
       "tools/",
@@ -19,7 +22,6 @@ export default [
       "**/*.config.js",
       "**/*.config.mjs",
       "**/*.setup.js",
-      "**/webpack*.js",
       "**/*.d.ts",
 
       // examples
@@ -59,6 +61,7 @@ export default [
       parser: tsParser,
       parserOptions: {
         project: "./tsconfig.eslint.json",
+        tsconfigRootDir: import.meta.dirname,
       },
       globals: globals.browser,
     },

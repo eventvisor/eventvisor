@@ -1,0 +1,5 @@
+description: All staging entities
+includeEvents: "*"
+includeAttributes: "*"
+includeDestinations: "*"
+includeEffects: "*"

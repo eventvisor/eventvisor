@@ -1,0 +1,13 @@
+description: Count products added during the current SDK instance
+tags: [all, storefront, checkout]
+on:
+  event_tracked:
+    - add_to_cart
+state:
+  itemCount: 0
+steps:
+  - description: increment cart activity
+    transforms:
+      - state: itemCount
+        type: increment
+        target: itemCount

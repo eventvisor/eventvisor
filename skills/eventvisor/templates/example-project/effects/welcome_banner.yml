@@ -1,0 +1,23 @@
+description: Show the welcome banner once after sign-up
+tags: [all, web]
+on:
+  event_tracked:
+    - signup_completed
+state:
+  shown: false
+conditions:
+  - state: shown
+    operator: equals
+    value: false
+steps:
+  - description: inject the banner
+    handler: pixel
+    params:
+      snippet: |
+        <div class="welcome-banner">Welcome aboard!</div>
+      selector: body
+  - description: remember it was shown
+    transforms:
+      - type: set
+        target: shown
+        value: true

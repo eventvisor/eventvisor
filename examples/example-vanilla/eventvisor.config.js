@@ -9,4 +9,5 @@ module.exports = {
   destinationsDirectoryPath: path.join(__dirname, "eventvisor-project", "destinations"),
   effectsDirectoryPath: path.join(__dirname, "eventvisor-project", "effects"),
   testsDirectoryPath: path.join(__dirname, "eventvisor-project", "tests"),
+  targetsDirectoryPath: path.join(__dirname, "eventvisor-project", "targets"),
 };

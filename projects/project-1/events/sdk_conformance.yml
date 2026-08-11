@@ -1,0 +1,87 @@
+description: Cross SDK conformance event with conditions, sampling, transforms, and routing
+tags:
+  - web
+
+type: object
+properties:
+  kind:
+    type: string
+    enum: [purchase, refund]
+  amount:
+    type: number
+    minimum: 0
+  version:
+    type: string
+  occurredAt:
+    type: string
+  customer:
+    type: object
+    properties:
+      name:
+        type: string
+      legacyId:
+        type: string
+      id:
+        type: string
+    required: [name, legacyId]
+  labels:
+    type: array
+    items:
+      type: string
+  metadata:
+    type: object
+    additionalProperties: true
+required: [kind, amount, version, occurredAt, customer]
+
+requiredAttributes:
+  - country
+  - userId
+
+conditions:
+  and:
+    - attribute: country
+      operator: in
+      value: [NL, DE]
+    - payload: version
+      operator: semverGreaterThanOrEquals
+      value: 3.0.0
+    - payload: occurredAt
+      operator: after
+      value: 2025-01-01T00:00:00Z
+    - not:
+        - payload: kind
+          operator: equals
+          value: refund
+        - payload: amount
+          operator: greaterThan
+          value: 1000
+
+sample:
+  by: attribute.userId
+  percentage: 100
+
+transforms:
+  - type: trim
+    target: customer.name
+  - type: increment
+    target: amount
+    value: 2
+  - type: append
+    target: labels
+    value: governed
+  - type: spread
+    target: metadata
+    value:
+      sdkContract: v1
+  - type: rename
+    targetMap:
+      customer.legacyId: customer.id
+  - type: remove
+    target: customer.legacyId
+
+destinations:
+  consoleSimple:
+    transforms:
+      - type: set
+        target: conformance
+        value: true

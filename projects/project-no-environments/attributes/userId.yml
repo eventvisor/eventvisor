@@ -1,0 +1,6 @@
+description: Signed in user ID
+tags:
+  - all
+  - web
+
+schema: identifier

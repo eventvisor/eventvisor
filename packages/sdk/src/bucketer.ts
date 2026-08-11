@@ -1,10 +1,9 @@
 import type { Sample, SampleBy, Inputs } from "@eventvisor/types";
 
-import type { Logger } from "./logger";
-import { MurmurHashV3 } from "./murmurhash";
-import type { SourceResolver } from "./sourceResolver";
-import type { ConditionsChecker } from "./conditions";
-import type { Transformer } from "./transformer";
+import type { Logger } from "./logger.js";
+import { MurmurHashV3 } from "./murmurhash.js";
+import type { SourceResolver } from "./sourceResolver.js";
+import type { ConditionsChecker } from "./conditions.js";
 
 export type BucketKey = string;
 export type BucketValue = number; // 0 to 100,000 (100% * 1000 to include three decimal places in same integer)
@@ -33,7 +32,6 @@ export class BucketerOptions {
   logger: Logger;
   sourceResolver: SourceResolver;
   conditionsChecker: ConditionsChecker;
-  transformer: Transformer;
 }
 
 export interface SampleResult {
@@ -47,13 +45,11 @@ export class Bucketer {
   private logger: Logger;
   private sourceResolver: SourceResolver;
   private conditionsChecker: ConditionsChecker;
-  private transformer: Transformer;
 
   constructor(options: BucketerOptions) {
     this.logger = options.logger;
     this.sourceResolver = options.sourceResolver;
     this.conditionsChecker = options.conditionsChecker;
-    this.transformer = options.transformer;
   }
 
   async getBucketKey(sampleBy: SampleBy, inputs: Inputs): Promise<BucketKey> {
@@ -73,7 +69,7 @@ export class Bucketer {
       type = "and";
       sources = [sampleBy];
     } else {
-      this.logger.error("invalid sampleBy", { sampleBy });
+      this.logger.error("invalid sampleBy", { code: "sample_by_invalid", sampleBy });
 
       throw new Error("invalid sampleBy");
     }
@@ -103,41 +99,44 @@ export class Bucketer {
   async isSampled(sample: Sample | Sample[], inputs: Inputs): Promise<SampleResult> {
     const samples = Array.isArray(sample) ? sample : [sample];
 
-    const matchedSample = samples.find(async (sample) => {
-      if (!sample.conditions) {
-        return true;
+    let matchedSample: Sample | undefined;
+    for (const candidate of samples) {
+      if (
+        !candidate.conditions ||
+        (await this.conditionsChecker.allAreMatched(candidate.conditions, inputs))
+      ) {
+        matchedSample = candidate;
+        break;
       }
-
-      const isMatched = await this.conditionsChecker.allAreMatched(sample.conditions, inputs);
-
-      return isMatched;
-    });
+    }
 
     if (matchedSample) {
       const bucketKey = await this.getBucketKey(matchedSample.by, inputs);
 
+      if (!bucketKey) {
+        this.logger.error("invalid sample by", {
+          code: "sample_by_invalid",
+          sampleBy: matchedSample.by,
+        });
+        return { isSampled: false, matchedSample, bucketKey };
+      }
+
       const bucketedNumber = getBucketedNumber(bucketKey);
 
-      if (
-        matchedSample.percentage &&
-        matchedSample.percentage > 0 &&
-        bucketedNumber < matchedSample.percentage
-      ) {
+      if (typeof matchedSample.percentage === "number") {
         return {
-          isSampled: false,
+          isSampled: bucketedNumber < matchedSample.percentage * 1000,
           matchedSample,
           bucketedNumber,
           bucketKey,
         };
       }
 
-      if (
-        matchedSample.range &&
-        bucketedNumber < matchedSample.range[0] &&
-        bucketedNumber > matchedSample.range[1]
-      ) {
+      if (matchedSample.range) {
+        const start = matchedSample.range[0] * 1000;
+        const end = matchedSample.range[1] * 1000;
         return {
-          isSampled: false,
+          isSampled: bucketedNumber >= start && bucketedNumber < end,
           matchedSample,
           bucketedNumber,
           bucketKey,

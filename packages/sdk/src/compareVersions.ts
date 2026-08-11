@@ -26,7 +26,7 @@ SOFTWARE.
  */
 
 export const semver =
-  /^[v^~<>=]*?(\d+)(?:\.([x*]|\d+)(?:\.([x*]|\d+)(?:\.([x*]|\d+))?(?:-([\da-z\-]+(?:\.[\da-z\-]+)*))?(?:\+[\da-z\-]+(?:\.[\da-z\-]+)*)?)?)?$/i;
+  /^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)(?:-((?:0|[1-9]\d*|\d*[A-Za-z-][0-9A-Za-z-]*)(?:\.(?:0|[1-9]\d*|\d*[A-Za-z-][0-9A-Za-z-]*))*))?(?:\+[0-9A-Za-z-]+(?:\.[0-9A-Za-z-]+)*)?$/;
 
 export const validateAndParse = (version: string) => {
   if (typeof version !== "string") {
@@ -40,8 +40,6 @@ export const validateAndParse = (version: string) => {
   return match;
 };
 
-const isWildcard = (s: string) => s === "*" || s === "x" || s === "X";
-
 const forceType = (a: string | number, b: string | number) =>
   typeof a !== typeof b ? [String(a), String(b)] : [a, b];
 
@@ -51,7 +49,6 @@ const tryParse = (v: string) => {
 };
 
 const compareStrings = (a: string, b: string) => {
-  if (isWildcard(a) || isWildcard(b)) return 0;
   const [ap, bp] = forceType(tryParse(a), tryParse(b));
   if (ap > bp) return 1;
   if (ap < bp) return -1;

@@ -1,0 +1,29 @@
+effect: welcome_banner
+assertions:
+  - description: other events leave the banner alone
+    actions:
+      - type: track
+        name: page_view
+        value:
+          url: https://example.com/home
+    expectedState:
+      shown: false
+
+  - description: shows the banner once across repeated sign-ups
+    actions:
+      - type: setAttribute
+        name: userId
+        value: user-123
+      - type: track
+        name: signup_completed
+        value:
+          plan: free
+      - type: track
+        name: signup_completed
+        value:
+          plan: pro
+    expectedState:
+      shown: true
+    expectedToBeCalled:
+      - handler: pixel
+        times: 1

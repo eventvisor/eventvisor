@@ -1,0 +1,18 @@
+description: Print web events to the console
+tags:
+  - all
+  - web
+
+transport: console
+transforms:
+  - type: set
+    value: {}
+  - source: eventName
+    type: set
+    target: name
+  - source: payload
+    type: set
+    target: properties
+  - source: attributes
+    type: set
+    target: context

@@ -1,0 +1,24 @@
+# targets/<key>.yml — named, dependency-aware datafile for one app/surface
+description: Checkout web application # required
+
+tag: web # entities must ALSO carry this tag (AND with patterns below)
+# tags: { and: [web, checkout] }     # or OR/AND tag combinations
+
+# each accepts one pattern, an array, or "*" (single * globs within a pattern)
+includeEvents:
+  - add_to_cart
+  - checkout_*
+# excludeEvents: checkout_internal_*
+includeAttributes: [userId, sessionId]
+includeDestinations: "*"
+# includeEffects: cart_*
+# excludeEffects: …
+
+# per-target datafile options
+# pretty: true
+# stringify: true
+# revisionFromHash: true
+
+# Dependencies are retained automatically: included effects pull their trigger
+# events/attributes, events keep requiredAttributes and source-referenced
+# definitions, and referenced Schemas are inlined. Explicit excludes win.

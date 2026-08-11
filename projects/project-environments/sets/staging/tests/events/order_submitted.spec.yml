@@ -1,0 +1,12 @@
+event: order_submitted
+assertions:
+  - description: marks staging orders
+    track:
+      orderId: order-staging-1
+      total: 99.5
+    expectedToBeValid: true
+    expectedEvent:
+      orderId: order-staging-1
+      total: 99.5
+      releaseLane: staging
+    expectedDestinations: [console]

@@ -1,5 +1,6 @@
 module.exports = {
-  preset: "ts-jest",
+  transform: require("../../jest.swc-transform.cjs"),
+  moduleNameMapper: { "^(\\.{1,2}/.*)\\.js$": "$1" },
   bail: true,
 
   // for react testing library

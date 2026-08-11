@@ -1,0 +1,11 @@
+description: A storefront page was viewed
+tags: [all, storefront]
+type: object
+properties:
+  url:
+    type: string
+  title:
+    type: string
+  referrer:
+    type: string
+required: [url]

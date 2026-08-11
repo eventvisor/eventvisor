@@ -1,13 +1,13 @@
-import { SourceResolver } from "./sourceResolver";
-import { Emitter } from "./emitter";
-import { createLogger } from "./logger";
-import { ModulesManager } from "./modulesManager";
-import { AttributesManager } from "./attributesManager";
-import { EffectsManager } from "./effectsManager";
-import { DatafileReader } from "./datafileReader";
-import { Validator } from "./validator";
-import { ConditionsChecker } from "./conditions";
-import { Transformer } from "./transformer";
+import { SourceResolver } from "./sourceResolver.js";
+import { Emitter } from "./emitter.js";
+import { createLogger } from "./logger.js";
+import { ModulesManager } from "./modulesManager.js";
+import { AttributesManager } from "./attributesManager.js";
+import { EffectsManager } from "./effectsManager.js";
+import { createTestDataProvider } from "./datafile.test-fixtures.js";
+import { Validator } from "./validator.js";
+import { ConditionsChecker } from "./conditions.js";
+import { Transformer } from "./transformer.js";
 
 describe("SourceResolver", () => {
   // initialize the dependencies
@@ -15,57 +15,55 @@ describe("SourceResolver", () => {
 
   const logger = createLogger({ level: "fatal" });
 
-  const datafileReader = new DatafileReader({
-    datafile: {
-      schemaVersion: "1",
-      revision: "0",
-      attributes: {
-        attribute1: {
-          type: "string",
-        },
-        attribute2: {
-          type: "number",
-        },
-        attribute3: {
-          type: "object",
-          properties: {
-            name: {
-              type: "string",
-            },
-          },
-        },
+  const datafileReader = createTestDataProvider({
+    schemaVersion: "1",
+    revision: "0",
+    attributes: {
+      attribute1: {
+        type: "string",
       },
-      events: {},
-      destinations: {},
-      effects: {
-        effect1: {
-          on: {
-            event_tracked: ["event1"],
+      attribute2: {
+        type: "number",
+      },
+      attribute3: {
+        type: "object",
+        properties: {
+          name: {
+            type: "string",
           },
-          state: {
-            nested: {
-              value: "effect1 value",
-            },
-          },
-        },
-        effect2: {
-          on: {
-            event_tracked: ["event2"],
-          },
-          state: 123,
         },
       },
     },
-    logger,
+    events: {},
+    destinations: {},
+    effects: {
+      effect1: {
+        on: {
+          event_tracked: ["event1"],
+        },
+        state: {
+          nested: {
+            value: "effect1 value",
+          },
+        },
+      },
+      effect2: {
+        on: {
+          event_tracked: ["event2"],
+        },
+        state: 123,
+      },
+    },
   });
 
   const modulesManager = new ModulesManager({
     logger,
-    getDatafileReader: () => datafileReader,
-    getSourceResolver: () => sourceResolver,
+    getRevision: () => datafileReader.getRevision(),
+    onDiagnostic: () => () => {},
+    reportDiagnostic: () => {},
   });
 
-  modulesManager.registerModule({
+  modulesManager.addModule({
     name: "module1",
     lookup: async ({ key }) => {
       if (!key) {
@@ -85,7 +83,7 @@ describe("SourceResolver", () => {
     logger,
     emitter,
     validator,
-    getDatafileReader: () => datafileReader,
+    getDataProvider: () => datafileReader,
     getTransformer: () => transformer,
     getConditionsChecker: () => conditionsChecker,
     modulesManager,
@@ -97,7 +95,7 @@ describe("SourceResolver", () => {
 
   const effectsManager = new EffectsManager({
     logger,
-    getDatafileReader: () => datafileReader,
+    getDataProvider: () => datafileReader,
     getTransformer: () => transformer,
     getConditionsChecker: () => conditionsChecker,
     modulesManager: modulesManager,
@@ -261,5 +259,19 @@ describe("SourceResolver", () => {
     expect(await sourceResolver.resolve({ lookup: "module1.key.subkey" })).toEqual(
       "module1 lookup value: key.subkey",
     );
+  });
+
+  it("fails closed for unsafe paths and ambiguous source objects", async () => {
+    expect(
+      await sourceResolver.resolve({ payload: "__proto__.polluted" } as any, {
+        payload: { safe: true },
+      }),
+    ).toBeNull();
+    expect(
+      await sourceResolver.resolve({ payload: "safe", attribute: "attribute1" } as any, {
+        payload: { safe: true },
+      }),
+    ).toBeNull();
+    expect(({} as any).polluted).toBeUndefined();
   });
 });

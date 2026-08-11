@@ -1,7 +1,14 @@
-import type { DatafileContent, WithLookups, Value, Step } from "@eventvisor/types";
+import type {
+  ComplexPersist,
+  DatafileContent,
+  Persist,
+  WithLookups,
+  Value,
+  Step,
+} from "@eventvisor/types";
 
-import { Eventvisor, LogLevel, getComplexPersists } from "@eventvisor/sdk";
-import type { Module } from "@eventvisor/sdk";
+import { createEventvisor } from "@eventvisor/sdk";
+import type { Eventvisor, EventvisorModule, LogLevel } from "@eventvisor/sdk";
 
 import type { TestProjectOptions } from "./testProject";
 
@@ -17,6 +24,17 @@ export interface CreateTestInstanceOptions {
   datafile: DatafileContent;
   cliOptions: TestProjectOptions;
   withLookups?: WithLookups;
+}
+
+function getComplexPersists(persist: Persist): ComplexPersist[] {
+  if (typeof persist === "string") return [{ storage: persist }];
+  if (Array.isArray(persist)) {
+    return persist.reduce<ComplexPersist[]>(
+      (all, entry) => all.concat(getComplexPersists(entry)),
+      [],
+    );
+  }
+  return [persist];
 }
 
 export function createTestInstance(options: CreateTestInstanceOptions): CreateTestInstanceResult {
@@ -93,7 +111,7 @@ export function createTestInstance(options: CreateTestInstanceOptions): CreateTe
   /**
    * Modules
    */
-  const modules: Module[] = [];
+  const modules: EventvisorModule[] = [];
   const bodiesByDestination: Record<string, any[]> = {};
   const calledStepsByEffect: Record<string, Step[]> = {};
 
@@ -107,13 +125,15 @@ export function createTestInstance(options: CreateTestInstanceOptions): CreateTe
     lookupsMap[moduleName][lookupKey] = value;
   }
 
-  const allModuleNames = Array.from(handlerNames)
-    .concat(Array.from(transportNames))
-    .concat(Object.keys(lookupsMap))
-    .concat(Array.from(storageNames));
+  const allModuleNames = new Set(
+    Array.from(handlerNames)
+      .concat(Array.from(transportNames))
+      .concat(Object.keys(lookupsMap))
+      .concat(Array.from(storageNames)),
+  );
 
   for (const moduleName of allModuleNames) {
-    const moduleObj: Module = { name: moduleName };
+    const moduleObj: EventvisorModule = { name: moduleName };
 
     // transport
     if (transportNames.has(moduleName)) {
@@ -145,6 +165,11 @@ export function createTestInstance(options: CreateTestInstanceOptions): CreateTe
 
         storageData[key] = value;
 
+        return Promise.resolve();
+      };
+
+      moduleObj.removeFromStorage = (options) => {
+        delete storageData[options.key];
         return Promise.resolve();
       };
     }
@@ -181,7 +206,7 @@ export function createTestInstance(options: CreateTestInstanceOptions): CreateTe
   /**
    * Instance
    */
-  const e = new Eventvisor({
+  const e = createEventvisor({
     datafile,
     logLevel,
     modules,

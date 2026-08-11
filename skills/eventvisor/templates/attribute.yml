@@ -1,0 +1,25 @@
+# attributes/<name>.yml — file path (minus extension) is the attribute name
+description: What this attribute captures and who sets it
+tags: [web] # must exist in eventvisor.config.js `tags`
+
+# any JSON Schema subset type: string | number | integer | boolean | object | array
+type: string
+# enum: [guest, standard, premium]
+# default: guest                 # filled in during validation when missing
+
+# --- optional fields, delete what you don't need ---
+
+# transforms:                    # reshape the value after validation
+#   - type: trim
+#     target: value
+
+# persist: localstorage          # survive restarts via a storage module in the app
+# persist:                       # conditional persistence (e.g. GDPR consent first)
+#   conditions:
+#     - attribute: gdprConsent
+#       operator: equals
+#       value: true
+#   storage: localstorage
+
+# deprecated: true
+# archived: true

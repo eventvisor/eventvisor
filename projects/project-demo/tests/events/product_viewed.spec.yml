@@ -1,0 +1,27 @@
+event: product_viewed
+assertions:
+  - description: tracks ${{ productId }} in ${{ country }}
+    matrix:
+      productId: [sku-shirt, sku-shoes]
+      country: [NL, DE]
+    withAttributes:
+      country: ${{ country }}
+      consentAnalytics: true
+    track:
+      productId: ${{ productId }}
+      name: Example product
+      category: apparel
+      price: 49.95
+    expectedToBeValid: true
+    expectedEvent:
+      productId: ${{ productId }}
+      name: Example product
+      category: apparel
+      price: 49.95
+    expectedDestinations: [browserAnalytics]
+
+  - description: rejects a product without an ID
+    track:
+      name: Incomplete product
+      price: 10
+    expectedToBeValid: false

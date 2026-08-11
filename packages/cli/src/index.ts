@@ -2,10 +2,11 @@ import * as fs from "fs";
 import * as path from "path";
 
 import { CONFIG_MODULE_NAME, getProjectConfig, Datasource, runCLI } from "@eventvisor/core";
+import { resolveRootDirectoryPath } from "./rootDirectory";
 
 process.on("unhandledRejection", (reason) => {
   console.error(reason);
-  process.exit(1);
+  process.exitCode = 1;
 });
 
 async function main() {
@@ -28,22 +29,18 @@ async function main() {
     return;
   }
 
-  let useRootDirectoryPath = rootDirectoryPath;
-  const customRootDir = argv.filter((arg) => arg.startsWith("--rootDirectoryPath="));
-  if (customRootDir.length > 0) {
-    useRootDirectoryPath = customRootDir[0].split("=")[1];
-  }
+  const useRootDirectoryPath = resolveRootDirectoryPath(argv, rootDirectoryPath);
 
-  const configModulePath = path.join(rootDirectoryPath, CONFIG_MODULE_NAME);
+  const configModulePath = path.join(useRootDirectoryPath, CONFIG_MODULE_NAME);
   if (!fs.existsSync(configModulePath)) {
     // not an existing project
-    await runCLI({ rootDirectoryPath: useRootDirectoryPath });
+    process.exitCode = await runCLI({ rootDirectoryPath: useRootDirectoryPath });
   } else {
     // existing project
     const projectConfig = getProjectConfig(useRootDirectoryPath);
     const datasource = new Datasource(projectConfig, useRootDirectoryPath);
 
-    await runCLI({
+    process.exitCode = await runCLI({
       rootDirectoryPath: useRootDirectoryPath,
       projectConfig,
       datasource,

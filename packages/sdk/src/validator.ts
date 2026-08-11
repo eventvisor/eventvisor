@@ -1,7 +1,8 @@
 import { JSONSchema, Value } from "@eventvisor/types";
 
-import type { GetSourceResolver } from "./sourceResolver";
-import type { Logger } from "./logger";
+import type { GetSourceResolver } from "./sourceResolver.js";
+import type { Logger } from "./logger.js";
+import { hasOwn, isPortableRegex, valuesAreEqual } from "./portable.js";
 
 export interface ValidatorOptions {
   logger: Logger;
@@ -120,7 +121,7 @@ function validateValue(
   }
 
   // Const validation
-  if (schema.const !== undefined && value !== schema.const) {
+  if (schema.const !== undefined && !valuesAreEqual(value, schema.const)) {
     errors.push({
       path,
       message: `Value must be exactly ${JSON.stringify(schema.const)}`,
@@ -131,7 +132,7 @@ function validateValue(
   }
 
   // Enum validation
-  if (schema.enum && !schema.enum.includes(value)) {
+  if (schema.enum && !schema.enum.some((candidate) => valuesAreEqual(candidate, value))) {
     errors.push({
       path,
       message: `Value must be one of: ${schema.enum.map((v) => JSON.stringify(v)).join(", ")}`,
@@ -144,7 +145,12 @@ function validateValue(
   let result = value;
 
   // Object validation
-  if (typeof value === "object" && !Array.isArray(value) && schema.properties) {
+  if (
+    typeof value === "object" &&
+    value !== null &&
+    !Array.isArray(value) &&
+    (schema.type === "object" || schema.properties || schema.additionalProperties !== undefined)
+  ) {
     // Handle JavaScript Error objects specially
     let obj: Record<string, Value>;
     if (value instanceof Error) {
@@ -162,14 +168,14 @@ function validateValue(
     // Validate required properties
     if (schema.required) {
       for (const requiredProp of schema.required) {
-        if (!(requiredProp in obj)) {
-          if (schema.properties[requiredProp]?.default !== undefined) {
+        if (!hasOwn(obj, requiredProp)) {
+          if (schema.properties?.[requiredProp]?.default !== undefined) {
             validatedObj[requiredProp] = schema.properties[requiredProp].default!;
           } else {
             errors.push({
               path: path ? `${path}.${requiredProp}` : requiredProp,
               message: `Required property '${requiredProp}' is missing`,
-              schema: schema.properties[requiredProp],
+              schema: schema.properties?.[requiredProp],
               value: undefined,
             });
           }
@@ -186,6 +192,8 @@ function validateValue(
         if (validatedProp !== undefined) {
           validatedObj[prop] = validatedProp;
         }
+      } else if (schema.additionalProperties === true) {
+        validatedObj[prop] = propValue;
       } else {
         errors.push({
           path: path ? `${path}.${prop}` : prop,
@@ -199,7 +207,7 @@ function validateValue(
     // Apply defaults for missing optional properties
     if (schema.properties) {
       for (const [prop, propSchema] of Object.entries(schema.properties)) {
-        if (!(prop in validatedObj) && propSchema.default !== undefined) {
+        if (!hasOwn(validatedObj, prop) && propSchema.default !== undefined) {
           validatedObj[prop] = propSchema.default;
         }
       }
@@ -229,6 +237,20 @@ function validateValue(
         value,
       });
       return undefined;
+    }
+
+    if (schema.uniqueItems === true) {
+      for (let index = 0; index < value.length; index++) {
+        if (value.slice(0, index).some((entry) => valuesAreEqual(entry, value[index]))) {
+          errors.push({
+            path: `${path}[${index}]`,
+            message: "Array items must be unique",
+            schema,
+            value: value[index],
+          });
+          return undefined;
+        }
+      }
     }
 
     if (schema.items) {
@@ -288,6 +310,15 @@ function validateValue(
     }
 
     if (schema.pattern) {
+      if (!isPortableRegex(schema.pattern)) {
+        errors.push({
+          path,
+          message: `String pattern is not portable: ${schema.pattern}`,
+          schema,
+          value,
+        });
+        return undefined;
+      }
       const regex = new RegExp(schema.pattern);
       if (!regex.test(value)) {
         errors.push({

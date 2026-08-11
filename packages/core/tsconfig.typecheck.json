@@ -1,0 +1,16 @@
+{
+  "extends": "./tsconfig.cjs.json",
+  "compilerOptions": {
+    "noEmit": true,
+    "rootDir": "../..",
+    "skipLibCheck": true,
+    "types": ["node", "jest"],
+    "paths": {
+      "@eventvisor/sdk": ["../sdk/src/index.ts"],
+      "@eventvisor/sdk/portable": ["../sdk/src/portable.ts"],
+      "@eventvisor/sdk/validator": ["../sdk/src/validator.ts"]
+    }
+  },
+  "include": ["./src/**/*.ts"],
+  "exclude": []
+}

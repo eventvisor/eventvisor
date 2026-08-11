@@ -6,7 +6,7 @@ type: object
 
 properties:
   bannerId:
-    type: string
+    schema: identifier
     description: The ID of the banner that was clicked
 
   screenWidth:
@@ -14,11 +14,7 @@ properties:
     description: The width of the screen
 
   screen:
-    type: object
-    properties:
-      width:
-        type: number
-        description: The width of the screen
+    schema: screen
 
 required:
   - bannerId

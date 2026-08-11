@@ -8,11 +8,23 @@ import { getTransformsSchema } from "./transformsSchema";
 import { getSampleSchema } from "./sampleSchema";
 
 export function getEventSchema(deps: Dependencies) {
+  const onValidationFailure = z.union([
+    z.literal("drop"),
+    z.literal("deliverWithWarning"),
+    z
+      .object({
+        action: z.literal("quarantine"),
+        destination: z.string().min(1),
+      })
+      .strict(),
+  ]);
+
   return z
     .object({
       ...JSONZodSchema.shape,
 
       archived: z.boolean().optional(),
+      promotable: z.boolean().optional(),
       deprecated: z.boolean().optional(),
       description: z.string(),
       tags: getTagsSchema(deps),
@@ -20,6 +32,7 @@ export function getEventSchema(deps: Dependencies) {
       skipValidation: z
         .union([z.boolean(), z.object({ conditions: getConditionsSchema(deps) }).strict()])
         .optional(),
+      onValidationFailure: onValidationFailure.optional(),
       level: z.enum(["fatal", "error", "warning", "log", "info", "debug"]).optional(),
       requiredAttributes: z.array(z.string()).optional(),
       conditions: getConditionsSchema(deps).optional(),

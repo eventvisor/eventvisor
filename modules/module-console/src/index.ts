@@ -1,4 +1,4 @@
-import type { Module } from "@eventvisor/sdk";
+import type { EventvisorModule } from "@eventvisor/sdk";
 
 export type ConsoleModuleOptions = {
   name?: string;
@@ -6,7 +6,7 @@ export type ConsoleModuleOptions = {
   prefix?: string;
 };
 
-export function createConsoleModule(options: ConsoleModuleOptions = {}): Module {
+export function createConsoleModule(options: ConsoleModuleOptions = {}): EventvisorModule {
   const { name = "console", prefix = "[Eventvisor] ", console = globalThis.console } = options;
 
   return {

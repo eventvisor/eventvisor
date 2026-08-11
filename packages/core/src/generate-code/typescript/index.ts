@@ -1,7 +1,9 @@
 import * as fs from "fs";
 import * as path from "path";
 
+import type { DatafileContent } from "@eventvisor/types";
 import { Dependencies } from "../../dependencies";
+import { loadSchemas, resolveEntitySchema } from "../../schemas";
 import { generateInterface } from "./generateInterface";
 
 const VALID_TYPESCRIPT_IDENTIFIER_REGEX = /^[A-Za-z_$][A-Za-z0-9_$]*$/;
@@ -51,6 +53,10 @@ export function getTypeScriptPropertyKey(name: string): string {
   return VALID_TYPESCRIPT_IDENTIFIER_REGEX.test(name) ? name : JSON.stringify(name);
 }
 
+function escapeDocComment(value: string): string {
+  return value.replace(/\*\//g, "* /").replace(/\r?\n/g, "\n * ");
+}
+
 function createUniqueInterfaceNames(entityNames: string[], suffix: string): Map<string, string> {
   const usedInterfaceNames = new Set<string>();
   const interfaceNames = new Map<string, string>();
@@ -72,8 +78,13 @@ function createUniqueInterfaceNames(entityNames: string[], suffix: string): Map<
   return interfaceNames;
 }
 
-export async function generateTypeScriptCodeForProject(deps: Dependencies, outputPath: string) {
+export async function generateTypeScriptCodeForProject(
+  deps: Dependencies,
+  outputPath: string,
+  datafile?: DatafileContent,
+) {
   const { datasource } = deps;
+  const schemas = datafile ? {} : await loadSchemas(datasource);
 
   /**
    * Attributes
@@ -84,10 +95,15 @@ export async function generateTypeScriptCodeForProject(deps: Dependencies, outpu
     code: string;
   }[] = [];
 
-  const attributes = await datasource.listAttributes();
+  const attributes = (
+    datafile ? Object.keys(datafile.attributes) : await datasource.listAttributes()
+  ).sort();
   const attributeInterfaceNames = createUniqueInterfaceNames(attributes, "Attribute");
   for (const attribute of attributes) {
-    const parsedAttribute = await datasource.readAttribute(attribute);
+    const authoredAttribute = datafile ? undefined : await datasource.readAttribute(attribute);
+    const parsedAttribute = datafile
+      ? datafile.attributes[attribute]
+      : authoredAttribute && resolveEntitySchema(authoredAttribute, schemas);
     if (!parsedAttribute) {
       continue;
     }
@@ -105,7 +121,7 @@ export async function generateTypeScriptCodeForProject(deps: Dependencies, outpu
   let attributesContent = generatedAttributes
     .map(
       ({ entityName, code }) => `/**
- * ${entityName}
+ * ${escapeDocComment(entityName)}
  */
 ${code}
 `,
@@ -139,10 +155,13 @@ ${generatedAttributes
     code: string;
   }[] = [];
 
-  const events = await datasource.listEvents();
+  const events = (datafile ? Object.keys(datafile.events) : await datasource.listEvents()).sort();
   const eventInterfaceNames = createUniqueInterfaceNames(events, "Event");
   for (const event of events) {
-    const parsedEvent = await datasource.readEvent(event);
+    const authoredEvent = datafile ? undefined : await datasource.readEvent(event);
+    const parsedEvent = datafile
+      ? datafile.events[event]
+      : authoredEvent && resolveEntitySchema(authoredEvent, schemas);
     if (!parsedEvent) {
       continue;
     }
@@ -160,7 +179,7 @@ ${generatedAttributes
   let eventsContent = generatedEvents
     .map(
       ({ entityName, code }) => `/**
- * ${entityName}
+ * ${escapeDocComment(entityName)}
  */
 ${code}
 `,
@@ -198,14 +217,14 @@ import type { Attributes } from "./attributes";
  */
 let instance: Eventvisor | null = null;
 
-export function setInstance(instance: Eventvisor) {
-  instance = instance;
+export function setInstance(nextInstance: Eventvisor | null) {
+  instance = nextInstance;
 }
 
 /**
  * Event
  */
-type TrackHandler = (eventName: string, payload: Value) => void;
+type TrackHandler = (eventName: string, payload: Value) => void | Promise<void>;
 
 let trackHandler: TrackHandler | null = null;
 
@@ -213,21 +232,31 @@ export function assignEventHandler(handler: TrackHandler | null) {
   trackHandler = handler;
 }
 
-export function track<K extends keyof Events>(eventName: K, payload: Events[K]): void {
+export async function track<K extends keyof Events>(
+  eventName: K,
+  payload: Events[K],
+): Promise<Value | null | undefined> {
+  let result: Value | null | undefined;
+
   if (instance) {
-    instance.track(eventName, payload as unknown as Value);
+    result = await instance.track(eventName, payload as unknown as Value);
   }
 
   if (trackHandler) {
-    trackHandler(eventName, payload as unknown as Value);
+    await trackHandler(eventName, payload as unknown as Value);
   }
+
+  return result;
 }
 
 /**
  * Attribute
  */
 
-type SetAttributeHandler = (attributeName: string, value: Value) => void;
+type SetAttributeHandler = (
+  attributeName: string,
+  value: Value,
+) => Value | null | undefined | Promise<Value | null | undefined>;
 
 let setAttributeHandler: SetAttributeHandler | null = null;
 
@@ -235,17 +264,22 @@ export function assignAttributeHandler(handler: SetAttributeHandler | null) {
   setAttributeHandler = handler;
 }
 
-export function setAttribute<K extends keyof Attributes>(
+export async function setAttribute<K extends keyof Attributes>(
   attributeName: K,
   value: Attributes[K],
-): void {
+): Promise<Value | null | undefined> {
+  let result: Value | null | undefined;
+
   if (instance) {
-    instance.setAttribute(attributeName, value as unknown as Value);
+    result = await instance.setAttribute(attributeName, value as unknown as Value);
   }
 
   if (setAttributeHandler) {
-    setAttributeHandler(attributeName, value as unknown as Value);
+    const handledResult = await setAttributeHandler(attributeName, value as unknown as Value);
+    if (typeof handledResult !== "undefined") result = handledResult;
   }
+
+  return result;
 }
 `;
 

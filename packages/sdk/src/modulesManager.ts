@@ -8,9 +8,7 @@ import type {
   EventLevel,
 } from "@eventvisor/types";
 
-import type { Logger } from "./logger";
-import type { DatafileReader } from "./datafileReader";
-import type { SourceResolver } from "./sourceResolver";
+import type { EventvisorDiagnostic, EventvisorDiagnosticHandler, Logger } from "./logger.js";
 
 export type ModuleName = string;
 
@@ -34,8 +32,13 @@ export interface TransportOptions {
   destinationName: DestinationName;
   eventName: EventName;
   eventLevel?: EventLevel;
+  revision: string;
   payload: Value;
   error?: Error;
+  validation?: {
+    valid: false;
+    errors: Array<{ path: string; message: string }>;
+  };
 }
 
 export interface ReadFromStorageOptions {
@@ -51,87 +54,163 @@ export interface RemoveFromStorageOptions {
   key: string;
 }
 
-export interface ModuleDependencies {
-  datafileReader: DatafileReader;
-  logger: Logger;
-  sourceResolver: SourceResolver; // @TODO: single resolveSource function?
+export interface EventvisorModuleApi {
+  getRevision: () => string;
+  onDiagnostic: (handler: EventvisorDiagnosticHandler) => () => void;
+  reportDiagnostic: (diagnostic: EventvisorDiagnostic) => void;
+  track: (eventName: EventName, payload: Value) => Promise<Value | null>;
 }
 
-export interface Module {
+export interface EventvisorModule {
   name: ModuleName;
 
-  // @TODO: initialize?
+  setup?: (api: EventvisorModuleApi) => void;
+  close?: () => void | Promise<void>;
 
-  lookup?: (options: LookupOptions, deps: ModuleDependencies) => Promise<Value>;
+  lookup?: (options: LookupOptions, api: EventvisorModuleApi) => Promise<Value>;
 
-  // @TODO: transform?: (options: TransformOptions, deps: ModuleDependencies) => Promise<Value>;
+  handle?: (options: HandleOptions, api: EventvisorModuleApi) => Promise<void>;
 
-  handle?: (options: HandleOptions, deps: ModuleDependencies) => Promise<void>;
+  transport?: (options: TransportOptions, api: EventvisorModuleApi) => Promise<void>;
+  flush?: (api: EventvisorModuleApi) => void | Promise<void>;
 
-  transport?: (options: TransportOptions, deps: ModuleDependencies) => Promise<void>;
-
-  readFromStorage?: (options: ReadFromStorageOptions, deps: ModuleDependencies) => Promise<Value>;
-  writeToStorage?: (options: WriteToStorageOptions, deps: ModuleDependencies) => Promise<void>;
+  readFromStorage?: (options: ReadFromStorageOptions, api: EventvisorModuleApi) => Promise<Value>;
+  writeToStorage?: (options: WriteToStorageOptions, api: EventvisorModuleApi) => Promise<void>;
   removeFromStorage?: (
     options: RemoveFromStorageOptions,
-    deps: ModuleDependencies,
+    api: EventvisorModuleApi,
   ) => Promise<void>;
 }
 
 export interface ModulesManagerOptions {
   logger: Logger;
-  getDatafileReader: () => DatafileReader;
-  getSourceResolver: () => SourceResolver;
+  getRevision: () => string;
+  onDiagnostic: (handler: EventvisorDiagnosticHandler) => () => void;
+  reportDiagnostic: (diagnostic: EventvisorDiagnostic) => void;
+  track?: (eventName: EventName, payload: Value) => Promise<Value | null>;
 }
 
 export class ModulesManager {
   private logger: Logger;
-  private getDatafileReader: () => DatafileReader;
-  private getSourceResolver: () => SourceResolver;
+  private options: ModulesManagerOptions;
 
-  // @TODO: can be optimized further by keeping only array of names, but keeping actual modules in an object
-  private modules: Module[];
+  private modules: EventvisorModule[];
+  private diagnosticUnsubscribers: Record<string, (() => void)[]> = {};
 
   constructor(options: ModulesManagerOptions) {
-    const { logger, getDatafileReader, getSourceResolver } = options;
+    const { logger } = options;
 
     this.logger = logger;
-    this.getDatafileReader = getDatafileReader;
-    this.getSourceResolver = getSourceResolver;
+    this.options = options;
     this.modules = [];
   }
 
-  registerModule(module: Module) {
+  private clearDiagnosticSubscriptions(moduleName: string) {
+    this.diagnosticUnsubscribers[moduleName]?.forEach((unsubscribe) => unsubscribe());
+    delete this.diagnosticUnsubscribers[moduleName];
+  }
+
+  private async closeModule(module: EventvisorModule) {
+    try {
+      await module.close?.();
+    } catch (error) {
+      this.options.reportDiagnostic({
+        level: "error",
+        code: "module_close_failed",
+        message: `Module ${module.name} close failed`,
+        details: {},
+        moduleName: module.name,
+        error,
+      });
+    }
+  }
+
+  addModule(module: EventvisorModule) {
     if (this.modules.find((m) => m.name === module.name)) {
-      this.logger.error(`Module ${module.name} already registered`);
+      this.options.reportDiagnostic({
+        level: "error",
+        code: "duplicate_module",
+        message: `Module ${module.name} already registered`,
+        details: {},
+        moduleName: module.name,
+      });
 
       return;
     }
 
+    try {
+      module.setup?.(this.getModuleApi(module.name));
+    } catch (error) {
+      this.clearDiagnosticSubscriptions(module.name);
+      this.options.reportDiagnostic({
+        level: "error",
+        code: "module_setup_failed",
+        message: `Module ${module.name} setup failed`,
+        details: {},
+        moduleName: module.name,
+        error,
+      });
+
+      void this.closeModule(module);
+      return;
+    }
+
     this.modules.push(module);
+
+    return async () => {
+      if (this.modules.includes(module)) await this.removeModule(module.name);
+    };
   }
 
   getModule(name: string) {
     return this.modules.find((module) => module.name === name);
   }
 
-  removeModule(name: string) {
+  async removeModule(name: string) {
     const module = this.getModule(name);
 
     if (!module) {
-      this.logger.error(`Module ${name} not found`);
+      this.logger.error(`Module ${name} not found`, { code: "module_not_found", moduleName: name });
 
       return;
     }
 
     this.modules = this.modules.filter((module) => module.name !== name);
+    this.clearDiagnosticSubscriptions(name);
+    if (module.flush) {
+      try {
+        await module.flush(this.getModuleApi(module.name));
+      } catch (error) {
+        this.options.reportDiagnostic({
+          level: "error",
+          code: "module_flush_failed",
+          message: `Module ${module.name} flush failed`,
+          details: {},
+          moduleName: module.name,
+          error,
+        });
+      }
+    }
+    await this.closeModule(module);
   }
 
-  getModuleDependencies(): ModuleDependencies {
+  getModuleApi(
+    moduleName: string,
+    track: EventvisorModuleApi["track"] = this.options.track || (async () => null),
+  ): EventvisorModuleApi {
     return {
-      datafileReader: this.getDatafileReader(),
-      logger: this.logger,
-      sourceResolver: this.getSourceResolver(),
+      getRevision: this.options.getRevision,
+      onDiagnostic: (handler) => {
+        const unsubscribe = this.options.onDiagnostic(handler);
+        if (!this.diagnosticUnsubscribers[moduleName]) {
+          this.diagnosticUnsubscribers[moduleName] = [];
+        }
+        this.diagnosticUnsubscribers[moduleName].push(unsubscribe);
+        return unsubscribe;
+      },
+      reportDiagnostic: (diagnostic) =>
+        this.options.reportDiagnostic({ ...diagnostic, moduleName }),
+      track,
     };
   }
 
@@ -143,15 +222,22 @@ export class ModulesManager {
 
     if (moduleInstance && moduleInstance.lookup) {
       try {
-        return await moduleInstance.lookup({ key }, this.getModuleDependencies());
+        return await moduleInstance.lookup({ key }, this.getModuleApi(moduleName));
       } catch (error) {
-        this.logger.error(`Error in lookup`, { moduleName, key, error });
+        this.logger.error(`Error in lookup`, {
+          code: "module_lookup_failed",
+          moduleName,
+          key,
+          error,
+        });
 
         return null;
       }
     }
-
-    this.logger.error(`Module "${moduleName}" not found with "lookup" function`);
+    this.logger.error(`Module "${moduleName}" not found with "lookup" function`, {
+      code: "module_lookup_not_found",
+      moduleName,
+    });
 
     return null;
   }
@@ -162,6 +248,7 @@ export class ModulesManager {
     effect: Effect,
     step: Step,
     payload: Value,
+    track: EventvisorModuleApi["track"] = this.options.track || (async () => null),
   ): Promise<void> {
     const [moduleName, key] = fullKey.split("."); // eslint-disable-line
 
@@ -171,18 +258,24 @@ export class ModulesManager {
       try {
         return await moduleInstance.handle(
           { effectName, effect, step, payload },
-          this.getModuleDependencies(),
+          this.getModuleApi(moduleName, track),
         );
       } catch (error) {
-        this.logger.error(`Error in handle`, { moduleName, effectName, error });
-
-        return;
+        this.logger.error(`Error in handle`, {
+          code: "module_handler_failed",
+          moduleName,
+          effectName,
+          error,
+        });
+        throw error;
       }
     }
 
-    this.logger.error(`Module "${moduleName}" not found with "handle" function`);
-
-    return;
+    this.logger.error(`Module "${moduleName}" not found with "handle" function`, {
+      code: "module_handler_not_found",
+      moduleName,
+    });
+    throw new Error(`Module "${moduleName}" not found with "handle" function`);
   }
 
   transportExists(fullKey: string): boolean {
@@ -193,33 +286,51 @@ export class ModulesManager {
     return !!(moduleInstance && moduleInstance.transport);
   }
 
-  // @TODO: change multiple args to single options object
-  async transport(
-    fullKey: string,
-    destinationName: DestinationName,
-    eventName: EventName,
-    payload: Value,
-    eventLevel?: EventLevel,
-    error?: Error,
-  ): Promise<void> {
+  async transport(fullKey: string, options: TransportOptions): Promise<void> {
     const [moduleName, key] = fullKey.split("."); // eslint-disable-line
 
     const moduleInstance = this.getModule(moduleName);
 
     if (moduleInstance && moduleInstance.transport) {
       try {
-        return await moduleInstance.transport(
-          { destinationName, eventName, eventLevel, payload, error },
-          this.getModuleDependencies(),
-        );
+        return await moduleInstance.transport(options, this.getModuleApi(moduleName));
       } catch (error) {
-        this.logger.error(`Error in transport`, { moduleName, destinationName, eventName, error });
+        this.logger.error(`Error in transport`, {
+          code: "module_transport_failed",
+          moduleName,
+          destinationName: options.destinationName,
+          eventName: options.eventName,
+          error,
+        });
 
         return;
       }
     }
 
-    this.logger.error(`Module "${moduleName}" not found with "transport" function`);
+    this.logger.error(`Module "${moduleName}" not found with "transport" function`, {
+      code: "module_transport_not_found",
+      moduleName,
+    });
+  }
+
+  async flush() {
+    await Promise.all(
+      this.modules.map(async (module) => {
+        if (!module.flush) return;
+        try {
+          await module.flush(this.getModuleApi(module.name));
+        } catch (error) {
+          this.options.reportDiagnostic({
+            level: "error",
+            code: "module_flush_failed",
+            message: `Module ${module.name} flush failed`,
+            details: {},
+            moduleName: module.name,
+            error,
+          });
+        }
+      }),
+    );
   }
 
   async readFromStorage(moduleName: ModuleName, key: string): Promise<Value> {
@@ -227,15 +338,23 @@ export class ModulesManager {
 
     if (moduleInstance && moduleInstance.readFromStorage) {
       try {
-        return await moduleInstance.readFromStorage({ key }, this.getModuleDependencies());
+        return await moduleInstance.readFromStorage({ key }, this.getModuleApi(moduleName));
       } catch (error) {
-        this.logger.error(`Error in readFromStorage`, { moduleName, key, error });
+        this.logger.error(`Error in readFromStorage`, {
+          code: "module_storage_read_failed",
+          moduleName,
+          key,
+          error,
+        });
 
         return null;
       }
     }
 
-    this.logger.error(`Module "${moduleName}" not found with "readFromStorage" function`);
+    this.logger.error(`Module "${moduleName}" not found with "readFromStorage" function`, {
+      code: "module_storage_read_not_found",
+      moduleName,
+    });
 
     return null;
   }
@@ -245,15 +364,24 @@ export class ModulesManager {
 
     if (moduleInstance && moduleInstance.writeToStorage) {
       try {
-        return await moduleInstance.writeToStorage({ key, value }, this.getModuleDependencies());
+        return await moduleInstance.writeToStorage({ key, value }, this.getModuleApi(moduleName));
       } catch (error) {
-        this.logger.error(`Error in writeToStorage`, { moduleName, key, value, error });
+        this.logger.error(`Error in writeToStorage`, {
+          code: "module_storage_write_failed",
+          moduleName,
+          key,
+          value,
+          error,
+        });
 
         return;
       }
     }
 
-    this.logger.error(`Module "${moduleName}" not found with "writeToStorage" function`);
+    this.logger.error(`Module "${moduleName}" not found with "writeToStorage" function`, {
+      code: "module_storage_write_not_found",
+      moduleName,
+    });
 
     return;
   }
@@ -263,16 +391,34 @@ export class ModulesManager {
 
     if (moduleInstance && moduleInstance.removeFromStorage) {
       try {
-        return await moduleInstance.removeFromStorage({ key }, this.getModuleDependencies());
+        return await moduleInstance.removeFromStorage({ key }, this.getModuleApi(moduleName));
       } catch (error) {
-        this.logger.error(`Error in removeFromStorage`, { moduleName, key, error });
+        this.logger.error(`Error in removeFromStorage`, {
+          code: "module_storage_remove_failed",
+          moduleName,
+          key,
+          error,
+        });
 
         return;
       }
     }
 
-    this.logger.error(`Module "${moduleName}" not found with "removeFromStorage" function`);
+    this.logger.error(`Module "${moduleName}" not found with "removeFromStorage" function`, {
+      code: "module_storage_remove_not_found",
+      moduleName,
+    });
 
     return;
+  }
+
+  async close() {
+    await this.flush();
+    const modules = [...this.modules];
+    this.modules = [];
+    for (const module of modules) {
+      this.clearDiagnosticSubscriptions(module.name);
+      await this.closeModule(module);
+    }
   }
 }

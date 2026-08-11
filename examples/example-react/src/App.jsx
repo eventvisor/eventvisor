@@ -1,16 +1,17 @@
 import { useEffect, useState } from "react";
 
-import { createInstance } from "@eventvisor/sdk";
+import { createEventvisor } from "@eventvisor/sdk";
+import { EventvisorProvider, useEventvisor, useEventvisorReady } from "@eventvisor/react";
 import { createConsoleModule } from "@eventvisor/module-console";
 import { createLocalStorageModule } from "@eventvisor/module-localstorage";
 import { createPixelModule } from "@eventvisor/module-pixel";
 
 // hardcoded datafile (only for testing in this example)
-import datafile from "../datafiles/eventvisor-tag-web.json";
+import datafile from "../datafiles/eventvisor-web.json";
 
 import { generateUUID } from "./uuid";
 
-const eventvisor = createInstance({
+const eventvisor = createEventvisor({
   datafile,
   modules: [
     createConsoleModule(),
@@ -28,6 +29,7 @@ eventvisor.setAttribute("userId", "user-123");
 
 function HomePage() {
   const [counter, setCounter] = useState(0);
+  const { track } = useEventvisor();
 
   useEffect(() => {
     eventvisor.track("page_view", {
@@ -62,27 +64,31 @@ function HomePage() {
   );
 }
 
-function App() {
-  const [isReady, setIsReady] = useState(false);
+function EventvisorApp() {
+  const isReady = useEventvisorReady();
+  const { instance, setAttribute } = useEventvisor();
 
   useEffect(() => {
-    // we wait for initialization to be complete,
-    // because persistence layer is used in marketing-pixel effect
-    eventvisor.onReady().then(() => {
-      // set deviceId if not set previously already
-      if (!eventvisor.isAttributeSet("deviceId")) {
-        eventvisor.setAttribute("deviceId", generateUUID());
+    if (isReady) {
+      if (!instance.isAttributeSet("deviceId")) {
+        setAttribute("deviceId", generateUUID());
       }
-
-      setIsReady(true);
-    });
-  }, []);
+    }
+  }, [instance, isReady, setAttribute]);
 
   if (!isReady) {
     return <div>Loading...</div>;
   }
 
   return <HomePage />;
+}
+
+function App() {
+  return (
+    <EventvisorProvider instance={eventvisor}>
+      <EventvisorApp />
+    </EventvisorProvider>
+  );
 }
 
 export default App;

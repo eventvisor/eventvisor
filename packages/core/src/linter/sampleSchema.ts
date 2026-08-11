@@ -9,7 +9,7 @@ export function getSampleSchema(deps: Dependencies) {
   const sampleBySource = getSourceBaseSchema(deps).refine(...getSourceBaseRefine());
 
   const sampleBySingle = z.union([sampleByString, sampleBySource]);
-  const sampleByMultiple = z.array(sampleBySingle);
+  const sampleByMultiple = z.array(sampleBySingle).min(1);
   const sampleByOr = z.object({ or: sampleByMultiple });
 
   const sampleBy = z.union([sampleBySingle, sampleByMultiple, sampleByOr]);
@@ -43,5 +43,13 @@ export function getSampleSchema(deps: Dependencies) {
       },
     );
 
-  return z.union([sampleSchema, z.array(sampleSchema)]);
+  const orderedSampleSchema = sampleSchema.refine(
+    (data) => !data.range || data.range[0] <= data.range[1],
+    {
+      message: "Sample range start must be less than or equal to its end",
+      path: ["range"],
+    },
+  );
+
+  return z.union([orderedSampleSchema, z.array(orderedSampleSchema).min(1)]);
 }

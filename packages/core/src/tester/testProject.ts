@@ -1,11 +1,17 @@
-import chalk from "chalk";
-
 import { Dependencies } from "../dependencies";
 import { Plugin } from "../cli";
-import { buildDatafile } from "../builder";
+import { buildSelectedDatafile } from "../builder";
 import { prettyDuration } from "../utils";
 import { printTestResult } from "./printTestResult";
 import { executeTest } from "./executeTest";
+import { getProjectSetExecutions, printSetHeader } from "../sets";
+import {
+  CLI_COLOR_CYAN,
+  CLI_FORMAT_BOLD,
+  CLI_FORMAT_GREEN,
+  CLI_FORMAT_RED,
+  colorize,
+} from "./cliFormat";
 
 export interface TestProjectOptions {
   keyPattern?: string;
@@ -14,19 +20,27 @@ export interface TestProjectOptions {
   onlyFailures?: boolean;
   quiet?: boolean;
   verbose?: boolean;
+  tag?: string | string[];
+  target?: string | string[];
+  set?: string;
 }
 
-export async function testProject(
+async function testSingleProject(
   deps: Dependencies,
   options: TestProjectOptions,
 ): Promise<boolean> {
   const beforeDatafileBuild = new Date();
-  console.log("Building datafile...");
+  console.log("");
+  console.log(CLI_FORMAT_BOLD, "Testing Eventvisor project");
+  console.log(`  ${colorize("•", CLI_COLOR_CYAN)} Building test datafile`);
 
-  const datafileContent = await buildDatafile(deps);
+  const datafileContent = await buildSelectedDatafile(deps, {
+    tag: options.tag,
+    target: options.target,
+  });
   const afterDatafileBuild = new Date();
   console.log(
-    `Datafile built in ${afterDatafileBuild.getTime() - beforeDatafileBuild.getTime()}ms`,
+    `  ${colorize("✔", 32)} Datafile built in ${afterDatafileBuild.getTime() - beforeDatafileBuild.getTime()}ms`,
   );
 
   const tests = await deps.datasource.listTests();
@@ -39,6 +53,7 @@ export async function testProject(
   };
 
   let hasFailures = false;
+  let matchedSpecs = 0;
 
   const start = new Date();
 
@@ -47,6 +62,7 @@ export async function testProject(
     if (options.keyPattern && !test.includes(options.keyPattern)) {
       continue;
     }
+    matchedSpecs++;
 
     const testContent = await deps.datasource.readTest(test);
     const testResult = await executeTest({
@@ -82,28 +98,44 @@ export async function testProject(
     }
   }
 
-  console.log(`\n\n`);
+  if (
+    matchedSpecs === 0 ||
+    (options.assertionPattern && totals.assertionsPassed + totals.assertionsFailed === 0)
+  ) {
+    hasFailures = true;
+    console.log(
+      CLI_FORMAT_RED,
+      matchedSpecs === 0
+        ? "No test specs matched the requested pattern"
+        : "No assertions matched the requested pattern",
+    );
+  }
+
+  console.log("");
 
   if (hasFailures) {
     console.log(
-      chalk.red(`Test specs: ${totals.specsPassed} passed, ${totals.specsFailed} failed`),
+      CLI_FORMAT_RED,
+      `Test specs: ${totals.specsPassed} passed, ${totals.specsFailed} failed`,
     );
     console.log(
-      chalk.red(`Assertions: ${totals.assertionsPassed} passed, ${totals.assertionsFailed} failed`),
+      CLI_FORMAT_RED,
+      `Assertions: ${totals.assertionsPassed} passed, ${totals.assertionsFailed} failed`,
     );
   } else {
     console.log(
-      chalk.green(`Test specs: ${totals.specsPassed} passed, ${totals.specsFailed} failed`),
+      CLI_FORMAT_GREEN,
+      `Test specs: ${totals.specsPassed} passed, ${totals.specsFailed} failed`,
     );
     console.log(
-      chalk.green(
-        `Assertions: ${totals.assertionsPassed} passed, ${totals.assertionsFailed} failed`,
-      ),
+      CLI_FORMAT_GREEN,
+      `Assertions: ${totals.assertionsPassed} passed, ${totals.assertionsFailed} failed`,
     );
   }
 
   const end = new Date();
-  console.log(`Time:       ${prettyDuration(end.getTime() - start.getTime())}`);
+  console.log(CLI_FORMAT_BOLD, `Time:       ${prettyDuration(end.getTime() - start.getTime())}`);
+  console.log("");
 
   if (hasFailures) {
     return false;
@@ -112,8 +144,48 @@ export async function testProject(
   return true;
 }
 
+export async function testProject(
+  deps: Dependencies,
+  options: TestProjectOptions,
+): Promise<boolean> {
+  const executions = await getProjectSetExecutions(
+    deps.projectConfig,
+    deps.datasource,
+    options.set,
+  );
+  let passed = true;
+  for (const execution of executions) {
+    printSetHeader(deps.projectConfig, execution.set);
+    const result = await testSingleProject(
+      { ...deps, projectConfig: execution.projectConfig, datasource: execution.datasource },
+      options,
+    );
+    if (!result) passed = false;
+  }
+  return passed;
+}
+
 export const testPlugin: Plugin = {
   command: "test",
+  description: "run project test specifications",
+  options: {
+    set: { type: "string", description: "test a project Set" },
+    tag: { type: "array", description: "include one or more tags" },
+    target: { type: "array", description: "include one or more Targets" },
+    keyPattern: { type: "string", alias: "key-pattern", description: "filter test keys" },
+    assertionPattern: {
+      type: "string",
+      alias: "assertion-pattern",
+      description: "filter assertion descriptions",
+    },
+    onlyFailures: {
+      type: "boolean",
+      alias: "only-failures",
+      description: "print only failed assertions",
+    },
+    quiet: { type: "boolean", description: "suppress assertion output" },
+    verbose: { type: "boolean", description: "print expanded assertion details" },
+  },
   handler: async function ({ rootDirectoryPath, projectConfig, datasource, parsed }) {
     return testProject(
       {
@@ -125,5 +197,8 @@ export const testPlugin: Plugin = {
       parsed as TestProjectOptions,
     );
   },
-  examples: [],
+  examples: [
+    { command: "test", description: "run every project test" },
+    { command: "test --target web --only-failures", description: "test one Target" },
+  ],
 };

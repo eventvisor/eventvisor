@@ -1,16 +1,21 @@
-export * from "./instance";
-
-export * from "./attributesManager";
-export * from "./datafileReader";
-export * from "./emitter";
-export * from "./logger";
-export * from "./transformer";
-export * from "./bucketer";
-export * from "./sourceResolver";
-export * from "./modulesManager";
-export * from "./effectsManager";
-
-export * from "./murmurhash";
-export * from "./compareVersions";
-
-export type { Value } from "@eventvisor/types";
+export { createEventvisor } from "./instance.js";
+export type { Eventvisor, EventvisorOptions } from "./instance.js";
+export type {
+  EventvisorModule,
+  EventvisorModuleApi,
+  ModuleName,
+  LookupOptions,
+  HandleOptions,
+  TransportOptions,
+  ReadFromStorageOptions,
+  WriteToStorageOptions,
+  RemoveFromStorageOptions,
+} from "./modulesManager.js";
+export type {
+  EmitType as EventvisorEvent,
+  EventCallback,
+  EventDetailsMap as EventvisorEventDetails,
+} from "./emitter.js";
+export type { LogLevel, EventvisorDiagnostic, EventvisorDiagnosticHandler } from "./logger.js";
+export type { DatafileInput } from "./datafile.js";
+export type { Value, DatafileContent } from "@eventvisor/types";

@@ -1,4 +1,10 @@
 packages/*/dist
 packages/*/lib
+**/cjs
+**/esm
+**/node-esm
+
+**/.catalog-dev/**
+**/test-results/**
 
 CHANGELOG.md

@@ -1,4 +1,5 @@
 import * as z from "zod";
+import { isPortableRegex } from "@eventvisor/sdk/portable";
 
 export const JSONZodSchema = getJSONSchema();
 
@@ -8,6 +9,9 @@ export const JSONZodSchema = getJSONSchema();
 export function getJSONSchema(): z.ZodObject<any> {
   return z
     .object({
+      // Reusable project Schema reference
+      schema: z.string().min(1).optional(),
+
       // Basic metadata
       description: z.string().optional(),
 
@@ -36,14 +40,11 @@ export function getJSONSchema(): z.ZodObject<any> {
       // Object validation keywords
       required: z.array(z.string()).optional(),
       properties: z.record(z.string(), createJSONSchema()).optional(),
+      additionalProperties: z.boolean().optional(),
 
       // Annotations
       default: createValueSchema().optional(),
       examples: z.array(createValueSchema()).optional(),
-
-      // project specific additional properties
-      defaultSource: z.string().optional(),
-      defaultSources: z.array(z.string()).optional(),
     })
     .refine((schema) => validateSchemaConstraints(schema), {
       message: "Schema validation failed: schema does not conform to JSON Schema specification",
@@ -319,13 +320,10 @@ function validateStringConstraints(
         code: "INVALID_PATTERN_TYPE",
       });
     } else {
-      try {
-        new RegExp(schema.pattern);
-        // eslint-disable-next-line
-      } catch (e) {
+      if (!isPortableRegex(schema.pattern)) {
         errors.push({
           path: [...path, "pattern"],
-          message: `Invalid regex pattern: ${schema.pattern}`,
+          message: `Pattern is not valid in the portable cross-SDK subset: ${schema.pattern}`,
           code: "INVALID_REGEX_PATTERN",
         });
       }
@@ -444,7 +442,7 @@ function validateObjectConstraints(
   path: string[] = [],
 ): void {
   // Check that object constraints are only used with object types
-  const objectKeywords = ["required", "properties"];
+  const objectKeywords = ["required", "properties", "additionalProperties"];
   const hasObjectConstraints = objectKeywords.some((key) => schema[key] !== undefined);
 
   if (hasObjectConstraints && schema.type && schema.type !== "object") {
@@ -470,6 +468,12 @@ function validateObjectConstraints(
             path: [...path, "required", index.toString()],
             message: "Required items must be strings",
             code: "INVALID_REQUIRED_ITEM",
+          });
+        } else if (!schema.properties || !schema.properties[item]) {
+          errors.push({
+            path: [...path, "required", index.toString()],
+            message: `Required property "${item}" must be declared in properties`,
+            code: "REQUIRED_PROPERTY_NOT_DECLARED",
           });
         }
       });

@@ -1,6 +1,6 @@
 # @eventvisor/types
 
-> Common TypeScript typings for Eventvisor packages
+Shared TypeScript contracts for Eventvisor definitions, generated datafiles, SDK values, tests, Targets, Sets, and Catalog data.
 
 Visit [https://eventvisor.org](https://eventvisor.org) for more information.
 

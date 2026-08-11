@@ -8,19 +8,23 @@ function createDeps(): Dependencies {
       eventsDirectoryPath: "/tmp/eventvisor/events",
       attributesDirectoryPath: "/tmp/eventvisor/attributes",
       destinationsDirectoryPath: "/tmp/eventvisor/destinations",
-      statesDirectoryPath: "/tmp/eventvisor/states",
       effectsDirectoryPath: "/tmp/eventvisor/effects",
+      schemasDirectoryPath: "/tmp/eventvisor/schemas",
       testsDirectoryPath: "/tmp/eventvisor/tests",
+      targetsDirectoryPath: "/tmp/eventvisor/targets",
+      setsDirectoryPath: "/tmp/eventvisor/sets",
       datafilesDirectoryPath: "/tmp/eventvisor/datafiles",
       systemDirectoryPath: "/tmp/eventvisor/.eventvisor",
       catalogExportDirectoryPath: "/tmp/eventvisor/out",
       datafileNamePattern: "eventvisor-%s.json",
       tags: ["all"],
-      adapter: class {},
+      sets: false,
+      adapter: class {} as any,
       plugins: [],
       parser: { extension: "yml", parse: jest.fn(), stringify: jest.fn() },
       prettyDatafile: false,
       stringify: true,
+      onValidationFailure: "drop",
     },
     datasource: {} as Dependencies["datasource"],
     options: {},
@@ -182,6 +186,25 @@ describe("getTestSchema", () => {
     expect(result.success).toBe(false);
   });
 
+  it("rejects specs without assertions", () => {
+    expect(schema.safeParse({ event: "page_view", assertions: [] }).success).toBe(false);
+  });
+
+  it("rejects empty matrices and matrix entries", () => {
+    expect(
+      schema.safeParse({
+        event: "page_view",
+        assertions: [{ matrix: {} }],
+      }).success,
+    ).toBe(false);
+    expect(
+      schema.safeParse({
+        event: "page_view",
+        assertions: [{ matrix: { country: [] } }],
+      }).success,
+    ).toBe(false);
+  });
+
   it("rejects unknown assertion fields", () => {
     const result = schema.safeParse({
       attribute: "testRequired",
@@ -196,7 +219,7 @@ describe("getTestSchema", () => {
     expect(result.success).toBe(false);
   });
 
-  it("rejects unsupported action types", () => {
+  it("accepts removeAttribute actions", () => {
     const result = schema.safeParse({
       event: "page_view",
       assertions: [
@@ -207,11 +230,12 @@ describe("getTestSchema", () => {
               name: "userId",
             },
           ],
+          expectedToBeTracked: false,
         },
       ],
     });
 
-    expect(result.success).toBe(false);
+    expect(result.success).toBe(true);
   });
 
   it("rejects malformed expectedToBeCalled entries", () => {
@@ -232,8 +256,8 @@ describe("getTestSchema", () => {
     expect(result.success).toBe(false);
   });
 
-  it("rejects runtime-unsupported fields", () => {
-    const unsupportedSpecs = [
+  it("accepts all runtime-supported assertion fields", () => {
+    const supportedSpecs = [
       {
         event: "page_view",
         assertions: [
@@ -241,6 +265,8 @@ describe("getTestSchema", () => {
             withAttributes: {
               userId: "123",
             },
+            track: {},
+            expectedToBeTracked: true,
           },
         ],
       },
@@ -248,7 +274,9 @@ describe("getTestSchema", () => {
         destination: "consoleSimple",
         assertions: [
           {
+            actions: [{ type: "track", name: "page_view", value: {} }],
             assertAfter: 10,
+            expectedToBeTransported: true,
           },
         ],
       },
@@ -256,6 +284,7 @@ describe("getTestSchema", () => {
         destination: "consoleSimple",
         assertions: [
           {
+            actions: [{ type: "track", name: "page_view", value: {} }],
             expectedBodies: [],
           },
         ],
@@ -264,6 +293,7 @@ describe("getTestSchema", () => {
         event: "page_view",
         assertions: [
           {
+            track: {},
             expectedDestinationsByTag: {
               marketing: ["console"],
             },
@@ -272,8 +302,8 @@ describe("getTestSchema", () => {
       },
     ];
 
-    for (const spec of unsupportedSpecs) {
-      expect(schema.safeParse(spec).success).toBe(false);
+    for (const spec of supportedSpecs) {
+      expect(schema.safeParse(spec).success).toBe(true);
     }
   });
 });

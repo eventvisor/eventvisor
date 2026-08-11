@@ -1,0 +1,7 @@
+description: Production analytics stream with consent
+tags: [all, checkout]
+transport: console
+conditions:
+  - attribute: consentAnalytics
+    operator: equals
+    value: true

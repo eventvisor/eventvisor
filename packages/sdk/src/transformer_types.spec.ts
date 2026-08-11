@@ -1,13 +1,14 @@
-import { Transformer } from "./transformer";
-import { emptyDatafile, DatafileReader } from "./datafileReader";
-import { createLogger } from "./logger";
-import { ModulesManager } from "./modulesManager";
-import { EffectsManager } from "./effectsManager";
-import { AttributesManager } from "./attributesManager";
-import { SourceResolver } from "./sourceResolver";
-import { ConditionsChecker } from "./conditions";
-import { Emitter } from "./emitter";
-import { Validator } from "./validator";
+import { Transformer } from "./transformer.js";
+import { emptyDatafile } from "./datafile.js";
+import { createTestDataProvider } from "./datafile.test-fixtures.js";
+import { createLogger } from "./logger.js";
+import { ModulesManager } from "./modulesManager.js";
+import { EffectsManager } from "./effectsManager.js";
+import { AttributesManager } from "./attributesManager.js";
+import { SourceResolver } from "./sourceResolver.js";
+import { ConditionsChecker } from "./conditions.js";
+import { Emitter } from "./emitter.js";
+import { Validator } from "./validator.js";
 
 describe("Transformer types", () => {
   // initialize the dependencies
@@ -15,26 +16,24 @@ describe("Transformer types", () => {
 
   const logger = createLogger({ level: "fatal" });
 
-  const datafileReader = new DatafileReader({
-    datafile: {
-      ...emptyDatafile,
-      attributes: {
-        ...emptyDatafile.attributes,
-        browserName: {
-          type: "string",
-        },
-        browserVersion: {
-          type: "string",
-        },
+  const datafileReader = createTestDataProvider({
+    ...emptyDatafile,
+    attributes: {
+      ...emptyDatafile.attributes,
+      browserName: {
+        type: "string",
+      },
+      browserVersion: {
+        type: "string",
       },
     },
-    logger,
   });
 
   const modulesManager = new ModulesManager({
     logger,
-    getDatafileReader: () => datafileReader,
-    getSourceResolver: () => sourceResolver,
+    getRevision: () => datafileReader.getRevision(),
+    onDiagnostic: () => () => {},
+    reportDiagnostic: () => {},
   });
 
   const validator = new Validator({
@@ -46,7 +45,7 @@ describe("Transformer types", () => {
     logger,
     emitter,
     validator,
-    getDatafileReader: () => datafileReader,
+    getDataProvider: () => datafileReader,
     getTransformer: () => transformer,
     getConditionsChecker: () => conditionsChecker,
     modulesManager,
@@ -54,7 +53,7 @@ describe("Transformer types", () => {
 
   const effectsManager = new EffectsManager({
     logger,
-    getDatafileReader: () => datafileReader,
+    getDataProvider: () => datafileReader,
     getTransformer: () => transformer,
     getConditionsChecker: () => conditionsChecker,
     modulesManager: modulesManager,
@@ -136,6 +135,14 @@ describe("Transformer types", () => {
         ),
       ).toEqual(6);
     });
+
+    it("increments the current target by the configured value", async () => {
+      expect(
+        await transformer.applyAll({ count: 10 }, [
+          { type: "increment", target: "count", value: 5 },
+        ]),
+      ).toEqual({ count: 15 });
+    });
   });
 
   /**
@@ -194,6 +201,14 @@ describe("Transformer types", () => {
           ],
         ),
       ).toEqual(-4);
+    });
+
+    it("decrements the current target by the configured value", async () => {
+      expect(
+        await transformer.applyAll({ count: 10 }, [
+          { type: "decrement", target: "count", value: 5 },
+        ]),
+      ).toEqual({ count: 5 });
     });
   });
 

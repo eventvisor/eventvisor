@@ -1,12 +1,12 @@
 import type { Attribute, Effect, Value, ComplexPersist } from "@eventvisor/types";
-import type { DatafileReader } from "./datafileReader";
-import type { ConditionsChecker } from "./conditions";
-import type { ModulesManager } from "./modulesManager";
+import type { InstanceDataProvider } from "./datafile.js";
+import type { ConditionsChecker } from "./conditions.js";
+import type { ModulesManager } from "./modulesManager.js";
 
 export type EntityMap = Record<string, Value>;
 
 export interface InitializeFromStorageOptions {
-  datafileReader: DatafileReader;
+  dataProvider: InstanceDataProvider;
   conditionsChecker: ConditionsChecker;
   modulesManager: ModulesManager;
   storageKeyPrefix: string;
@@ -44,8 +44,7 @@ export async function findPersist(
 }
 
 export async function initializeFromStorage({
-  datafileReader,
-  conditionsChecker,
+  dataProvider,
   modulesManager,
   storageKeyPrefix,
   getEntityNames,
@@ -61,26 +60,23 @@ export async function initializeFromStorage({
       continue;
     }
 
-    const persists = datafileReader.getPersists(schema);
+    const persists = dataProvider.getPersists(schema);
 
     if (!persists) {
       continue;
     }
 
-    const persist = await findPersist({ persists, entityName, conditionsChecker, payload: {} });
-
-    if (!persist) {
-      continue;
-    }
-
-    // read from storage
-    const value = await modulesManager.readFromStorage(
-      persist.storage,
-      `${storageKeyPrefix}${entityName}`,
-    );
-
-    if (value !== null && value !== undefined) {
-      entityMap[entityName] = value;
+    // Conditions can depend on the persisted value, which is not available
+    // until it has been read. Read configured stores in declaration order.
+    for (const persist of persists) {
+      const value = await modulesManager.readFromStorage(
+        persist.storage,
+        `${storageKeyPrefix}${entityName}`,
+      );
+      if (value !== null && value !== undefined) {
+        entityMap[entityName] = value;
+        break;
+      }
     }
   }
 
@@ -88,7 +84,7 @@ export async function initializeFromStorage({
 }
 
 export interface PersistEntityOptions {
-  datafileReader: DatafileReader;
+  dataProvider: InstanceDataProvider;
   conditionsChecker: ConditionsChecker;
   modulesManager: ModulesManager;
   storageKeyPrefix: string;
@@ -98,7 +94,7 @@ export interface PersistEntityOptions {
 }
 
 export async function persistEntity({
-  datafileReader,
+  dataProvider,
   conditionsChecker,
   modulesManager,
   storageKeyPrefix,
@@ -110,7 +106,7 @@ export async function persistEntity({
     return;
   }
 
-  const persists = datafileReader.getPersists(entity);
+  const persists = dataProvider.getPersists(entity);
 
   if (!persists) {
     return;
@@ -122,11 +118,16 @@ export async function persistEntity({
     return;
   }
 
+  for (const candidate of persists) {
+    if (candidate.storage !== persist.storage) {
+      await modulesManager.removeFromStorage(candidate.storage, `${storageKeyPrefix}${entityName}`);
+    }
+  }
   await modulesManager.writeToStorage(persist.storage, `${storageKeyPrefix}${entityName}`, value);
 }
 
 export interface RemoveEntityOptions {
-  datafileReader: DatafileReader;
+  dataProvider: InstanceDataProvider;
   conditionsChecker: ConditionsChecker;
   modulesManager: ModulesManager;
   storageKeyPrefix: string;
@@ -135,8 +136,7 @@ export interface RemoveEntityOptions {
 }
 
 export async function removeEntity({
-  datafileReader,
-  conditionsChecker,
+  dataProvider,
   modulesManager,
   storageKeyPrefix,
   entityName,
@@ -146,17 +146,13 @@ export async function removeEntity({
     return;
   }
 
-  const persists = datafileReader.getPersists(entity);
+  const persists = dataProvider.getPersists(entity);
 
   if (!persists) {
     return;
   }
 
-  const persist = await findPersist({ persists, entityName, conditionsChecker, payload: {} });
-
-  if (!persist) {
-    return;
+  for (const storage of [...new Set(persists.map((persist) => persist.storage))]) {
+    await modulesManager.removeFromStorage(storage, `${storageKeyPrefix}${entityName}`);
   }
-
-  await modulesManager.removeFromStorage(persist.storage, `${storageKeyPrefix}${entityName}`);
 }

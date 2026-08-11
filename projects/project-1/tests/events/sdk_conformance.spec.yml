@@ -1,0 +1,156 @@
+event: sdk_conformance
+
+assertions:
+  - description: valid event passes the complete cross SDK pipeline
+    withAttributes:
+      country: NL
+      userId: user-123
+    track:
+      kind: purchase
+      amount: 40
+      version: 3.2.1
+      occurredAt: 2026-01-15T10:30:00Z
+      customer:
+        name: "  Ada Lovelace  "
+        legacyId: customer-1
+      labels: [checkout]
+      metadata:
+        source: project-1
+    expectedToBeValid: true
+    expectedToBeTracked: true
+    expectedEvent:
+      kind: purchase
+      amount: 42
+      version: 3.2.1
+      occurredAt: 2026-01-15T10:30:00Z
+      customer:
+        name: Ada Lovelace
+        id: customer-1
+      labels: [checkout, governed]
+      metadata:
+        source: project-1
+        sdkContract: v1
+    expectedDestinations:
+      - consoleSimple
+
+  - description: a valid event can be rejected by conditions
+    withAttributes:
+      country: NL
+      userId: user-123
+    track:
+      kind: refund
+      amount: 1500
+      version: 3.2.1
+      occurredAt: 2026-01-15T10:30:00Z
+      customer:
+        name: Ada Lovelace
+        legacyId: customer-1
+    expectedToBeValid: true
+    expectedToBeTracked: false
+
+  - description: strict validation rejects unknown properties
+    withAttributes:
+      country: NL
+      userId: user-123
+    track:
+      kind: purchase
+      amount: 40
+      version: 3.2.1
+      occurredAt: 2026-01-15T10:30:00Z
+      customer:
+        name: Ada Lovelace
+        legacyId: customer-1
+      unknown: true
+    expectedToBeValid: false
+    expectedToBeTracked: false
+
+  - description: another allowed country passes the same pipeline
+    withAttributes:
+      country: DE
+      userId: user-456
+    track:
+      kind: purchase
+      amount: 0
+      version: 3.0.0
+      occurredAt: 2025-01-01T00:00:01Z
+      customer:
+        name: "  Grace Hopper "
+        legacyId: customer-2
+      labels: []
+    expectedToBeValid: true
+    expectedToBeTracked: true
+    expectedEvent:
+      kind: purchase
+      amount: 2
+      version: 3.0.0
+      occurredAt: 2025-01-01T00:00:01Z
+      customer:
+        name: Grace Hopper
+        id: customer-2
+      labels: [governed]
+      metadata:
+        sdkContract: v1
+    expectedDestinations:
+      - consoleSimple
+
+  - description: not allows a refund when the amount is not above the limit
+    withAttributes:
+      country: NL
+      userId: user-123
+    track:
+      kind: refund
+      amount: 100
+      version: 3.1.0
+      occurredAt: 2026-01-15T10:30:00Z
+      customer:
+        name: Ada Lovelace
+        legacyId: customer-1
+      labels: [support]
+    expectedToBeValid: true
+    expectedToBeTracked: true
+
+  - description: an unsupported country is valid but does not pass conditions
+    withAttributes:
+      country: US
+      userId: user-123
+    track:
+      kind: purchase
+      amount: 40
+      version: 3.2.1
+      occurredAt: 2026-01-15T10:30:00Z
+      customer:
+        name: Ada Lovelace
+        legacyId: customer-1
+    expectedToBeValid: true
+    expectedToBeTracked: false
+
+  - description: malformed semantic versions fail conditions closed
+    withAttributes:
+      country: NL
+      userId: user-123
+    track:
+      kind: purchase
+      amount: 40
+      version: latest
+      occurredAt: 2026-01-15T10:30:00Z
+      customer:
+        name: Ada Lovelace
+        legacyId: customer-1
+    expectedToBeValid: true
+    expectedToBeTracked: false
+
+  - description: nested objects reject unknown properties
+    withAttributes:
+      country: NL
+      userId: user-123
+    track:
+      kind: purchase
+      amount: 40
+      version: 3.2.1
+      occurredAt: 2026-01-15T10:30:00Z
+      customer:
+        name: Ada Lovelace
+        legacyId: customer-1
+        unknown: true
+    expectedToBeValid: false
+    expectedToBeTracked: false

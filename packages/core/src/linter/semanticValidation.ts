@@ -32,7 +32,6 @@ interface SourceValidationOptions {
   allowedOrigins: Set<string>;
   payloadSchemas?: JSONSchema[];
   stateValue?: Value;
-  allowPayloadArrays?: boolean;
   validateTargetAgainstPayload?: boolean;
   validateTargetAgainstState?: boolean;
 }
@@ -288,31 +287,18 @@ function validateSourceBase(
   options: SourceValidationOptions,
 ) {
   if (typeof sourceBase.source !== "undefined") {
-    if (Array.isArray(sourceBase.source)) {
-      pushIssue(
-        state,
-        [...options.path, "source"],
-        `The "source" field does not support arrays; use "payload" for multi-source payload references`,
-      );
-    } else {
-      validateSourceString(state, sourceBase.source, {
+    const sources = Array.isArray(sourceBase.source) ? sourceBase.source : [sourceBase.source];
+    sources.forEach((source, index) =>
+      validateSourceString(state, source, {
         ...options,
-        path: [...options.path, "source"],
-      });
-    }
+        path: [...options.path, "source", ...(Array.isArray(sourceBase.source) ? [index] : [])],
+      }),
+    );
   }
 
   if (typeof sourceBase.payload !== "undefined") {
     const payloadValue = sourceBase.payload;
     const payloadPaths = Array.isArray(payloadValue) ? payloadValue : [payloadValue];
-
-    if (Array.isArray(payloadValue) && !options.allowPayloadArrays) {
-      pushIssue(
-        state,
-        [...options.path, "payload"],
-        `The "payload" field does not support arrays in this context`,
-      );
-    }
 
     for (let index = 0; index < payloadPaths.length; index++) {
       const payloadPath = payloadPaths[index];
@@ -331,62 +317,58 @@ function validateSourceBase(
   }
 
   if (typeof sourceBase.lookup !== "undefined") {
-    if (Array.isArray(sourceBase.lookup)) {
-      pushIssue(state, [...options.path, "lookup"], `The "lookup" field must be a single string`);
-    } else {
-      validateLookupKey(state, String(sourceBase.lookup), [...options.path, "lookup"]);
-    }
+    const lookups = Array.isArray(sourceBase.lookup) ? sourceBase.lookup : [sourceBase.lookup];
+    lookups.forEach((lookup, index) =>
+      validateLookupKey(state, String(lookup), [
+        ...options.path,
+        "lookup",
+        ...(Array.isArray(sourceBase.lookup) ? [index] : []),
+      ]),
+    );
   }
 
   if (typeof sourceBase.attribute !== "undefined") {
-    if (Array.isArray(sourceBase.attribute)) {
-      pushIssue(
-        state,
-        [...options.path, "attribute"],
-        `The "attribute" field must reference a single attribute`,
-      );
-    } else {
+    const attributes = Array.isArray(sourceBase.attribute)
+      ? sourceBase.attribute
+      : [sourceBase.attribute];
+    attributes.forEach((attribute, index) =>
       validateEntityReference(
         state,
         "attribute",
-        String(sourceBase.attribute).split(".")[0],
-        [...options.path, "attribute"],
-        `Attribute reference "${sourceBase.attribute}"`,
-      );
-    }
+        String(attribute).split(".")[0],
+        [...options.path, "attribute", ...(Array.isArray(sourceBase.attribute) ? [index] : [])],
+        `Attribute reference "${attribute}"`,
+      ),
+    );
   }
 
   if (typeof sourceBase.effect !== "undefined") {
-    if (Array.isArray(sourceBase.effect)) {
-      pushIssue(
-        state,
-        [...options.path, "effect"],
-        `The "effect" field must reference a single effect`,
-      );
-    } else {
+    const effects = Array.isArray(sourceBase.effect) ? sourceBase.effect : [sourceBase.effect];
+    effects.forEach((effect, index) =>
       validateEntityReference(
         state,
         "effect",
-        String(sourceBase.effect).split(".")[0],
-        [...options.path, "effect"],
-        `Effect reference "${sourceBase.effect}"`,
-      );
-    }
+        String(effect).split(".")[0],
+        [...options.path, "effect", ...(Array.isArray(sourceBase.effect) ? [index] : [])],
+        `Effect reference "${effect}"`,
+      ),
+    );
   }
 
   if (typeof sourceBase.state !== "undefined") {
-    if (Array.isArray(sourceBase.state)) {
-      pushIssue(state, [...options.path, "state"], `The "state" field must be a single path`);
-    } else if (
-      options.stateValue !== undefined &&
-      !valueHasPath(options.stateValue, String(sourceBase.state).split("."))
-    ) {
-      pushIssue(
-        state,
-        [...options.path, "state"],
-        `State reference "${sourceBase.state}" is not declared in the effect state`,
-      );
-    }
+    const states = Array.isArray(sourceBase.state) ? sourceBase.state : [sourceBase.state];
+    states.forEach((stateValue, index) => {
+      if (
+        options.stateValue !== undefined &&
+        !valueHasPath(options.stateValue, String(stateValue).split("."))
+      ) {
+        pushIssue(
+          state,
+          [...options.path, "state", ...(Array.isArray(sourceBase.state) ? [index] : [])],
+          `State reference "${stateValue}" is not declared in the effect state`,
+        );
+      }
+    });
   }
 }
 
@@ -496,7 +478,6 @@ function validateTransform(
   validateSourceBase(state, transform as Record<string, any>, {
     ...options,
     path,
-    allowPayloadArrays: transform.type === "concat",
   });
 
   if (
@@ -635,6 +616,22 @@ function validateAttributeSemantics(state: ValidationState, attribute: Attribute
 }
 
 function validateEventSemantics(state: ValidationState, event: Event) {
+  if (event.type !== "object") {
+    pushIssue(state, ["type"], 'Events must resolve to JSON Schema type "object"');
+  }
+
+  if (
+    event.onValidationFailure &&
+    typeof event.onValidationFailure === "object" &&
+    !state.ctx.destinations[event.onValidationFailure.destination]
+  ) {
+    pushIssue(
+      state,
+      ["onValidationFailure", "destination"],
+      `onValidationFailure references missing destination "${event.onValidationFailure.destination}"`,
+    );
+  }
+
   const options: SourceValidationOptions = {
     path: [],
     allowedOrigins: new Set([

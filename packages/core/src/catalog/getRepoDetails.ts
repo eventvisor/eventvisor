@@ -1,8 +1,10 @@
-import { execSync } from "child_process";
+import { execFileSync } from "child_process";
 
 import { getOwnerAndRepoFromUrl } from "./getOwnerAndRepoFromUrl";
 
 export interface RepoDetails {
+  provider: "github" | "gitlab" | "bitbucket";
+  repository: string;
   branch: string;
   remoteUrl: string;
   blobUrl: string;
@@ -10,16 +12,18 @@ export interface RepoDetails {
   topLevelPath: string;
 }
 
-export function getRepoDetails(): RepoDetails | undefined {
+function runGit(rootDirectoryPath: string, args: string[]) {
+  return execFileSync("git", ["-C", rootDirectoryPath, ...args], {
+    encoding: "utf8",
+    stdio: ["ignore", "pipe", "ignore"],
+  }).trim();
+}
+
+export function getRepoDetails(rootDirectoryPath = process.cwd()): RepoDetails | undefined {
   try {
-    const topLevelPathOutput = execSync(`git rev-parse --show-toplevel`);
-    const topLevelPath = topLevelPathOutput.toString().trim();
-
-    const remoteUrlOutput = execSync(`git remote get-url origin`);
-    const remoteUrl = remoteUrlOutput.toString().trim();
-
-    const branchOutput = execSync(`git rev-parse --abbrev-ref HEAD`);
-    const branch = branchOutput.toString().trim();
+    const topLevelPath = runGit(rootDirectoryPath, ["rev-parse", "--show-toplevel"]);
+    const remoteUrl = runGit(rootDirectoryPath, ["remote", "get-url", "origin"]);
+    const branch = runGit(rootDirectoryPath, ["rev-parse", "--abbrev-ref", "HEAD"]);
 
     if (!remoteUrl || !branch) {
       return;
@@ -33,30 +37,40 @@ export function getRepoDetails(): RepoDetails | undefined {
 
     let blobUrl;
     let commitUrl;
+    let repository;
+    let provider: RepoDetails["provider"];
 
     if (remoteUrl.indexOf("github.com") > -1) {
+      provider = "github";
+      repository = `https://github.com/${owner}/${repo}`;
       blobUrl = `https://github.com/${owner}/${repo}/blob/${branch}/{{blobPath}}`;
       commitUrl = `https://github.com/${owner}/${repo}/commit/{{hash}}`;
+    } else if (remoteUrl.indexOf("gitlab.com") > -1) {
+      provider = "gitlab";
+      repository = `https://gitlab.com/${owner}/${repo}`;
+      blobUrl = `https://gitlab.com/${owner}/${repo}/-/blob/${branch}/{{blobPath}}`;
+      commitUrl = `https://gitlab.com/${owner}/${repo}/-/commit/{{hash}}`;
     } else if (remoteUrl.indexOf("bitbucket.org") > -1) {
+      provider = "bitbucket";
+      repository = `https://bitbucket.org/${owner}/${repo}`;
       blobUrl = `https://bitbucket.org/${owner}/${repo}/src/${branch}/{{blobPath}}`;
       commitUrl = `https://bitbucket.org/${owner}/${repo}/commits/{{hash}}`;
     }
 
-    if (!blobUrl || !commitUrl) {
+    if (!provider || !repository || !blobUrl || !commitUrl) {
       return;
     }
 
     return {
+      provider,
+      repository,
       branch,
       remoteUrl,
       blobUrl,
       commitUrl,
       topLevelPath,
     };
-  } catch (e) {
-    console.error(e);
+  } catch {
     return;
   }
-
-  return;
 }

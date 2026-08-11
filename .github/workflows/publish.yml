@@ -9,27 +9,31 @@ permissions:
   id-token: write
   contents: write
 
+concurrency:
+  group: publish-${{ github.ref }}
+  cancel-in-progress: false
+
 jobs:
   ci:
     name: Publish
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 20
     permissions:
-      id-token: write   # required for npm OIDC trusted publishing
+      id-token: write # required for npm OIDC trusted publishing
       contents: write
       packages: write
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           fetch-depth: 0
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v7
         with:
           node-version-file: ".nvmrc"
           registry-url: "https://registry.npmjs.org"
 
       - name: Cache dependencies
-        uses: actions/cache@v4
+        uses: actions/cache@v5
         with:
           path: ~/.npm
           key: ${{ runner.os }}-node-${{ hashFiles('**/package-lock.json') }}
@@ -42,35 +46,44 @@ jobs:
       - name: Build
         run: make build
 
-      # - name: Lint
-      #   run: make lint
+      - name: Lint
+        run: make lint
 
-      # - name: Test
-      #   run: make test
+      - name: Typecheck
+        run: make typecheck
+
+      - name: Test
+        run: make test
+
+      - name: Verify packages
+        run: npm run release-check
+
+      - name: Audit production dependencies
+        run: make dependency-check
 
       - name: Bump version
         continue-on-error: true
         id: graduateRelease
         # @NOTE: versioning strategy
-        #   major:   npx lerna version 2.0.0 --force-publish --exact --yes
-        #   regular: npx lerna version --conventional-commits --conventional-graduate --exact --yes
+        #   major:   npx lerna version X.0.0 --force-publish --exact --yes --no-push
+        #   regular: npx lerna version --conventional-commits --conventional-graduate --exact --yes --no-push
         run: |
           git config user.name "${{ github.actor }}"
           git config user.email "${{ github.actor}}@users.noreply.github.com"
-          npx lerna version --conventional-commits --conventional-graduate --exact --yes --no-push
+          npx lerna version 1.0.0 --force-publish --exact --yes --no-push
 
       - name: Bump version fallback
         if: ${{ always() && steps.graduateRelease.outcome == 'failure'  }}
         # @NOTE: versioning strategy
-        #   major:   npx lerna version 2.0.0 --force-publish --exact --yes
-        #   regular: npx lerna version --conventional-commits --exact --yes
+        #   major:   npx lerna version X.0.0 --force-publish --exact --yes --no-push
+        #   regular: npx lerna version --conventional-commits --exact --yes --no-push
         run: |
           git config user.name "${{ github.actor }}"
           git config user.email "${{ github.actor}}@users.noreply.github.com"
 
           echo "Falling back to non-graduate release due to https://github.com/lerna/lerna/issues/2532"
           git stash
-          npx lerna version --conventional-commits --exact --yes --no-push
+          npx lerna version 1.0.0 --force-publish --exact --yes --no-push
 
       - name: Publish
         run: |

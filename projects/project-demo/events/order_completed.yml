@@ -1,0 +1,19 @@
+description: A customer completed an order
+tags: [all, checkout, backend]
+type: object
+properties:
+  orderId:
+    schema: identifier
+  total:
+    schema: money
+  orderTotal:
+    type: number
+  itemCount:
+    type: integer
+    minimum: 1
+required: [orderId, total, itemCount]
+requiredAttributes: [userId, currency]
+transforms:
+  - type: rename
+    targetMap:
+      total: orderTotal

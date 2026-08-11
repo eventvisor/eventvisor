@@ -1,0 +1,5 @@
+description: Customer loyalty tier
+tags: [all, storefront, checkout]
+type: string
+enum: [guest, standard, premium]
+default: guest

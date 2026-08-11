@@ -1,20 +1,20 @@
 import type { AttributeName, Value } from "@eventvisor/types";
 
-import type { GetDatafileReader } from "./datafileReader";
-import type { GetConditionsChecker } from "./conditions";
-import type { ModulesManager } from "./modulesManager";
-import type { Emitter } from "./emitter";
-import type { Logger } from "./logger";
-import type { GetTransformer } from "./transformer";
-import type { Validator } from "./validator";
-import { initializeFromStorage, persistEntity, removeEntity } from "./persister";
+import type { InstanceDataProvider } from "./datafile.js";
+import type { GetConditionsChecker } from "./conditions.js";
+import type { ModulesManager } from "./modulesManager.js";
+import type { Emitter } from "./emitter.js";
+import type { Logger } from "./logger.js";
+import type { GetTransformer } from "./transformer.js";
+import type { Validator } from "./validator.js";
+import { initializeFromStorage, persistEntity, removeEntity } from "./persister.js";
 
 export type AttributesMap = Record<AttributeName, Value>;
 
 export interface AttributesManagerOptions {
   logger: Logger;
   emitter: Emitter;
-  getDatafileReader: GetDatafileReader;
+  getDataProvider: () => InstanceDataProvider;
   getTransformer: GetTransformer;
   getConditionsChecker: GetConditionsChecker;
   validator: Validator;
@@ -23,7 +23,7 @@ export interface AttributesManagerOptions {
 
 export class AttributesManager {
   private logger: Logger;
-  private getDatafileReader: GetDatafileReader;
+  private getDataProvider: () => InstanceDataProvider;
   private emitter: Emitter;
   private getTransformer: GetTransformer;
   private getConditionsChecker: GetConditionsChecker;
@@ -35,7 +35,7 @@ export class AttributesManager {
   constructor(options: AttributesManagerOptions) {
     const {
       logger,
-      getDatafileReader,
+      getDataProvider,
       emitter,
       getTransformer,
       getConditionsChecker,
@@ -44,14 +44,13 @@ export class AttributesManager {
     } = options;
 
     this.logger = logger;
-    this.getDatafileReader = getDatafileReader;
+    this.getDataProvider = getDataProvider;
     this.emitter = emitter;
     this.getTransformer = getTransformer;
     this.getConditionsChecker = getConditionsChecker;
     this.validator = validator;
     this.modulesManager = modulesManager;
 
-    // @TODO: initial attributes from SDK options
     this.attributesMap = {};
   }
 
@@ -61,30 +60,31 @@ export class AttributesManager {
   }
 
   private async initializeFromStorage(): Promise<void> {
-    const datafileReader = this.getDatafileReader();
+    const dataProvider = this.getDataProvider();
 
     const result = await initializeFromStorage({
-      datafileReader,
+      dataProvider,
       conditionsChecker: this.getConditionsChecker(),
       modulesManager: this.modulesManager,
       storageKeyPrefix: "attributes_",
-      getEntityNames: () => datafileReader.getAttributeNames(),
-      getEntity: (entityName: string) => datafileReader.getAttribute(entityName),
+      getEntityNames: () => dataProvider.getAttributeNames(),
+      getEntity: (entityName: string) => dataProvider.getAttribute(entityName),
     });
 
     this.attributesMap = result;
   }
 
   async setAttribute(attributeName: AttributeName, value: Value): Promise<Value | null> {
-    const datafileReader = this.getDatafileReader();
+    const dataProvider = this.getDataProvider();
 
     /**
      * Find
      */
-    const attributeSchema = datafileReader.getAttribute(attributeName);
+    const attributeSchema = dataProvider.getAttribute(attributeName);
 
     if (!attributeSchema) {
       this.logger.error(`Attribute schema not found`, {
+        code: "attribute_not_found",
         attributeName,
       });
 
@@ -95,7 +95,10 @@ export class AttributesManager {
      * Deprecated
      */
     if (attributeSchema.deprecated) {
-      this.logger.warn(`Attribute is deprecated`, { attributeName });
+      this.logger.warn(`Attribute is deprecated`, {
+        code: "attribute_deprecated",
+        attributeName,
+      });
     }
 
     /**
@@ -105,6 +108,7 @@ export class AttributesManager {
 
     if (!validationResult.valid) {
       this.logger.warn(`Attribute validation failed`, {
+        code: "attribute_validation_failed",
         attributeName,
         errors: validationResult.errors,
       });
@@ -136,13 +140,13 @@ export class AttributesManager {
      * Persist
      */
     await persistEntity({
-      datafileReader,
+      dataProvider,
       conditionsChecker: this.getConditionsChecker(),
       modulesManager: this.modulesManager,
       storageKeyPrefix: "attributes_",
       entityName: attributeName,
       entity: attributeSchema,
-      value,
+      value: transformedValue,
     });
 
     return transformedValue;
@@ -157,19 +161,31 @@ export class AttributesManager {
   }
 
   getAttributeValue(attributeName: AttributeName): Value | null {
-    return this.attributesMap[attributeName] || null;
+    return Object.prototype.hasOwnProperty.call(this.attributesMap, attributeName)
+      ? this.attributesMap[attributeName]
+      : null;
+  }
+
+  async refresh() {
+    const activeNames = new Set(this.getDataProvider().getAttributeNames());
+    const current = this.attributesMap;
+    await this.initializeFromStorage();
+    activeNames.forEach((name) => {
+      if (Object.prototype.hasOwnProperty.call(current, name))
+        this.attributesMap[name] = current[name];
+    });
   }
 
   async removeAttribute(attributeName: AttributeName): Promise<void> {
-    const datafileReader = this.getDatafileReader();
+    const dataProvider = this.getDataProvider();
 
     await removeEntity({
-      datafileReader,
+      dataProvider,
       conditionsChecker: this.getConditionsChecker(),
       modulesManager: this.modulesManager,
       storageKeyPrefix: "attributes_",
       entityName: attributeName,
-      entity: datafileReader.getAttribute(attributeName),
+      entity: dataProvider.getAttribute(attributeName),
     });
 
     delete this.attributesMap[attributeName];

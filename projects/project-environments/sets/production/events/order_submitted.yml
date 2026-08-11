@@ -1,0 +1,16 @@
+description: Order submitted in production
+tags: [all, checkout]
+type: object
+properties:
+  orderId:
+    type: string
+  total:
+    type: number
+    minimum: 0
+  releaseLane:
+    type: string
+required: [orderId, total]
+transforms:
+  - type: set
+    target: releaseLane
+    value: production

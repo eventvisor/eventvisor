@@ -2,6 +2,10 @@ import { JSONSchema } from "@eventvisor/types";
 
 import { getTypeScriptPropertyKey } from "./index";
 
+function escapeDocComment(value: string): string {
+  return value.replace(/\*\//g, "* /").replace(/\r?\n/g, "\n * ");
+}
+
 export function generateInterface(schema: JSONSchema, interfaceName: string): string {
   function generateType(schema: JSONSchema, indent: number = 0): string {
     const indentStr = "  ".repeat(indent);
@@ -36,7 +40,9 @@ export function generateInterface(schema: JSONSchema, interfaceName: string): st
     // Handle object
     if (schema.type === "object" || (schema.properties && !schema.type)) {
       if (!schema.properties || Object.keys(schema.properties).length === 0) {
-        return "Record<string, any>";
+        return schema.additionalProperties === true
+          ? "Record<string, unknown>"
+          : "Record<string, never>";
       }
 
       const required = schema.required || [];
@@ -47,7 +53,9 @@ export function generateInterface(schema: JSONSchema, interfaceName: string): st
         return `${indentStr}  ${getTypeScriptPropertyKey(key)}${optionalMarker}: ${propType};`;
       });
 
-      return `{\n${properties.join("\n")}\n${indentStr}}`;
+      const indexSignature =
+        schema.additionalProperties === true ? `${indentStr}  [key: string]: unknown;` : "";
+      return `{\n${[...properties, indexSignature].filter(Boolean).join("\n")}\n${indentStr}}`;
     }
 
     // Handle primitives
@@ -62,7 +70,7 @@ export function generateInterface(schema: JSONSchema, interfaceName: string): st
       case "null":
         return "null";
       default:
-        return "any";
+        return "unknown";
     }
   }
 
@@ -85,7 +93,7 @@ export function generateInterface(schema: JSONSchema, interfaceName: string): st
   const declarationType = isObjectType ? "interface" : "type";
   const separator = isObjectType ? " " : " = ";
 
-  const description = schema.description ? `/** ${schema.description} */\n` : "";
+  const description = schema.description ? `/** ${escapeDocComment(schema.description)} */\n` : "";
 
   return `${description}export ${declarationType} ${interfaceName}${separator}${typeDefinition}`;
 }

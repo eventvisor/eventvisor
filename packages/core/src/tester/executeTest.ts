@@ -1,18 +1,17 @@
-import type { DatafileContent, Test, Value } from "@eventvisor/types";
+import type { Action, DatafileContent, Test, Value } from "@eventvisor/types";
 
 import type { TestProjectOptions } from "./testProject";
 import type { Dependencies } from "../dependencies";
 import { createTestInstance } from "./createTestInstance";
+import { expandAssertions } from "./matrix";
+import { validate } from "@eventvisor/sdk/validator";
 
 export interface TestAssertionResult {
   passed: boolean;
   description?: string;
-  errors?: string[];
-}
-
-export interface TestAssertionResult {
-  passed: boolean;
-  description?: string;
+  assertionIndex?: number;
+  matrixIndex?: number;
+  matrixCount?: number;
   errors?: string[];
 }
 
@@ -28,409 +27,239 @@ export interface ExecuteTestOptions {
   cliOptions: TestProjectOptions;
 }
 
-export async function executeTest(options: ExecuteTestOptions) {
-  const { datafileContent, test, cliOptions } = options;
-
-  const testResult: TestResult = {
-    passed: true,
-    assertions: [],
-  };
-
-  let testPassed = true;
-
-  /**
-   * Attribute
-   */
-  if ("attribute" in test) {
-    // attribute test spec
-    const attributeName = test.attribute;
-    const assertions = test.assertions;
-
-    for (const assertion of assertions) {
-      // @TODO: apply matrix
-
-      if (
-        cliOptions.assertionPattern &&
-        !assertion.description?.includes(cliOptions.assertionPattern)
-      ) {
-        continue;
-      }
-
-      let assertionPassed = true;
-
-      const { e } = createTestInstance({
-        datafile: datafileContent,
-        cliOptions,
-        withLookups: assertion.withLookups,
-      });
-
-      if (assertion.setAttribute) {
-        await e.setAttributeAsync(attributeName, assertion.setAttribute);
-      }
-
-      const previouslySetAttribute = e.getAttributeValue(attributeName);
-      const isAttributeSet = e.isAttributeSet(attributeName);
-
-      const testAssertionResult: TestAssertionResult = {
-        passed: assertionPassed,
-        description: assertion.description,
-        errors: [],
-      };
-
-      // expectedToBeValid
-      if (typeof assertion.expectedToBeValid === "boolean") {
-        if (
-          (assertion.expectedToBeValid === true && !isAttributeSet) ||
-          (assertion.expectedToBeValid === false && isAttributeSet)
-        ) {
-          assertionPassed = false;
-          testAssertionResult.errors?.push(
-            `expectedToBeValid: expected ${assertion.expectedToBeValid}, received ${!assertion.expectedToBeValid}`,
-          );
-        }
-      }
-
-      // expectedToBeSet
-      if (typeof assertion.expectedToBeSet === "boolean") {
-        if (
-          (assertion.expectedToBeSet === true && !isAttributeSet) ||
-          (assertion.expectedToBeSet === false && isAttributeSet)
-        ) {
-          assertionPassed = false;
-          testAssertionResult.errors?.push(
-            `expectedToBeSet: expected ${assertion.expectedToBeSet}, received ${!assertion.expectedToBeSet}`,
-          );
-        }
-      }
-
-      if (assertion.expectedAttribute) {
-        if (!checkIfObjectsAreDeepEqual(previouslySetAttribute, assertion.expectedAttribute)) {
-          assertionPassed = false;
-          testAssertionResult.errors?.push(
-            `expectedAttribute: \n  expected: ${JSON.stringify(assertion.expectedAttribute)}\n  received: ${JSON.stringify(
-              previouslySetAttribute,
-            )}`,
-          );
-        }
-      }
-
-      testAssertionResult.passed = assertionPassed;
-
-      if (!assertionPassed) {
-        testPassed = false;
-      }
-
-      testResult.assertions.push(testAssertionResult);
-    }
-  }
-
-  /**
-   * Effect
-   */
-  if ("effect" in test) {
-    const effectName = test.effect;
-    const assertions = test.assertions;
-
-    for (const assertion of assertions) {
-      // @TODO: apply matrix
-
-      if (
-        cliOptions.assertionPattern &&
-        !assertion.description?.includes(cliOptions.assertionPattern)
-      ) {
-        continue;
-      }
-
-      let assertionPassed = true;
-
-      const { e, getCalledStepsBySingleEffect } = createTestInstance({
-        datafile: datafileContent,
-        cliOptions,
-        withLookups: assertion.withLookups,
-      });
-
-      await e.onReady();
-
-      if (assertion.actions) {
-        for (const action of assertion.actions) {
-          if (action.type === "track") {
-            await e.trackAsync(action.name, action.value);
-          } else if (action.type === "setAttribute") {
-            await e.setAttributeAsync(action.name, action.value);
-          }
-        }
-      }
-
-      const testAssertionResult: TestAssertionResult = {
-        passed: assertionPassed,
-        description: assertion.description,
-        errors: [],
-      };
-
-      // expectedState
-      if (assertion.expectedState) {
-        const latestState = e.getStateValue(effectName);
-
-        if (!checkIfObjectsAreDeepEqual(latestState, assertion.expectedState)) {
-          assertionPassed = false;
-          testAssertionResult.errors?.push(
-            `expectedState: \n  expected: ${JSON.stringify(assertion.expectedState)}\n  received: ${JSON.stringify(latestState)}`,
-          );
-        }
-      }
-
-      // expectedHandlersToBeCalled
-      if (assertion.expectedToBeCalled) {
-        const calledSteps = getCalledStepsBySingleEffect(effectName);
-
-        for (const expectedToBeCalled of assertion.expectedToBeCalled) {
-          const { handler, times } = expectedToBeCalled;
-
-          const calledStepsForHandler = calledSteps?.filter((step) => step.handler === handler);
-
-          if (times) {
-            if (calledStepsForHandler?.length !== times) {
-              assertionPassed = false;
-              testAssertionResult.errors?.push(
-                `expectedToBeCalled: expected handler "${handler}" to be called ${times} times, received ${calledStepsForHandler?.length} times`,
-              );
-            }
-          } else {
-            if (!calledStepsForHandler?.length || calledStepsForHandler.length === 0) {
-              assertionPassed = false;
-              testAssertionResult.errors?.push(
-                `expectedToBeCalled: expected handler "${handler}" to be called at least once`,
-              );
-            }
-          }
-        }
-      }
-
-      testAssertionResult.passed = assertionPassed;
-
-      if (!assertionPassed) {
-        testPassed = false;
-      }
-
-      testResult.assertions.push(testAssertionResult);
-    }
-  }
-
-  /**
-   * Event
-   */
-  if ("event" in test) {
-    const eventName = test.event;
-    const assertions = test.assertions;
-
-    for (const assertion of assertions) {
-      // @TODO: apply matrix
-
-      if (
-        cliOptions.assertionPattern &&
-        !assertion.description?.includes(cliOptions.assertionPattern)
-      ) {
-        continue;
-      }
-
-      let assertionPassed = true;
-
-      const { e } = createTestInstance({
-        datafile: datafileContent,
-        cliOptions,
-        withLookups: assertion.withLookups,
-      });
-
-      let trackedEvent: Value | null = null;
-
-      if (assertion.track) {
-        trackedEvent = await e.trackAsync(eventName, assertion.track);
-      }
-
-      if (assertion.actions) {
-        for (const action of assertion.actions) {
-          if (action.type === "track") {
-            await e.trackAsync(action.name, action.value);
-          } else if (action.type === "setAttribute") {
-            await e.setAttributeAsync(action.name, action.value);
-          }
-        }
-      }
-
-      const testAssertionResult: TestAssertionResult = {
-        passed: assertionPassed,
-        description: assertion.description,
-        errors: [],
-      };
-
-      // expectedToBeValid
-      if (typeof assertion.expectedToBeValid === "boolean") {
-        if (
-          (assertion.expectedToBeValid === true && !trackedEvent) ||
-          (assertion.expectedToBeValid === false && trackedEvent)
-        ) {
-          assertionPassed = false;
-          testAssertionResult.errors?.push(
-            `expectedToBeValid: expected ${assertion.expectedToBeValid}, received ${!assertion.expectedToBeValid}`,
-          );
-        }
-      }
-
-      // expectedToContinue
-      if (assertion.expectedToContinue) {
-        // @TODO: implement
-      }
-
-      // expectedEvent
-      if (assertion.expectedEvent) {
-        if (!checkIfObjectsAreDeepEqual(trackedEvent, assertion.expectedEvent)) {
-          assertionPassed = false;
-          testAssertionResult.errors?.push(
-            `expectedEvent: \n  expected: ${JSON.stringify(assertion.expectedEvent)}\n  received: ${JSON.stringify(trackedEvent)}`,
-          );
-        }
-      }
-
-      // expectedDestinations
-      if (assertion.expectedDestinations) {
-        // if (!assertion.expectedDestinations.includes(m.getDestinationName())) {
-        //   assertionPassed = false;
-        //   testAssertionResult.errors?.push(
-        //     `expectedDestinations: expected ${assertion.expectedDestinations.join(", ")}, received ${m.getDestinationName()}`,
-        //   );
-        // }
-      }
-
-      // expectedDestinationsByTag
-      if (assertion.expectedDestinationsByTag) {
-        // @TODO: implement
-      }
-
-      testAssertionResult.passed = assertionPassed;
-
-      if (!assertionPassed) {
-        testPassed = false;
-      }
-
-      testResult.assertions.push(testAssertionResult);
-    }
-  }
-
-  /**
-   * Destination
-   */
-  if ("destination" in test) {
-    const destinationName = test.destination;
-    const assertions = test.assertions;
-
-    for (const assertion of assertions) {
-      // @TODO: apply matrix
-
-      if (
-        cliOptions.assertionPattern &&
-        !assertion.description?.includes(cliOptions.assertionPattern)
-      ) {
-        continue;
-      }
-
-      let assertionPassed = true;
-
-      const { e, getBodiesBySingleDestination } = createTestInstance({
-        datafile: datafileContent,
-        cliOptions,
-        withLookups: assertion.withLookups,
-      });
-
-      if (assertion.actions) {
-        for (const action of assertion.actions) {
-          if (action.type === "track") {
-            await e.trackAsync(action.name, action.value);
-          } else if (action.type === "setAttribute") {
-            await e.setAttributeAsync(action.name, action.value);
-          }
-        }
-      }
-
-      const testAssertionResult: TestAssertionResult = {
-        passed: assertionPassed,
-        description: assertion.description,
-        errors: [],
-      };
-
-      // expectedToBeTransported
-      if (typeof assertion.expectedToBeTransported === "boolean") {
-        const bodies = getBodiesBySingleDestination(destinationName);
-
-        if (
-          (assertion.expectedToBeTransported === false && bodies && bodies.length > 0) ||
-          (assertion.expectedToBeTransported === true && (!bodies || bodies.length === 0))
-        ) {
-          assertionPassed = false;
-          testAssertionResult.errors?.push(
-            `expectedToBeTransported: expected ${assertion.expectedToBeTransported}, received ${!assertion.expectedToBeTransported}`,
-          );
-        }
-      }
-
-      // expectedBody
-      if (assertion.expectedBody) {
-        const bodies = getBodiesBySingleDestination(destinationName);
-        if (!checkIfObjectsAreDeepEqual(bodies && bodies[0], assertion.expectedBody)) {
-          assertionPassed = false;
-          testAssertionResult.errors?.push(
-            `expectedBody: \n  expected: ${JSON.stringify(assertion.expectedBody, null, 2)}\n  received: ${JSON.stringify(bodies && bodies[0], null, 2)}`,
-          );
-        }
-      }
-
-      // @TODO: expectedBodies
-
-      testAssertionResult.passed = assertionPassed;
-
-      if (!assertionPassed) {
-        testPassed = false;
-      }
-
-      testResult.assertions.push(testAssertionResult);
-    }
-  }
-
-  testResult.passed = testPassed;
-
-  return testResult;
-}
-
-function checkIfObjectsAreDeepEqual(a: any, b: any) {
-  // Handle null/undefined cases
-  if (a === null || b === null || a === undefined || b === undefined) {
-    return a === b;
-  }
-
-  // Handle primitive types
-  if (typeof a !== "object" || typeof b !== "object") {
-    return a === b;
-  }
-
-  // Handle arrays
-  if (Array.isArray(a) && Array.isArray(b)) {
-    if (a.length !== b.length) {
-      return false;
-    }
-    return a.every((item, index) => checkIfObjectsAreDeepEqual(item, b[index]));
-  }
-
-  // Handle objects
+function equal(a: unknown, b: unknown): boolean {
+  if (Object.is(a, b)) return true;
+  if (!a || !b || typeof a !== "object" || typeof b !== "object") return false;
+  if (Array.isArray(a) !== Array.isArray(b)) return false;
   const aKeys = Object.keys(a);
   const bKeys = Object.keys(b);
+  return (
+    aKeys.length === bKeys.length &&
+    aKeys.every((key) => Object.prototype.hasOwnProperty.call(b, key) && equal(a[key], b[key]))
+  );
+}
 
-  if (aKeys.length !== bKeys.length) {
-    return false;
+function addComparison(
+  result: TestAssertionResult,
+  field: string,
+  expected: unknown,
+  actual: unknown,
+) {
+  if (equal(expected, actual)) return;
+  result.passed = false;
+  result.errors?.push(
+    `${field}:\n  expected: ${JSON.stringify(expected, null, 2)}\n  received: ${JSON.stringify(actual, null, 2)}`,
+  );
+}
+
+async function setAttributes(
+  e: ReturnType<typeof createTestInstance>["e"],
+  values?: Record<string, Value>,
+) {
+  for (const [name, value] of Object.entries(values || {})) await e.setAttribute(name, value);
+}
+
+async function runActions(e: ReturnType<typeof createTestInstance>["e"], actions?: Action[]) {
+  const tracked: Array<{ name: string; input: Value; output: Value | null }> = [];
+  for (const action of actions || []) {
+    if (action.type === "track") {
+      tracked.push({
+        name: action.name,
+        input: action.value,
+        output: await e.track(action.name, action.value),
+      });
+    } else if (action.type === "setAttribute") await e.setAttribute(action.name, action.value);
+    else await e.removeAttribute(action.name);
+  }
+  return tracked;
+}
+
+function createResult(expanded: ReturnType<typeof expandAssertions>[number]): TestAssertionResult {
+  return {
+    passed: true,
+    description: expanded.assertion.description,
+    assertionIndex: expanded.assertionIndex,
+    matrixIndex: expanded.matrixIndex,
+    matrixCount: expanded.matrixCount,
+    errors: [],
+  };
+}
+
+export async function executeTest(options: ExecuteTestOptions): Promise<TestResult> {
+  const { datafileContent, test, cliOptions, deps } = options;
+  const results: TestAssertionResult[] = [];
+
+  for (const expanded of expandAssertions(test.assertions)) {
+    const assertion = expanded.assertion as any;
+    if (
+      cliOptions.assertionPattern &&
+      !assertion.description?.includes(cliOptions.assertionPattern)
+    ) {
+      continue;
+    }
+    const result = createResult(expanded);
+    const instance = createTestInstance({
+      datafile: datafileContent,
+      cliOptions,
+      withLookups: assertion.withLookups,
+    });
+    const { e } = instance;
+
+    try {
+      await e.onReady();
+      await setAttributes(e, assertion.withAttributes);
+
+      if ("attribute" in test) {
+        let validationResult;
+        if (Object.prototype.hasOwnProperty.call(assertion, "setAttribute")) {
+          validationResult = await validate(
+            datafileContent.attributes[test.attribute],
+            assertion.setAttribute,
+            {},
+          );
+          await e.setAttribute(test.attribute, assertion.setAttribute);
+        }
+        const isSet = e.isAttributeSet(test.attribute);
+        if (typeof assertion.expectedToBeValid === "boolean") {
+          addComparison(
+            result,
+            "expectedToBeValid",
+            assertion.expectedToBeValid,
+            validationResult?.valid ?? false,
+          );
+        }
+        if (typeof assertion.expectedToBeSet === "boolean") {
+          addComparison(result, "expectedToBeSet", assertion.expectedToBeSet, isSet);
+        }
+        if (Object.prototype.hasOwnProperty.call(assertion, "expectedAttribute")) {
+          addComparison(
+            result,
+            "expectedAttribute",
+            assertion.expectedAttribute,
+            e.getAttributeValue(test.attribute),
+          );
+        }
+      } else if ("event" in test) {
+        const actionTracks = await runActions(e, assertion.actions);
+        let tracked: Value | null = null;
+        let input: Value | undefined;
+        if (Object.prototype.hasOwnProperty.call(assertion, "track")) {
+          input = assertion.track;
+          tracked = await e.track(test.event, assertion.track);
+        } else {
+          const subject = [...actionTracks].reverse().find((entry) => entry.name === test.event);
+          if (subject) {
+            input = subject.input;
+            tracked = subject.output;
+          }
+        }
+        if (typeof assertion.expectedToBeValid === "boolean") {
+          const event = datafileContent.events[test.event];
+          const validationResult =
+            event && typeof input !== "undefined"
+              ? await validate(event, input, {})
+              : { valid: false };
+          addComparison(
+            result,
+            "expectedToBeValid",
+            assertion.expectedToBeValid,
+            validationResult.valid,
+          );
+        }
+        if (typeof assertion.expectedToBeTracked === "boolean") {
+          addComparison(
+            result,
+            "expectedToBeTracked",
+            assertion.expectedToBeTracked,
+            tracked !== null,
+          );
+        }
+        if (Object.prototype.hasOwnProperty.call(assertion, "expectedEvent")) {
+          addComparison(result, "expectedEvent", assertion.expectedEvent, tracked);
+        }
+
+        const transported = Object.keys(instance.getBodiesByDestination()).filter(
+          (name) => (instance.getBodiesBySingleDestination(name) || []).length > 0,
+        );
+        if (assertion.expectedDestinations) {
+          addComparison(
+            result,
+            "expectedDestinations",
+            [...assertion.expectedDestinations].sort(),
+            [...transported].sort(),
+          );
+        }
+        if (assertion.expectedDestinationsByTag) {
+          for (const [tag, expected] of Object.entries(assertion.expectedDestinationsByTag) as [
+            string,
+            string[],
+          ][]) {
+            const actual: string[] = [];
+            for (const name of transported) {
+              const destination = await deps.datasource.readDestination(name);
+              if (destination.tags?.includes(tag)) actual.push(name);
+            }
+            addComparison(
+              result,
+              `expectedDestinationsByTag.${tag}`,
+              [...expected].sort(),
+              actual.sort(),
+            );
+          }
+        }
+      } else if ("effect" in test) {
+        await runActions(e, assertion.actions);
+        const called = instance.getCalledStepsBySingleEffect(test.effect) || [];
+        if (Object.prototype.hasOwnProperty.call(assertion, "expectedState")) {
+          addComparison(
+            result,
+            "expectedState",
+            assertion.expectedState,
+            e.getStateValue(test.effect),
+          );
+        }
+        if (typeof assertion.expectedToBeHandled === "boolean") {
+          addComparison(
+            result,
+            "expectedToBeHandled",
+            assertion.expectedToBeHandled,
+            called.length > 0,
+          );
+        }
+        for (const expected of assertion.expectedToBeCalled || []) {
+          const actual = called.filter((step) => step.handler === expected.handler).length;
+          if (typeof expected.times === "number") {
+            addComparison(result, `expectedToBeCalled.${expected.handler}`, expected.times, actual);
+          } else if (actual === 0) {
+            result.passed = false;
+            result.errors?.push(`expectedToBeCalled: handler "${expected.handler}" was not called`);
+          }
+        }
+      } else if ("destination" in test) {
+        await runActions(e, assertion.actions);
+        if (assertion.assertAfter) {
+          await new Promise((resolve) => setTimeout(resolve, assertion.assertAfter));
+        }
+        const bodies = instance.getBodiesBySingleDestination(test.destination) || [];
+        if (typeof assertion.expectedToBeTransported === "boolean") {
+          addComparison(
+            result,
+            "expectedToBeTransported",
+            assertion.expectedToBeTransported,
+            bodies.length > 0,
+          );
+        }
+        if (Object.prototype.hasOwnProperty.call(assertion, "expectedBody")) {
+          addComparison(result, "expectedBody", assertion.expectedBody, bodies[0]);
+        }
+        if (assertion.expectedBodies)
+          addComparison(result, "expectedBodies", assertion.expectedBodies, bodies);
+      }
+    } finally {
+      await e.close();
+    }
+    results.push(result);
   }
 
-  return aKeys.every((key) => {
-    if (!Object.prototype.hasOwnProperty.call(b, key)) {
-      return false;
-    }
-    return checkIfObjectsAreDeepEqual(a[key], b[key]);
-  });
+  return { passed: results.every((result) => result.passed), assertions: results };
 }

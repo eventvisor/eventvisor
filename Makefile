@@ -4,6 +4,9 @@
 install:
 	npm ci
 
+clean:
+	npm run clean
+
 build:
 	npm run build
 	make print-size
@@ -11,23 +14,29 @@ build:
 test:
 	npm test
 
+test-browser:
+	npm run test:browser
+
+typecheck:
+	npm run typecheck
+
+dependency-check:
+	npm run dependency-check
+
 lint:
-	npx prettier examples/ packages/ modules/ projects/ --check
-	npx eslint .
-	npx lerna run lint
+	npm run lint
 
 format:
 	npx prettier examples/ packages/ modules/ projects/ --write
 	npx eslint . --fix
 
+check: clean build test lint typecheck test-browser dependency-check release-check
+
+release-check: build
+	npm run release-check
+
 ##
 # Misc.
 #
 print-size:
-	@echo 'SDK package size:'
-	@gzip -c packages/sdk/dist/index.mjs > packages/sdk/dist/index.mjs.gz
-	@ls -alh packages/sdk/dist | grep index.mjs | awk '{print $$9 "\t" $$5}'
-
-	@echo 'LocalStorage module size:'
-	@gzip -c modules/module-localstorage/dist/index.mjs > modules/module-localstorage/dist/index.mjs.gz
-	@ls -alh modules/module-localstorage/dist | grep index.mjs | awk '{print $$9 "\t" $$5}'
+	npm run bundle-sizes

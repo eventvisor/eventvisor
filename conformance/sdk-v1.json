@@ -1,0 +1,429 @@
+{
+  "contract": "eventvisor-sdk-v1",
+  "description": "Language-neutral Eventvisor SDK behavior. Implementations must preserve these results.",
+  "bucketing": {
+    "algorithm": "MurmurHash3 x86 32-bit",
+    "seed": 1,
+    "buckets": 100000,
+    "vectors": [
+      { "key": "a", "bucket": 34586 },
+      { "key": "user-123", "bucket": 63182 },
+      { "key": "checkout.42", "bucket": 33214 },
+      { "key": "", "bucket": 31759 },
+      { "key": "café", "bucket": 77759 },
+      { "key": "東京", "bucket": 18369 },
+      { "key": "😀", "bucket": 28386 },
+      { "key": "user-😀-東京", "bucket": 12161 },
+      { "key": "𝄞", "bucket": 26111 },
+      { "key": "mañana", "bucket": 98409 }
+    ]
+  },
+  "conditions": [
+    {
+      "name": "implicit-and",
+      "conditions": [
+        { "payload": "country", "operator": "equals", "value": "NL" },
+        { "payload": "paid", "operator": "equals", "value": true }
+      ],
+      "payload": { "country": "NL", "paid": true },
+      "matches": true
+    },
+    {
+      "name": "not-negates-implicit-and",
+      "conditions": {
+        "not": [
+          { "payload": "country", "operator": "equals", "value": "NL" },
+          { "payload": "paid", "operator": "equals", "value": true }
+        ]
+      },
+      "payload": { "country": "NL", "paid": false },
+      "matches": true
+    },
+    {
+      "name": "portable-regex-with-flags",
+      "conditions": {
+        "payload": "value",
+        "operator": "matches",
+        "value": "^(hello|world)[\\s\\S]+$",
+        "regexFlags": "gi"
+      },
+      "payload": { "value": "HELLO\nAGAIN" },
+      "matches": true
+    },
+    {
+      "name": "nonportable-regex-fails-closed",
+      "conditions": {
+        "payload": "value",
+        "operator": "notMatches",
+        "value": "value(?=x)"
+      },
+      "payload": { "value": "other" },
+      "matches": false
+    },
+    {
+      "name": "portable-date-time",
+      "conditions": {
+        "payload": "timestamp",
+        "operator": "before",
+        "value": "2026-01-01T00:00:00Z"
+      },
+      "payload": { "timestamp": "2025-12-31T23:59:59Z" },
+      "matches": true
+    },
+    {
+      "name": "date-without-timezone-fails-closed",
+      "conditions": {
+        "payload": "timestamp",
+        "operator": "before",
+        "value": "2026-01-01"
+      },
+      "payload": { "timestamp": "2025-01-01" },
+      "matches": false
+    },
+    {
+      "name": "null-is-an-existing-value",
+      "conditions": { "payload": "value", "operator": "exists" },
+      "payload": { "value": null },
+      "matches": true
+    },
+    {
+      "name": "primitive-array-membership",
+      "conditions": {
+        "payload": "value",
+        "operator": "includes",
+        "value": false
+      },
+      "payload": { "value": [true, false] },
+      "matches": true
+    },
+    {
+      "name": "wildcard",
+      "conditions": "*",
+      "payload": {},
+      "matches": true
+    },
+    {
+      "name": "malformed-stringified-conditions-fail-closed",
+      "conditions": "{",
+      "payload": {},
+      "matches": false
+    },
+    {
+      "name": "valid-stringified-conditions",
+      "conditions": "{\"payload\":\"country\",\"operator\":\"equals\",\"value\":\"NL\"}",
+      "payload": { "country": "NL" },
+      "matches": true
+    },
+    {
+      "name": "empty-array-fails-closed",
+      "conditions": [],
+      "payload": {},
+      "matches": false
+    },
+    {
+      "name": "empty-and-fails-closed",
+      "conditions": { "and": [] },
+      "payload": {},
+      "matches": false
+    },
+    {
+      "name": "empty-or-fails-closed",
+      "conditions": { "or": [] },
+      "payload": {},
+      "matches": false
+    },
+    {
+      "name": "empty-not-fails-closed",
+      "conditions": { "not": [] },
+      "payload": {},
+      "matches": false
+    },
+    {
+      "name": "or-matches-one-child",
+      "conditions": {
+        "or": [
+          { "payload": "country", "operator": "equals", "value": "DE" },
+          { "payload": "country", "operator": "equals", "value": "NL" }
+        ]
+      },
+      "payload": { "country": "NL" },
+      "matches": true
+    },
+    {
+      "name": "nested-not-or-means-none-match",
+      "conditions": {
+        "not": [
+          {
+            "or": [
+              { "payload": "country", "operator": "equals", "value": "DE" },
+              { "payload": "country", "operator": "equals", "value": "FR" }
+            ]
+          }
+        ]
+      },
+      "payload": { "country": "NL" },
+      "matches": true
+    },
+    {
+      "name": "missing-value-not-exists",
+      "conditions": { "payload": "missing", "operator": "notExists" },
+      "payload": {},
+      "matches": true
+    },
+    {
+      "name": "not-equals",
+      "conditions": { "payload": "country", "operator": "notEquals", "value": "DE" },
+      "payload": { "country": "NL" },
+      "matches": true
+    },
+    {
+      "name": "in-with-null",
+      "conditions": { "payload": "value", "operator": "in", "value": [null, "known"] },
+      "payload": { "value": null },
+      "matches": true
+    },
+    {
+      "name": "not-in",
+      "conditions": { "payload": "value", "operator": "notIn", "value": ["blocked"] },
+      "payload": { "value": "allowed" },
+      "matches": true
+    },
+    {
+      "name": "not-includes",
+      "conditions": { "payload": "roles", "operator": "notIncludes", "value": "admin" },
+      "payload": { "roles": ["viewer"] },
+      "matches": true
+    },
+    {
+      "name": "contains",
+      "conditions": { "payload": "value", "operator": "contains", "value": "visor" },
+      "payload": { "value": "eventvisor" },
+      "matches": true
+    },
+    {
+      "name": "not-contains",
+      "conditions": { "payload": "value", "operator": "notContains", "value": "message" },
+      "payload": { "value": "eventvisor" },
+      "matches": true
+    },
+    {
+      "name": "starts-with",
+      "conditions": { "payload": "value", "operator": "startsWith", "value": "event" },
+      "payload": { "value": "eventvisor" },
+      "matches": true
+    },
+    {
+      "name": "ends-with",
+      "conditions": { "payload": "value", "operator": "endsWith", "value": "visor" },
+      "payload": { "value": "eventvisor" },
+      "matches": true
+    },
+    {
+      "name": "greater-than",
+      "conditions": { "payload": "value", "operator": "greaterThan", "value": 9 },
+      "payload": { "value": 10 },
+      "matches": true
+    },
+    {
+      "name": "greater-than-or-equals-boundary",
+      "conditions": { "payload": "value", "operator": "greaterThanOrEquals", "value": 10 },
+      "payload": { "value": 10 },
+      "matches": true
+    },
+    {
+      "name": "less-than",
+      "conditions": { "payload": "value", "operator": "lessThan", "value": 11 },
+      "payload": { "value": 10 },
+      "matches": true
+    },
+    {
+      "name": "less-than-or-equals-boundary",
+      "conditions": { "payload": "value", "operator": "lessThanOrEquals", "value": 10 },
+      "payload": { "value": 10 },
+      "matches": true
+    },
+    {
+      "name": "numeric-type-mismatch-fails-closed",
+      "conditions": { "payload": "value", "operator": "greaterThan", "value": 9 },
+      "payload": { "value": "10" },
+      "matches": false
+    },
+    {
+      "name": "after",
+      "conditions": {
+        "payload": "timestamp",
+        "operator": "after",
+        "value": "2025-12-31T23:59:58Z"
+      },
+      "payload": { "timestamp": "2025-12-31T23:59:59Z" },
+      "matches": true
+    },
+    {
+      "name": "semver-equals",
+      "conditions": { "payload": "version", "operator": "semverEquals", "value": "1.2.3" },
+      "payload": { "version": "1.2.3" },
+      "matches": true
+    },
+    {
+      "name": "semver-not-equals",
+      "conditions": { "payload": "version", "operator": "semverNotEquals", "value": "1.2.4" },
+      "payload": { "version": "1.2.3" },
+      "matches": true
+    },
+    {
+      "name": "semver-greater-than",
+      "conditions": { "payload": "version", "operator": "semverGreaterThan", "value": "1.2.2" },
+      "payload": { "version": "1.2.3" },
+      "matches": true
+    },
+    {
+      "name": "semver-greater-than-or-equals",
+      "conditions": { "payload": "version", "operator": "semverGreaterThanOrEquals", "value": "1.2.3" },
+      "payload": { "version": "1.2.3" },
+      "matches": true
+    },
+    {
+      "name": "semver-less-than",
+      "conditions": { "payload": "version", "operator": "semverLessThan", "value": "2.0.0" },
+      "payload": { "version": "1.2.3" },
+      "matches": true
+    },
+    {
+      "name": "semver-less-than-or-equals",
+      "conditions": { "payload": "version", "operator": "semverLessThanOrEquals", "value": "1.2.3" },
+      "payload": { "version": "1.2.3" },
+      "matches": true
+    },
+    {
+      "name": "invalid-semver-fails-closed",
+      "conditions": { "payload": "version", "operator": "semverNotEquals", "value": "1" },
+      "payload": { "version": "invalid" },
+      "matches": false
+    },
+    {
+      "name": "duplicate-regex-flags-fail-closed",
+      "conditions": {
+        "payload": "value",
+        "operator": "matches",
+        "value": "^eventvisor$",
+        "regexFlags": "ii"
+      },
+      "payload": { "value": "eventvisor" },
+      "matches": false
+    }
+  ],
+  "validation": [
+    {
+      "name": "strict-object-rejects-unknown",
+      "schema": { "type": "object", "properties": { "id": { "type": "string" } } },
+      "value": { "id": "1", "extra": true },
+      "valid": false
+    },
+    {
+      "name": "additional-properties-opt-in",
+      "schema": { "type": "object", "additionalProperties": true },
+      "value": { "id": "1", "extra": true },
+      "valid": true
+    },
+    {
+      "name": "structural-unique-items",
+      "schema": {
+        "type": "array",
+        "items": { "type": "object", "additionalProperties": true },
+        "uniqueItems": true
+      },
+      "value": [{ "id": 1 }, { "id": 1 }],
+      "valid": false
+    },
+    {
+      "name": "required-default-is-applied",
+      "schema": {
+        "type": "object",
+        "properties": { "currency": { "type": "string", "default": "EUR" } },
+        "required": ["currency"]
+      },
+      "value": {},
+      "valid": true,
+      "expectedValue": { "currency": "EUR" }
+    },
+    {
+      "name": "integer-rejects-fraction",
+      "schema": { "type": "integer" },
+      "value": 1.5,
+      "valid": false
+    },
+    {
+      "name": "numeric-boundaries-are-inclusive",
+      "schema": { "type": "number", "minimum": 1, "maximum": 2 },
+      "value": 2,
+      "valid": true
+    },
+    {
+      "name": "numeric-maximum-rejects-larger-value",
+      "schema": { "type": "number", "maximum": 2 },
+      "value": 3,
+      "valid": false
+    },
+    {
+      "name": "string-length-boundaries",
+      "schema": { "type": "string", "minLength": 2, "maxLength": 4 },
+      "value": "four",
+      "valid": true
+    },
+    {
+      "name": "portable-string-pattern",
+      "schema": { "type": "string", "pattern": "^[a-z]+$" },
+      "value": "eventvisor",
+      "valid": true
+    },
+    {
+      "name": "nonportable-string-pattern-fails-closed",
+      "schema": { "type": "string", "pattern": "event(?=visor)" },
+      "value": "eventvisor",
+      "valid": false
+    },
+    {
+      "name": "array-minimum-rejects-short-value",
+      "schema": { "type": "array", "minItems": 2 },
+      "value": [1],
+      "valid": false
+    },
+    {
+      "name": "array-maximum-rejects-long-value",
+      "schema": { "type": "array", "maxItems": 1 },
+      "value": [1, 2],
+      "valid": false
+    },
+    {
+      "name": "tuple-items",
+      "schema": { "type": "array", "items": [{ "type": "string" }, { "type": "integer" }] },
+      "value": ["one", 2],
+      "valid": true
+    },
+    {
+      "name": "const-uses-structural-equality",
+      "schema": { "const": { "id": 1 } },
+      "value": { "id": 1 },
+      "valid": true
+    },
+    {
+      "name": "enum-supports-null",
+      "schema": { "enum": [null, "known"] },
+      "value": null,
+      "valid": true
+    }
+  ],
+  "pipeline": [
+    "event lookup",
+    "required attributes",
+    "validation policy",
+    "conditions",
+    "sampling",
+    "event transforms",
+    "event_tracked effects",
+    "destination conditions and sampling",
+    "destination transforms",
+    "parallel transport fan-out",
+    "SDK event_tracked emission"
+  ]
+}

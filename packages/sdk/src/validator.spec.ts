@@ -1,4 +1,4 @@
-import { validate } from "./validator";
+import { validate } from "./validator.js";
 import { JSONSchema } from "@eventvisor/types";
 
 describe("Validator", () => {
@@ -62,7 +62,7 @@ describe("Validator", () => {
     });
 
     it("should validate object type correctly", async () => {
-      const schema: JSONSchema = { type: "object" };
+      const schema: JSONSchema = { type: "object", additionalProperties: true };
       const result = await validate(schema, { key: "value" }, {});
 
       expect(result.valid).toBe(true);
@@ -169,6 +169,60 @@ describe("Validator", () => {
       expect(result.valid).toBe(true);
       expect(result.value).toEqual(["hello", 42, "extra"]);
     });
+
+    it("should reject duplicate primitive items when uniqueness is required", async () => {
+      const result = await validate(
+        { type: "array", items: { type: "number" }, uniqueItems: true },
+        [1, 2, 1],
+        {},
+      );
+
+      expect(result.valid).toBe(false);
+      expect(result.errors).toEqual([
+        expect.objectContaining({ path: "[2]", message: "Array items must be unique" }),
+      ]);
+    });
+
+    it("should compare object and array items structurally for uniqueness", async () => {
+      const schema: JSONSchema = {
+        type: "array",
+        items: { type: "object", additionalProperties: true },
+        uniqueItems: true,
+      };
+
+      await expect(
+        validate(
+          schema,
+          [
+            { id: 1, values: ["a"] },
+            { values: ["a"], id: 1 },
+          ],
+          {},
+        ),
+      ).resolves.toEqual(
+        expect.objectContaining({
+          valid: false,
+          errors: [expect.objectContaining({ path: "[1]" })],
+        }),
+      );
+      await expect(
+        validate(
+          schema,
+          [
+            { id: 1, values: ["a"] },
+            { id: 2, values: ["a"] },
+          ],
+          {},
+        ),
+      ).resolves.toEqual({
+        valid: true,
+        errors: undefined,
+        value: [
+          { id: 1, values: ["a"] },
+          { id: 2, values: ["a"] },
+        ],
+      });
+    });
   });
 
   describe("Object Validation", () => {
@@ -214,9 +268,44 @@ describe("Validator", () => {
       expect(result.errors![0].path).toBe("extra");
       expect(result.errors![0].message).toContain("not allowed by schema");
     });
+
+    it("should reject additional properties by default without a properties map", async () => {
+      const result = await validate({ type: "object" }, { extra: "value" }, {});
+
+      expect(result.valid).toBe(false);
+      expect(result.errors).toEqual([
+        expect.objectContaining({
+          path: "extra",
+          message: "Property 'extra' is not allowed by schema",
+        }),
+      ]);
+    });
+
+    it("should preserve additional properties when explicitly allowed", async () => {
+      const schema: JSONSchema = {
+        type: "object",
+        properties: { name: { type: "string" } },
+        additionalProperties: true,
+      };
+      const value = { name: "John", extra: { nested: true } };
+
+      await expect(validate(schema, value, {})).resolves.toEqual({
+        valid: true,
+        errors: undefined,
+        value,
+      });
+    });
   });
 
   describe("Enum and Const Validation", () => {
+    it("compares object and array enum and const values structurally", async () => {
+      await expect(
+        validate({ enum: [{ id: 1, tags: ["a"] }] }, { id: 1, tags: ["a"] }, {}),
+      ).resolves.toMatchObject({ valid: true });
+      await expect(
+        validate({ const: { id: 1, tags: ["a"] } }, { id: 1, tags: ["b"] }, {}),
+      ).resolves.toMatchObject({ valid: false });
+    });
     it("should validate enum values", async () => {
       const schema: JSONSchema = {
         type: "string",

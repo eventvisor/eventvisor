@@ -1,5 +1,5 @@
 {
   "description": "User ID attribute",
   "tags": ["web"],
-  "type": "string"
+  "schema": "identifier"
 }

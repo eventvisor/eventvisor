@@ -1,0 +1,4 @@
+description: Whether analytics consent was granted
+tags: [all, web]
+type: boolean
+default: false

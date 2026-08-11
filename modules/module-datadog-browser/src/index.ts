@@ -1,11 +1,14 @@
-import type { Module } from "@eventvisor/sdk";
+import type { EventvisorModule } from "@eventvisor/sdk";
 
 export type DatadogBrowserModuleOptions = {
   name?: string;
-  datadogRum: any; // @TODO: type this later
+  datadogRum: {
+    addAction: (eventName: string, payload: unknown) => unknown;
+    addError: (error: Error, payload: unknown) => unknown;
+  };
 };
 
-export function createDatadogBrowserModule(options: DatadogBrowserModuleOptions): Module {
+export function createDatadogBrowserModule(options: DatadogBrowserModuleOptions): EventvisorModule {
   const { name = "datadog-browser", datadogRum } = options;
 
   return {
@@ -13,9 +16,9 @@ export function createDatadogBrowserModule(options: DatadogBrowserModuleOptions)
 
     transport: async ({ eventName, payload, error }) => {
       if (error) {
-        datadogRum.addError(error, payload);
+        await Promise.resolve(datadogRum.addError(error, payload));
       } else {
-        datadogRum.addAction(eventName, payload);
+        await Promise.resolve(datadogRum.addAction(eventName, payload));
       }
     },
   };

@@ -2,6 +2,7 @@ import type { ProjectConfig } from "../config";
 import { Datasource } from "../datasource";
 
 import { commonPlugins, nonProjectPlugins, projectBasedPlugins } from "./plugins";
+import { CLI_FORMAT_RED } from "../tester/cliFormat";
 
 export interface ParsedOptions {
   _: string[];
@@ -16,12 +17,30 @@ export interface PluginHandlerOptions {
 }
 
 export interface Plugin {
-  command: string; // single word
+  command: string; // command declaration, optionally with yargs positionals
+  description: string;
   handler: (options: PluginHandlerOptions) => Promise<void | boolean>;
   examples: {
     command: string; // full command usage
     description: string;
   }[];
+  options?: Record<
+    string,
+    {
+      type: "string" | "boolean" | "number" | "array";
+      description?: string;
+      alias?: string;
+      demandOption?: boolean;
+      choices?: readonly string[];
+    }
+  >;
+}
+
+/**
+ * Defines a type-safe Eventvisor CLI plugin without changing it at runtime.
+ */
+export function definePlugin(plugin: Plugin): Plugin {
+  return plugin;
 }
 
 export interface RunnerOptions {
@@ -32,15 +51,28 @@ export interface RunnerOptions {
   datasource?: Datasource;
 }
 
-export async function runCLI(runnerOptions: RunnerOptions) {
-  const yargs = require("yargs");
+export async function runCLI(runnerOptions: RunnerOptions): Promise<number> {
+  const yargs = require("yargs/yargs");
 
-  let y = yargs(process.argv.slice(2)).usage("Usage: <command> [options]");
+  let y = yargs(process.argv.slice(2))
+    .scriptName("eventvisor")
+    .usage("Usage: $0 <command> [options]")
+    .option("root-directory-path", {
+      type: "string",
+      alias: ["rootDirectoryPath", "projectDirectoryPath"],
+      description: "Eventvisor project directory",
+    })
+    .alias("h", "help")
+    .strictCommands()
+    .strictOptions()
+    .exitProcess(false);
   const registeredSubcommands: string[] = [];
 
   const { rootDirectoryPath, projectConfig, datasource } = runnerOptions;
 
-  function registerPlugin(plugin: Plugin) {
+  let exitCode = 0;
+
+  function registerPlugin(plugin: Plugin, requiresProject = false) {
     const subcommand = plugin.command.split(" ")[0];
 
     if (registeredSubcommands.includes(subcommand)) {
@@ -50,13 +82,30 @@ export async function runCLI(runnerOptions: RunnerOptions) {
 
     y = y.command({
       command: plugin.command,
-      handler: async function (parsed: ParsedOptions) {
-        // @NOTE: in future, allow yargs options to be defined via plugins
-        if (parsed.schemaVersion && typeof parsed.schemaVersion !== "string") {
-          parsed.schemaVersion = parsed.schemaVersion.toString();
+      describe: plugin.description,
+      builder: (commandYargs: any) => {
+        commandYargs.options(plugin.options || {});
+
+        for (const match of plugin.command.matchAll(/([<[])([^>\]]+)[>\]]/g)) {
+          const [, opening, name] = match;
+          const configured = plugin.options?.[name];
+          commandYargs.positional(name, {
+            type: configured?.type || "string",
+            description: configured?.description,
+            choices: configured?.choices,
+            demandOption: opening === "<",
+          });
         }
 
+        return commandYargs;
+      },
+      handler: async function (parsed: ParsedOptions) {
         try {
+          if (requiresProject && (!projectConfig || !datasource)) {
+            throw new Error(
+              `No Eventvisor project found at ${rootDirectoryPath}. Run eventvisor init or choose a project with --root-directory-path.`,
+            );
+          }
           const result = await plugin.handler({
             rootDirectoryPath,
             projectConfig,
@@ -65,11 +114,12 @@ export async function runCLI(runnerOptions: RunnerOptions) {
           } as PluginHandlerOptions);
 
           if (result === false) {
-            process.exit(1);
+            exitCode = 1;
           }
         } catch (error) {
-          console.error(error);
-          process.exit(1);
+          const message = error instanceof Error ? error.message : String(error);
+          console.error(CLI_FORMAT_RED, `Error: ${message}`);
+          exitCode = 1;
         }
       },
     });
@@ -81,30 +131,30 @@ export async function runCLI(runnerOptions: RunnerOptions) {
     registeredSubcommands.push(subcommand);
   }
 
-  // non project-based plugins
-  if (!projectConfig) {
-    for (const plugin of nonProjectPlugins) {
-      registerPlugin(plugin);
-    }
-  }
+  for (const plugin of nonProjectPlugins) registerPlugin(plugin);
 
-  // project-based plugins
-  if (projectConfig) {
-    for (const plugin of [...projectBasedPlugins, ...(projectConfig.plugins || [])]) {
-      registerPlugin(plugin);
-    }
-  }
+  // Built in commands are always registered so help works outside a project.
+  for (const plugin of projectBasedPlugins) registerPlugin(plugin, true);
+  for (const plugin of projectConfig?.plugins || []) registerPlugin(plugin, true);
 
   // common plugins
   for (const plugin of commonPlugins) {
     registerPlugin(plugin);
   }
 
-  // show help if no command is provided
-  y.command({
-    command: "*",
-    handler() {
-      y.showHelp();
-    },
-  }).argv;
+  if (process.argv.slice(2).length === 0) {
+    y.showHelp();
+    return exitCode;
+  }
+
+  try {
+    await y.parseAsync();
+  } catch (error) {
+    console.error(
+      CLI_FORMAT_RED,
+      `Error: ${error instanceof Error ? error.message : String(error)}`,
+    );
+    return 1;
+  }
+  return exitCode;
 }

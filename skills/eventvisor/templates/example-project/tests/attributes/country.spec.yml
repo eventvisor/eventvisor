@@ -1,0 +1,12 @@
+attribute: country
+assertions:
+  - description: accepts a two-letter code
+    setAttribute: NL
+    expectedToBeValid: true
+    expectedToBeSet: true
+    expectedAttribute: NL
+
+  - description: rejects a one-letter code
+    setAttribute: N
+    expectedToBeValid: false
+    expectedToBeSet: false

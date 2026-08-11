@@ -8,10 +8,28 @@ import { getDestinationSchema } from "./destinationSchema";
 import { getEffectSchema } from "./effectSchema";
 import { getEventSchema } from "./eventSchema";
 import { getTestSchema } from "./testSchema";
+import { getTargetSchema } from "./targetSchema";
+import { getProjectSetExecutions } from "../sets";
 import { printError } from "./printError";
 import { getSemanticIssues, type LintContext } from "./semanticValidation";
+import { CLI_COLOR_CYAN, CLI_FORMAT_BOLD, CLI_FORMAT_GREEN, colorize } from "../tester/cliFormat";
+import { JSONZodSchema } from "./jsonSchema";
+import { loadSchemas, resolveEntitySchema, resolveSchema } from "../schemas";
 
-async function createLintContext(options: Dependencies): Promise<LintContext> {
+function schemaReferenceError(error: unknown) {
+  return new z.ZodError([
+    {
+      code: "custom",
+      path: ["schema"],
+      message: (error as Error).message,
+    },
+  ]);
+}
+
+async function createLintContext(
+  options: Dependencies,
+  schemas: Awaited<ReturnType<typeof loadSchemas>>,
+): Promise<LintContext> {
   const { datasource } = options;
 
   const [attributeNames, eventNames, destinationNames, effectNames] = await Promise.all([
@@ -35,8 +53,24 @@ async function createLintContext(options: Dependencies): Promise<LintContext> {
   ]);
 
   return {
-    attributes: Object.fromEntries(attributes),
-    events: Object.fromEntries(events),
+    attributes: Object.fromEntries(
+      attributes.map(([key, entity]) => {
+        try {
+          return [key, resolveEntitySchema(entity, schemas)];
+        } catch {
+          return [key, entity];
+        }
+      }),
+    ),
+    events: Object.fromEntries(
+      events.map(([key, entity]) => {
+        try {
+          return [key, resolveEntitySchema(entity, schemas)];
+        } catch {
+          return [key, entity];
+        }
+      }),
+    ),
     destinations: Object.fromEntries(destinations),
     effects: Object.fromEntries(effects),
   };
@@ -51,12 +85,59 @@ export async function lintProject(
 ): Promise<boolean> {
   const { projectConfig, datasource } = options;
   const { keyPattern, entityType } = filterOptions;
-  const lintContext = await createLintContext(options);
+  const schemasByKey = await loadSchemas(datasource);
+  const lintContext = await createLintContext(options, schemasByKey);
 
   let hasErrors = false;
 
+  console.log("");
+  console.log(CLI_FORMAT_BOLD, "Linting Eventvisor project");
+  const printSection = (label: string) =>
+    console.log(`  ${colorize("•", CLI_COLOR_CYAN)} Linting ${label}`);
+
+  if (
+    typeof projectConfig.onValidationFailure === "object" &&
+    !lintContext.destinations[projectConfig.onValidationFailure.destination]
+  ) {
+    console.log(
+      `  ${colorize("×", 31)} Project onValidationFailure references missing destination "${projectConfig.onValidationFailure.destination}"`,
+    );
+    hasErrors = true;
+  }
+
+  // reusable schemas
+  printSection("schemas");
+  for (const schemaKey of Object.keys(schemasByKey)) {
+    if (entityType && entityType !== "schema") continue;
+    if (keyPattern && !schemaKey.includes(keyPattern)) continue;
+    const result = await JSONZodSchema.extend({
+      promotable: z.boolean().optional(),
+    }).safeParseAsync(schemasByKey[schemaKey]);
+    if (!result.success) {
+      printError({
+        entityType: "schema",
+        entityKey: schemaKey,
+        error: result.error,
+        projectConfig,
+      });
+      hasErrors = true;
+      continue;
+    }
+    try {
+      resolveSchema(result.data, schemasByKey);
+    } catch (error) {
+      printError({
+        entityType: "schema",
+        entityKey: schemaKey,
+        error: schemaReferenceError(error),
+        projectConfig,
+      });
+      hasErrors = true;
+    }
+  }
+
   // attributes
-  console.log("\nLinting attributes...");
+  printSection("attributes");
 
   const attributes = await datasource.listAttributes();
   const attributeSchema = getAttributeSchema(options);
@@ -84,7 +165,20 @@ export async function lintProject(
       continue;
     }
 
-    const semanticIssues = getSemanticIssues("attribute", result.data as any, lintContext);
+    let resolvedAttribute;
+    try {
+      resolvedAttribute = resolveEntitySchema(result.data, schemasByKey);
+    } catch (error) {
+      printError({
+        entityType: "attribute",
+        entityKey: attributeKey,
+        error: schemaReferenceError(error),
+        projectConfig,
+      });
+      hasErrors = true;
+      continue;
+    }
+    const semanticIssues = getSemanticIssues("attribute", resolvedAttribute as any, lintContext);
 
     if (semanticIssues.length > 0) {
       printError({
@@ -98,7 +192,7 @@ export async function lintProject(
   }
 
   // events
-  console.log("\nLinting events...");
+  printSection("events");
 
   const events = await datasource.listEvents();
   const eventSchema = getEventSchema(options);
@@ -127,7 +221,20 @@ export async function lintProject(
       continue;
     }
 
-    const semanticIssues = getSemanticIssues("event", result.data as any, lintContext);
+    let resolvedEvent;
+    try {
+      resolvedEvent = resolveEntitySchema(result.data, schemasByKey);
+    } catch (error) {
+      printError({
+        entityType: "event",
+        entityKey: eventKey,
+        error: schemaReferenceError(error),
+        projectConfig,
+      });
+      hasErrors = true;
+      continue;
+    }
+    const semanticIssues = getSemanticIssues("event", resolvedEvent as any, lintContext);
 
     if (semanticIssues.length > 0) {
       printError({
@@ -141,7 +248,7 @@ export async function lintProject(
   }
 
   // destinations
-  console.log("\nLinting destinations...");
+  printSection("destinations");
 
   const destinations = await datasource.listDestinations();
   const destinationSchema = getDestinationSchema(options);
@@ -183,7 +290,7 @@ export async function lintProject(
   }
 
   // effects
-  console.log("\nLinting effects...");
+  printSection("effects");
 
   const effects = await datasource.listEffects();
   const effectSchema = getEffectSchema(options);
@@ -225,7 +332,7 @@ export async function lintProject(
   }
 
   // tests
-  console.log("\nLinting tests...");
+  printSection("tests");
 
   const tests = await datasource.listTests();
   const testSchema = getTestSchema(options);
@@ -266,32 +373,61 @@ export async function lintProject(
     }
   }
 
+  printSection("targets");
+  const targets = await datasource.listTargets();
+  const targetSchema = getTargetSchema(projectConfig);
+  for (const targetKey of targets) {
+    if (entityType && entityType !== "target") continue;
+    if (keyPattern && !targetKey.includes(keyPattern)) continue;
+
+    const result = await targetSchema.safeParseAsync(await datasource.readTarget(targetKey));
+    if (!result.success) {
+      printError({
+        entityType: "target",
+        entityKey: targetKey,
+        error: result.error,
+        projectConfig,
+      });
+      hasErrors = true;
+    }
+  }
+
   if (hasErrors) {
     return false;
   }
 
+  console.log("");
+  console.log(CLI_FORMAT_GREEN, "✔ No lint errors found");
+  console.log("");
   return true;
 }
 
 export const lintPlugin: Plugin = {
   command: "lint",
+  description: "validate project definitions and dependencies",
+  options: {
+    set: { type: "string" },
+    keyPattern: { type: "string" },
+    entityType: { type: "string" },
+  },
   handler: async function (options) {
     const { rootDirectoryPath, projectConfig, datasource, parsed } = options;
 
-    const successfullyLinted = await lintProject(
-      {
-        rootDirectoryPath,
-        projectConfig,
-        datasource,
-        options: parsed,
-      },
-      {
-        keyPattern: parsed.keyPattern,
-        entityType: parsed.entityType,
-      },
-    );
-
-    return successfullyLinted;
+    const executions = await getProjectSetExecutions(projectConfig, datasource, parsed.set);
+    let successful = true;
+    for (const execution of executions) {
+      const result = await lintProject(
+        {
+          rootDirectoryPath,
+          projectConfig: execution.projectConfig,
+          datasource: execution.datasource,
+          options: parsed,
+        },
+        { keyPattern: parsed.keyPattern, entityType: parsed.entityType },
+      );
+      if (!result) successful = false;
+    }
+    return successful;
   },
   examples: [
     {

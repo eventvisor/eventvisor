@@ -1,6 +1,6 @@
 # @eventvisor/core
 
-> Core package of Eventvisor for internal usage in CLI
+Core project tooling used by the Eventvisor CLI. It implements configuration, linting, datafile builds, Targets, Sets, test matrices, code generation, simulation, benchmarks, and Catalog export.
 
 Visit [https://eventvisor.org](https://eventvisor.org) for more information.
 

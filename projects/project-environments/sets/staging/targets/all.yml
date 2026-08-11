@@ -1,0 +1,5 @@
+description: Complete staging datafile
+includeEvents: "*"
+includeAttributes: "*"
+includeDestinations: "*"
+includeEffects: "*"

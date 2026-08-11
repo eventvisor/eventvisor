@@ -1,11 +1,11 @@
 import type { EventName, AttributeName, EffectName, Value, EffectOnType } from "@eventvisor/types";
 
-import type { GetDatafileReader } from "./datafileReader";
-import type { Logger } from "./logger";
-import type { GetTransformer } from "./transformer";
-import type { GetConditionsChecker } from "./conditions";
-import type { ModulesManager } from "./modulesManager";
-import { initializeFromStorage, persistEntity } from "./persister";
+import type { InstanceDataProvider } from "./datafile.js";
+import type { Logger } from "./logger.js";
+import type { GetTransformer } from "./transformer.js";
+import type { GetConditionsChecker } from "./conditions.js";
+import type { ModulesManager } from "./modulesManager.js";
+import { initializeFromStorage, persistEntity } from "./persister.js";
 
 export type StatesByEffect = Record<EffectName, Value>;
 
@@ -17,44 +17,51 @@ export interface DispatchOptions {
 
 export interface EffectsManagerOptions {
   logger: Logger;
-  getDatafileReader: GetDatafileReader;
+  getDataProvider: () => InstanceDataProvider;
   getTransformer: GetTransformer;
   getConditionsChecker: GetConditionsChecker;
   modulesManager: ModulesManager;
+  track?: (
+    eventName: EventName,
+    payload: Value,
+    effectChain: EffectName[],
+  ) => Promise<Value | null>;
 }
 
 export class EffectsManager {
   private logger: Logger;
-  private getDatafileReader: GetDatafileReader;
+  private getDataProvider: () => InstanceDataProvider;
   private getTransformer: GetTransformer;
   private getConditionsChecker: GetConditionsChecker;
   private modulesManager: ModulesManager;
+  private track: NonNullable<EffectsManagerOptions["track"]>;
 
   private statesByEffect: StatesByEffect = {};
 
   constructor(options: EffectsManagerOptions) {
     this.logger = options.logger;
-    this.getDatafileReader = options.getDatafileReader;
+    this.getDataProvider = options.getDataProvider;
     this.getTransformer = options.getTransformer;
     this.getConditionsChecker = options.getConditionsChecker;
     this.modulesManager = options.modulesManager;
+    this.track = options.track || (async () => null);
   }
 
   async initialize(): Promise<void> {
-    const datafileReader = this.getDatafileReader();
-    const effects = datafileReader.getEffectNames();
+    const dataProvider = this.getDataProvider();
+    const effects = dataProvider.getEffectNames();
 
     const persistedResult = await initializeFromStorage({
-      datafileReader,
+      dataProvider,
       conditionsChecker: this.getConditionsChecker(),
       modulesManager: this.modulesManager,
       storageKeyPrefix: "effects_",
-      getEntityNames: () => datafileReader.getEffectNames(),
-      getEntity: (entityName: string) => datafileReader.getEffect(entityName),
+      getEntityNames: () => dataProvider.getEffectNames(),
+      getEntity: (entityName: string) => dataProvider.getEffect(entityName),
     });
 
     for (const effectName of effects) {
-      const effect = datafileReader.getEffect(effectName);
+      const effect = dataProvider.getEffect(effectName);
 
       if (!effect) {
         continue;
@@ -79,22 +86,33 @@ export class EffectsManager {
     }
   }
 
-  async dispatch(dispatchOptions: DispatchOptions) {
+  async dispatch(dispatchOptions: DispatchOptions, effectChain: EffectName[] = []) {
     // @TODO: rename to actionType
     const { eventType, name, value } = dispatchOptions;
 
-    const datafileReader = this.getDatafileReader();
+    const dataProvider = this.getDataProvider();
     const conditionsChecker = this.getConditionsChecker();
     const transformer = this.getTransformer();
 
-    const allEffects = datafileReader.getEffectNames();
+    const allEffects = dataProvider.getEffectNames();
 
     for (const effectName of allEffects) {
-      const effect = datafileReader.getEffect(effectName);
+      const effect = dataProvider.getEffect(effectName);
 
       if (!effect) {
         continue;
       }
+
+      if (effectChain.includes(effectName)) {
+        this.logger.error("Effect re-entrancy blocked", {
+          code: "effect_reentrancy_blocked",
+          effectName,
+          effectChain: [...effectChain, effectName],
+        });
+        continue;
+      }
+
+      const nextEffectChain = [...effectChain, effectName];
 
       if (eventType === "event_tracked") {
         if (Array.isArray(effect.on) && !effect.on.includes("event_tracked")) {
@@ -153,9 +171,17 @@ export class EffectsManager {
           // handler
           if (step.handler) {
             try {
-              await this.modulesManager.handle(step.handler, effectName, effect, step, value);
+              await this.modulesManager.handle(
+                step.handler,
+                effectName,
+                effect,
+                step,
+                value,
+                (eventName, payload) => this.track(eventName, payload, nextEffectChain),
+              );
             } catch (handlerError) {
               this.logger.error(`Effect handler error`, {
+                code: "effect_handler_failed",
                 effectName,
                 step,
                 error: handlerError,
@@ -166,7 +192,7 @@ export class EffectsManager {
           }
 
           // continueOnError
-          if (!stepPassed && typeof step.continueOnError === "boolean" && !step.continueOnError) {
+          if (!stepPassed && step.continueOnError !== true) {
             break;
           }
 
@@ -187,7 +213,7 @@ export class EffectsManager {
 
       // persist
       await persistEntity({
-        datafileReader,
+        dataProvider,
         conditionsChecker,
         modulesManager: this.modulesManager,
         storageKeyPrefix: "effects_",
@@ -199,9 +225,12 @@ export class EffectsManager {
   }
 
   // called after datafile refresh
-  refresh() {
-    // @TODO: think
-    this.initialize();
+  async refresh() {
+    const activeNames = new Set(this.getDataProvider().getEffectNames());
+    for (const name of Object.keys(this.statesByEffect)) {
+      if (!activeNames.has(name)) delete this.statesByEffect[name];
+    }
+    await this.initialize();
   }
 
   getAllStates() {

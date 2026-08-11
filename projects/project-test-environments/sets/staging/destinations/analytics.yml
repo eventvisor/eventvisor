@@ -1,0 +1,7 @@
+description: Staging analytics stream for internal sessions
+tags: [all, checkout]
+transport: console
+conditions:
+  - attribute: team
+    operator: equals
+    value: engineering

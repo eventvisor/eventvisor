@@ -4,6 +4,7 @@ import { getEffectSchema } from "./effectSchema";
 import { getEventSchema } from "./eventSchema";
 import { getConditionsSchema } from "./conditionsSchema";
 import { getSampleSchema } from "./sampleSchema";
+import { getTransformsSchema } from "./transformsSchema";
 import type { Dependencies } from "../dependencies";
 
 function createDeps(): Dependencies {
@@ -13,19 +14,23 @@ function createDeps(): Dependencies {
       eventsDirectoryPath: "/tmp/eventvisor/events",
       attributesDirectoryPath: "/tmp/eventvisor/attributes",
       destinationsDirectoryPath: "/tmp/eventvisor/destinations",
-      statesDirectoryPath: "/tmp/eventvisor/states",
       effectsDirectoryPath: "/tmp/eventvisor/effects",
+      schemasDirectoryPath: "/tmp/eventvisor/schemas",
       testsDirectoryPath: "/tmp/eventvisor/tests",
+      targetsDirectoryPath: "/tmp/eventvisor/targets",
+      setsDirectoryPath: "/tmp/eventvisor/sets",
       datafilesDirectoryPath: "/tmp/eventvisor/datafiles",
       systemDirectoryPath: "/tmp/eventvisor/.eventvisor",
       catalogExportDirectoryPath: "/tmp/eventvisor/out",
       datafileNamePattern: "eventvisor-%s.json",
       tags: ["all", "web"],
-      adapter: class {},
+      sets: false,
+      adapter: class {} as any,
       plugins: [],
       parser: { extension: "yml", parse: jest.fn(), stringify: jest.fn() },
       prettyDatafile: false,
       stringify: true,
+      onValidationFailure: "drop",
     },
     datasource: {} as Dependencies["datasource"],
     options: {},
@@ -56,6 +61,103 @@ describe("entity lint schemas", () => {
         ],
       }).success,
     ).toBe(true);
+  });
+
+  it("validates stringified conditions", () => {
+    const schema = getConditionsSchema(deps);
+    const condition = JSON.stringify({
+      payload: "country",
+      operator: "equals",
+      value: "NL",
+    });
+
+    expect(schema.safeParse(condition).success).toBe(true);
+    expect(schema.safeParse("not-json").success).toBe(false);
+    expect(schema.safeParse("null").success).toBe(false);
+    expect(schema.safeParse("[]").success).toBe(false);
+    expect(schema.safeParse('{"and":[]}').success).toBe(false);
+  });
+
+  it.each([
+    ["lookahead", "value(?=x)", ""],
+    ["lookbehind", "(?<=x)value", ""],
+    ["noncapturing group", "(?:value)", ""],
+    ["named group", "(?<name>value)", ""],
+    ["backreference", "(value)\\1", ""],
+    ["possessive quantifier", "value++", ""],
+    ["unsupported flag", "value", "u"],
+    ["duplicate flag", "value", "ii"],
+  ])("rejects nonportable regex %s", (_name, value, regexFlags) => {
+    const schema = getConditionsSchema(deps);
+    expect(
+      schema.safeParse({ payload: "value", operator: "matches", value, regexFlags }).success,
+    ).toBe(false);
+  });
+
+  it("accepts the portable regex subset", () => {
+    const schema = getConditionsSchema(deps);
+    expect(
+      schema.safeParse({
+        payload: "value",
+        operator: "matches",
+        value: "^(hello|world)[\\s\\S]+$",
+        regexFlags: "gims",
+      }).success,
+    ).toBe(true);
+  });
+
+  it("requires portable date and semantic version operands", () => {
+    const schema = getConditionsSchema(deps);
+    expect(
+      schema.safeParse({
+        payload: "timestamp",
+        operator: "after",
+        value: "2026-01-01T00:00:00Z",
+      }).success,
+    ).toBe(true);
+    expect(
+      schema.safeParse({ payload: "timestamp", operator: "after", value: "2026-01-01" }).success,
+    ).toBe(false);
+    expect(
+      schema.safeParse({ payload: "version", operator: "semverEquals", value: "1.2.3" }).success,
+    ).toBe(true);
+    expect(
+      schema.safeParse({ payload: "version", operator: "semverEquals", value: "latest" }).success,
+    ).toBe(false);
+    for (const value of ["2026-02-30T00:00:00Z", "v1.2.3", "1.2", "1.2.x", "01.2.3"]) {
+      const operator = value.includes("T") ? "after" : "semverEquals";
+      expect(schema.safeParse({ payload: "value", operator, value }).success).toBe(false);
+    }
+  });
+
+  it("requires one safe source and rejects transform fields that do not apply", () => {
+    const schema = getTransformsSchema(deps);
+    expect(
+      schema.safeParse([{ type: "set", target: "id", source: "id", payload: "id" }]).success,
+    ).toBe(false);
+    expect(
+      schema.safeParse([{ type: "set", target: "__proto__.polluted", value: true }]).success,
+    ).toBe(false);
+    expect(schema.safeParse([{ type: "trim", target: "name", separator: "," }]).success).toBe(
+      false,
+    );
+    expect(schema.safeParse([{ type: "set", target: "id", source: "id" }]).success).toBe(true);
+  });
+
+  it("validates primitive membership operands", () => {
+    const schema = getConditionsSchema(deps);
+    expect(schema.safeParse({ payload: "value", operator: "includes", value: false }).success).toBe(
+      true,
+    );
+    expect(
+      schema.safeParse({ payload: "value", operator: "in", value: ["one", 2, true, null] }).success,
+    ).toBe(true);
+    expect(
+      schema.safeParse({ payload: "value", operator: "includes", value: { nested: true } }).success,
+    ).toBe(false);
+    expect(
+      schema.safeParse({ payload: "value", operator: "in", value: [{ nested: true }] }).success,
+    ).toBe(false);
   });
 
   it("accepts arrays of samples", () => {

@@ -1,0 +1,28 @@
+# tests/destinations/<name>.spec.yml
+destination: orderWarehouse
+assertions:
+  - description: builds the exact vendor body
+    actions: # ordered SDK operations
+      - type: setAttribute
+        name: userId
+        value: user-123
+      - type: track
+        name: order_completed
+        value:
+          orderId: order-123
+          total: 129.95
+          itemCount: 3
+    expectedToBeTransported: true
+    expectedBody: # the exact body handed to the transport
+      order:
+        id: order-123
+        total: 129.95
+      customer:
+        id: user-123
+
+  # - description: async transports — wait before asserting
+  #   assertAfter: 50                  # milliseconds
+  #   actions: [...]
+  #   expectedBodies:                  # complete ordered list across several tracks
+  #     - { ... }
+  #     - { ... }
