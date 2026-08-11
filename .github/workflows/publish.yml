@@ -86,11 +86,13 @@ jobs:
           npx lerna version 1.0.0 --force-publish --exact --yes --no-push
 
       - name: Publish
+        env:
+          NPM_CONFIG_PROVENANCE: "false"
         run: |
           unset NODE_AUTH_TOKEN
           rm -f .npmrc
           npm config delete always-auth 2>/dev/null || true
-          npx lerna publish --no-private from-git --yes
+          npx lerna publish --no-private from-package --yes --concurrency 1
 
       - name: Push back to GitHub
         run: |
