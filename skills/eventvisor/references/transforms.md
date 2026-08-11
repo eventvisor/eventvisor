@@ -9,7 +9,7 @@ Transforms manipulate data on the fly: event payloads (event level), transport b
 ```yaml
 transforms:
   - type: set                 # required — one of the types below
-    source: eventName         # optional source (source | attribute | payload | state | lookup)
+    source: eventName         # optional source (source | attribute | payload | state | effect | lookup)
     target: event             # dot-separated path into the value being built
     value: …                  # literal value (when no source)
     conditions: []            # optional per-transform gate (see conditions.md)
@@ -122,7 +122,7 @@ The current `target` value is the numeric input; `value` is the operand (default
 Any transform can carry its own `conditions` — it applies only when they match:
 
 ```yaml
-- lookup: browser.screen.width
+- lookup: browser.screen.width  # `browser` here is a custom module the app registers
   type: set
   target: screenWidth
   conditions:

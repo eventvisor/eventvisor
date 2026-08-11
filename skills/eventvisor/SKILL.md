@@ -1,6 +1,6 @@
 ---
 name: eventvisor
-description: Author, query, and integrate Eventvisor — Git-based governance, transformation, filtering, and routing of analytics events and logs. Use whenever the user mentions Eventvisor, works in a project containing eventvisor.config.js, edits files under events/, attributes/, destinations/, effects/, schemas/, targets/, or tests/, runs `eventvisor` CLI commands, or asks to define/validate/route/sample/filter/transform/deprecate analytics events, set up or audit a tracking plan, cut data ingestion costs, migrate analytics vendors, manage marketing pixels, or govern tracking schemas. Also use when consuming Eventvisor from app code — @eventvisor/sdk, @eventvisor/react, @eventvisor/module-*, createEventvisor, track/setAttribute, datafiles, transports, lookups, handlers. Covers starting a project from scratch, events, attributes, reusable Schemas, destinations, effects, conditions, transforms, sampling, tags, Targets, Sets, test specs, linting, building/deploying datafiles, simulation debugging, the Catalog, and code generation.
+description: Author, query, and integrate Eventvisor — Git-based governance, transformation, filtering, and routing of analytics events and logs. Use whenever the user mentions Eventvisor, works in a project containing eventvisor.config.js, edits files under events/, attributes/, destinations/, effects/, schemas/, targets/, or tests/, runs `eventvisor` CLI commands, or asks to define/validate/route/sample/filter/transform/deprecate analytics events, set up or audit a tracking plan, cut data ingestion costs, migrate analytics vendors, manage marketing pixels, or govern tracking schemas. Also use when consuming Eventvisor from app code — @eventvisor/sdk, @eventvisor/react, the Java SDK, @eventvisor/module-*, createEventvisor, track/setAttribute, datafiles, transports, lookups, handlers. Covers starting a project from scratch, events, attributes, reusable Schemas, destinations, effects, conditions, transforms, sampling, tags, Targets, Sets, test specs, linting, building/deploying datafiles, simulation debugging, the Catalog, code generation, upgrading a project or app from 0.x to v1, and securing the datafile publishing path.
 ---
 
 # Eventvisor
@@ -90,6 +90,9 @@ This file is loaded eagerly. The files below are loaded only when relevant — r
 | React or React Native integration (`EventvisorProvider`, hooks)                                                                                                                        | [sdk-react.md](references/sdk-react.md)                   |
 | Modules — official catalog (console, GA4, Segment, pixel…) and writing custom ones                                                                                                     | [modules.md](references/modules.md)                       |
 | Code generation (typed TS `track`/`setAttribute` bindings)                                                                                                                             | [code-generation.md](references/code-generation.md)       |
+| Java / JVM services consuming the same datafiles                                                                                                                                       | [sdk-java.md](references/sdk-java.md)                     |
+| **Upgrading 0.x → v1** — project or application                                                                                                                                        | [upgrading-to-v1.md](references/upgrading-to-v1.md)       |
+| Datafile publishing trust, pixel scripts, consent gating, privacy                                                                                                                      | [security.md](references/security.md)                     |
 | **Common patterns** — governance, routing, vendor migration, ingestion costs, validation rollout, deprecation, marketing pixels, error tracking, enrichment, microfrontends, ownership | [recipes.md](references/recipes.md)                       |
 | Terminology refresher                                                                                                                                                                  | [glossary.md](references/glossary.md)                     |
 
@@ -165,8 +168,8 @@ All `eventvisor` CLI commands are local and safe to run without confirmation, wi
 | `npx eventvisor find-usage --unused-attributes --unused-schemas`              | Find dead definitions                                                   |
 | `npx eventvisor simulate <event> --value='{…}' --attributes='{…}'`            | Run the full pipeline on a payload — the debugging tool                 |
 | `npx eventvisor test [--keyPattern=…] [--assertionPattern=…]`                 | Run test specs                                                          |
-| `npx eventvisor build [--tag=…] [--target=…]`                                 | Build datafiles                                                         |
-| `npx eventvisor build --tag=<t> --json --pretty`                              | Print one datafile without side effects                                 |
+| `npx eventvisor build [--target=…] [--tag=…]`                                | Build one `eventvisor-<target>.json` per Target                         |
+| `npx eventvisor build --json --pretty [--target=<t>]`                        | Print a datafile instead of writing one (no revision bump)              |
 | `npx eventvisor benchmark <event> -n 1000`                                    | Measure evaluation performance                                          |
 | `npx eventvisor generate-code --language typescript --out-dir src/eventvisor` | Typed TS bindings                                                       |
 | `npx eventvisor catalog`                                                      | Browsable UI of the whole project, live-reloading in watch mode         |
@@ -211,7 +214,7 @@ Practical consequences:
 
 ### Routing events to destinations
 
-Default: every event goes to every destination in the datafile. Narrow it either from the destination side (destination `conditions` on `eventName` — good for "this vendor only gets these events") or the event side (`destinations:` overrides — good for "this event skips that vendor"). Read [destinations.md](references/destinations.md) and [events.md](references/events.md#destinations); the vendor-routing recipe is in [recipes.md](references/recipes.md#conditional-routing).
+Default: every event goes to every destination in the datafile. Narrow it either from the destination side (destination `conditions` on `eventName` — good for "this vendor only gets these events") or the event side (`destinations:` overrides — good for "this event skips that vendor"). Read [destinations.md](references/destinations.md) and [events.md](references/events.md#destinations-per-destination-overrides); the vendor-routing recipe is in [recipes.md](references/recipes.md#conditional-routing).
 
 ### Cutting ingestion costs (filtering + sampling)
 
@@ -223,7 +226,7 @@ Add the new destination alongside the old, then shift traffic by complementary c
 
 ### Marketing pixels / side-effects
 
-Effects + the `pixel` handler module, with `state` + `conditions` to fire once and `persist` to survive reloads. Read [effects.md](references/effects.md); full pattern in [recipes.md](references/recipes.md#marketing-pixels-with-oversight).
+Effects + the `pixel` handler module, with `state` + `conditions` to fire once and `persist` to survive reloads. Read [effects.md](references/effects.md); full pattern in [recipes.md](references/recipes.md#marketing-pixels-with-oversight). Script execution in the pixel module is **off by default** and has to be enabled deliberately — say so once and point at [security.md](references/security.md), then help them do it.
 
 ### Debugging "where did my event go?"
 
@@ -239,6 +242,10 @@ Use `npx eventvisor simulate <event> --value='{…}' --attributes='{…}'` rathe
 
 Offer this proactively when a session involves several authoring changes or when the user is less comfortable reading YAML (PMs, marketers, analysts) — prompting plus a live Catalog is the best way to experience Eventvisor. Entity URLs are shareable. Details in [querying.md](references/querying.md).
 
+### Upgrading a 0.x project or application to v1
+
+Read [upgrading-to-v1.md](references/upgrading-to-v1.md). Unlike most upgrades, **applications go first**: a v1 SDK reads the 0.x datafiles you are still publishing, so apps can move at their own pace before the project switches to Target-named datafiles. The v1 CLI needs Node.js 24 or newer, every tag-named datafile artifact becomes a Target-named one (so application URLs change), and multi-child `not` groups plus sampling volumes need checking before either half ships.
+
 ### Recipes for higher-level use cases
 
 When the request matches a named pattern — governance/single source of truth, conditional routing, vendor migration, saving ingestion costs, validation rollout, deprecation, filtering, data enrichment, marketing pixels, error tracking, microfrontends, environments, ownership/CODEOWNERS — open [recipes.md](references/recipes.md) and adapt the matching section. It links back to the granular references for shape details.
@@ -250,6 +257,7 @@ When the task is consuming Eventvisor from application code:
 - **JavaScript / TypeScript / Node.js / browser** → read [sdk-javascript.md](references/sdk-javascript.md) in full. It covers install, `createEventvisor`, tracking, attributes, datafile refresh (merge vs replace), SDK events, diagnostics, `spawn()` child instances, and `close()`.
 - **React / React Native** → [sdk-react.md](references/sdk-react.md) (`EventvisorProvider`, `useEventvisor`, `useEventvisorReady`).
 - **Modules** → [modules.md](references/modules.md). The SDK core does nothing vendor-specific; every transport (console, GA4, GTM, Segment, Sentry, Datadog, Amplitude, Mixpanel, New Relic), lookup (localStorage, timestamp, UUID), handler (pixel), and storage layer is a module installed at init. Custom modules are ~10 lines.
+- **Java / JVM** (backend services, and Kotlin or Android through JVM interop) → [sdk-java.md](references/sdk-java.md). Same datafiles, same pipeline, same diagnostic codes as the JavaScript SDK.
 - **Type-safe bindings** (generated `track`/`setAttribute` with compile-checked keys and payload types) → [code-generation.md](references/code-generation.md).
 
 Key facts that prevent most integration mistakes: the app must load a **datafile** (built and deployed from the project repo) and decide its own refresh strategy; `track`/`setAttribute`/`setDatafile`/`close` are **async** and processed in call order, so await them when completion or a result matters; `track()` resolving to `null` means the pipeline dropped the event (see the pipeline above); event keys, property names, and attribute names must match the project's definitions exactly — verify against the project (or its Catalog) rather than guessing; `await eventvisor.onReady()` is only needed when persistence modules are in play.
@@ -262,7 +270,8 @@ Key facts that prevent most integration mistakes: the app must load a **datafile
 - Do not reference transports, lookups, handlers, or storage names that no application module provides — coordinate app deployment first.
 - Do not invent attribute, event, destination, or schema keys — in YAML or in application code. Verify they exist; create them explicitly if needed.
 - Do not delete or archive entities before checking `find-usage`.
+- Do not put credentials, tokens, or personal data in definitions — datafiles are fetched by browsers and are effectively public ([security.md](references/security.md)).
 - Do not use `skipValidation` as a convenience — it exists for controlled cases (e.g. production-only bypass via conditions); validation is the governance value.
 - Do not skip `npx eventvisor lint` after edits.
 - Do not author project definitions inside an application repo — they belong in the Eventvisor project repo.
-- Do not commit `datafiles/`, `out/`, or `.eventvisor/` changes unless the project's convention explicitly does.
+- Do not commit generated `datafiles/` or Catalog `out/` output; the reference projects gitignore both. `.eventvisor/REVISION` is different — it is tracked, and CI owns bumping it, so don't commit a local build's revision either (use `--json` to inspect, or `--revision-from-hash` to avoid stored state entirely).

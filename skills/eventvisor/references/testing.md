@@ -41,9 +41,12 @@ assertions:
       - browserAnalytics
       - orderWarehouse
 
-  - description: rejected without required attributes
+  # the payload is schema-valid; the pipeline gates it on requiredAttributes,
+  # so assert on tracking, not on validity
+  - description: not tracked without the required attributes
     track: { orderId: o-1, total: 5, itemCount: 1 }
-    expectedToBeValid: false
+    expectedToBeValid: true
+    expectedToBeTracked: false
     expectedDestinations: []
 ```
 
@@ -145,7 +148,9 @@ assertions:
 When authoring or changing an entity, cover:
 
 1. The happy path (valid payload → expected transformed event → expected destinations).
-2. The rejection path (invalid/missing-required → `expectedToBeValid: false`, `expectedDestinations: []`).
+2. The rejection paths, and keep the two kinds apart:
+   - **schema rejection** (missing a `required` property, wrong type, value outside an `enum`) → `expectedToBeValid: false`, `expectedDestinations: []`;
+   - **pipeline gating** (a missing `requiredAttributes` entry, a failed `conditions` match, sampling) → `expectedToBeValid: true` (**still true**), plus `expectedToBeTracked: false` and `expectedDestinations: []`. The payload was fine; governance stopped it. Asserting `expectedToBeValid: false` here is the single most common mistake in Eventvisor test specs.
 3. Any conditional behavior you added (consent gates, per-destination overrides, conditional transforms) — one assertion per branch.
 4. For destinations: the exact `expectedBody`, since that's the vendor contract.
 5. For effects: idempotency (`times: 1`) when state guards exist.

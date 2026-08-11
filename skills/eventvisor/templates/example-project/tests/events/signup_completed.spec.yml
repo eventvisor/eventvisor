@@ -12,12 +12,15 @@ assertions:
       signupChannel: web
     expectedDestinations: [browserConsole]
 
+  # the payload itself is valid; the event is gated by requiredAttributes,
+  # so assert on tracking rather than on validity
   - description: requires the userId attribute
     withAttributes:
       consentAnalytics: true
     track:
       plan: pro
-    expectedToBeValid: false
+    expectedToBeValid: true
+    expectedToBeTracked: false
     expectedDestinations: []
 
   - description: rejects an unknown plan

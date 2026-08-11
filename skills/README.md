@@ -24,6 +24,7 @@ Then in your agent (Claude Code, Cursor, Codex, OpenCode, etc.) ask things like:
 - "Set up a brand-new Eventvisor project for my team"
 - "Wire Eventvisor tracking into my React app"
 - "Which events use the `userId` attribute?"
+- "Upgrade this project from Eventvisor 0.x to v1"
 
 ## What's included
 
@@ -33,7 +34,9 @@ A single skill, `eventvisor`, that the agent invokes (e.g. as `/eventvisor` in C
 - **Testing** — declarative `.spec.yml` assertions for events, attributes, destinations, and effects; matrix expansion; simulated lookups; async destination assertions.
 - **Querying** — `list`, `info`, `find-usage`, `simulate`, and `benchmark` recipes for answering questions about an existing project without grepping YAML.
 - **Visual review** — pairs authoring with `npx eventvisor catalog` running locally in watch mode: the agent makes changes by prompt, and the Catalog in your (or the agent's) browser live-reloads so you see every entity, its history, usage relationships, tests, and Target membership evolve visually.
-- **Application integration** — `@eventvisor/sdk` (browser and Node.js), `@eventvisor/react`, official modules (console, GA4, GTM, Segment, Sentry, Datadog, Amplitude, Mixpanel, New Relic, pixel, localStorage, timestamp, UUID), custom modules, and typed code generation.
+- **Application integration** — `@eventvisor/sdk` (browser and Node.js), `@eventvisor/react`, the Java SDK for JVM services, official modules (console, GA4, GTM, Segment, Sentry, Datadog, Amplitude, Mixpanel, New Relic, HTTP, Beacon, pixel, localStorage, timestamp, UUID), custom modules, and typed code generation.
+- **Upgrading** — the 0.x to v1 path for both the project repo and each application, in the order that lets them ship separately.
+- **Security** — what the datafile publishing path actually controls, why pixel script execution is off by default, and how to gate destinations on consent.
 - **Templates** — copy-and-adapt YAML for every common authoring shape, plus a complete lint- and test-passing example project.
 
 ## Updating

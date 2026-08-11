@@ -18,8 +18,8 @@ Modules are how the SDK gains capabilities while the core stays tiny. Definition
 | Package                                | Creator                               | Provides                                                        | Notes                                                                                             |
 | -------------------------------------- | ------------------------------------- | --------------------------------------------------------------- | ------------------------------------------------------------------------------------------------- |
 | `@eventvisor/module-console`           | `createConsoleModule()`               | transport `console`                                             | Browser/Node console. Options: `{name, console}` — register twice under different names if needed |
-| `@eventvisor/module-http`              | `createHttpModule()`                  | transport `http`                                                | Bounded batches, retry, timed and explicit flush                                                  |
-| `@eventvisor/module-beacon`            | `createBeaconModule()`                | transport `beacon`                                              | Browser pagehide delivery with keepalive fallback                                                 |
+| `@eventvisor/module-http`              | `createHttpModule({ url })`           | transport `http`                                                | Bounded batches, retry, timed and explicit flush. `url` is required                               |
+| `@eventvisor/module-beacon`            | `createBeaconModule({ url })`         | transport `beacon`                                              | Browser pagehide delivery with keepalive fallback. `url` is required                              |
 | `@eventvisor/module-ga4`               | `createGA4Module()`                   | transport `ga4`                                                 | Google Analytics 4                                                                                |
 | `@eventvisor/module-gtm`               | `createGTMModule()`                   | transport `gtm`                                                 | Google Tag Manager dataLayer                                                                      |
 | `@eventvisor/module-segment-browser`   | `createSegmentBrowserModule({...})`   | transport `segment-browser`                                     | Segment                                                                                           |
@@ -46,7 +46,7 @@ const eventvisor = createEventvisor({
 });
 ```
 
-Vendor module docs (setup options like measurement IDs, keys): `https://eventvisor.org/docs/modules/<name>`.
+Vendor module docs, with setup options like measurement IDs and keys, live under <https://eventvisor.org/docs/modules> (one page per module, e.g. `/docs/modules/ga4`).
 
 ## Custom modules
 

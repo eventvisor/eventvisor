@@ -76,7 +76,7 @@ steps:
 
 Each step may have: `description`, `handler` + `params`, `transforms` (state-mutating), its own `conditions`, and `continueOnError: true` to let later steps run if this one fails. Steps run synchronously in order. Handler failures stop remaining steps unless `continueOnError` is set.
 
-Handler `params` string values support `{{ source.path }}` interpolation (e.g. `{{ payload.url }}`, `{{ attributes.userId }}`).
+**`{{ … }}` interpolation is not a core feature.** The SDK passes `params` to the handler untouched; any templating is up to the module. The official `pixel` module interpolates `{{ … }}` in its `snippet` param only, and resolves each expression **against the triggering payload** — `{{ payload.url }}` and `{{ url }}` both read `payload.url`, while `{{ attributes.userId }}` resolves to nothing. A custom handler that wants richer templating has to implement it itself.
 
 ## Handlers (application side)
 
