@@ -1,6 +1,6 @@
 {
   "name": "@eventvisor/core",
-  "version": "0.26.0",
+  "version": "1.0.0",
   "description": "Project building, testing, linting, and Catalog tools for Eventvisor",
   "main": "lib/index.js",
   "types": "lib/index.d.ts",
@@ -42,10 +42,10 @@
   },
   "license": "MIT",
   "dependencies": {
-    "@eventvisor/catalog": "0.26.0",
-    "@eventvisor/parsers": "0.26.0",
-    "@eventvisor/sdk": "0.26.0",
-    "@eventvisor/types": "0.26.0",
+    "@eventvisor/catalog": "1.0.0",
+    "@eventvisor/parsers": "1.0.0",
+    "@eventvisor/sdk": "1.0.0",
+    "@eventvisor/types": "1.0.0",
     "axios": "^1.19.0",
     "tar": "^7.5.22",
     "yargs": "^17.7.2",

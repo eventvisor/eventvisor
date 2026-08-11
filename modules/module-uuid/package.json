@@ -1,6 +1,6 @@
 {
   "name": "@eventvisor/module-uuid",
-  "version": "0.26.0",
+  "version": "1.0.0",
   "description": "Eventvisor UUID module",
   "main": "cjs/index.js",
   "module": "esm/index.js",
@@ -52,7 +52,7 @@
     "@eventvisor/sdk": ">=1.0.0 <2"
   },
   "devDependencies": {
-    "@eventvisor/sdk": "0.26.0"
+    "@eventvisor/sdk": "1.0.0"
   },
   "license": "MIT"
 }

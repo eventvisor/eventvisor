@@ -1,6 +1,6 @@
 {
   "name": "@eventvisor/sdk",
-  "version": "0.26.0",
+  "version": "1.0.0",
   "description": "Event governance SDK for browsers, Node.js, and React Native",
   "main": "cjs/index.js",
   "module": "esm/index.js",
@@ -60,6 +60,6 @@
   },
   "license": "MIT",
   "dependencies": {
-    "@eventvisor/types": "0.26.0"
+    "@eventvisor/types": "1.0.0"
   }
 }

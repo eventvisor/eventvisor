@@ -1,6 +1,6 @@
 {
   "name": "@eventvisor/module-http",
-  "version": "0.26.0",
+  "version": "1.0.0",
   "description": "Reliable batching HTTP transport module for Eventvisor",
   "main": "cjs/index.js",
   "module": "esm/index.js",
@@ -53,6 +53,6 @@
     "@eventvisor/sdk": ">=1.0.0 <2"
   },
   "devDependencies": {
-    "@eventvisor/sdk": "0.26.0"
+    "@eventvisor/sdk": "1.0.0"
   }
 }

@@ -1,6 +1,6 @@
 {
   "name": "@eventvisor/catalog",
-  "version": "0.26.0",
+  "version": "1.0.0",
   "description": "Static project Catalog for Eventvisor",
   "homepage": "https://eventvisor.org",
   "keywords": [

@@ -1,7 +1,7 @@
 {
   "name": "@eventvisor/project-environments",
   "private": true,
-  "version": "0.26.0",
+  "version": "1.0.0",
   "description": "Eventvisor project using sets as release environments",
   "scripts": {
     "lint": "eventvisor lint",
@@ -11,6 +11,6 @@
     "generate-code": "eventvisor generate-code --language typescript --out-dir src/generated"
   },
   "dependencies": {
-    "@eventvisor/cli": "0.26.0"
+    "@eventvisor/cli": "1.0.0"
   }
 }

@@ -1,7 +1,7 @@
 {
   "name": "@eventvisor/project-test-environments",
   "private": true,
-  "version": "0.26.0",
+  "version": "1.0.0",
   "description": "Eventvisor set testing examples for release environments",
   "scripts": {
     "lint": "eventvisor lint",
@@ -12,6 +12,6 @@
     "test:production": "eventvisor test --set=production"
   },
   "dependencies": {
-    "@eventvisor/cli": "0.26.0"
+    "@eventvisor/cli": "1.0.0"
   }
 }

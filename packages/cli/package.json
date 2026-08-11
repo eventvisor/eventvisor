@@ -1,6 +1,6 @@
 {
   "name": "@eventvisor/cli",
-  "version": "0.26.0",
+  "version": "1.0.0",
   "description": "Command line tools for Eventvisor projects",
   "main": "bin.js",
   "types": "lib/index.d.ts",
@@ -46,6 +46,6 @@
   },
   "license": "MIT",
   "dependencies": {
-    "@eventvisor/core": "0.26.0"
+    "@eventvisor/core": "1.0.0"
   }
 }
