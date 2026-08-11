@@ -14,7 +14,7 @@ datafiles/
 └── eventvisor-account.json
 ```
 
-Selective builds: `--target checkout` and `--tag web` are repeatable. Use `--set staging` for one Set. Print without writing with `--tag` or one `--target`, followed by `--json --pretty`. Sets projects must pass one `--set` for JSON. Tags are selection metadata and do not create artifacts. Datafiles contain `schemaVersion`, `revision`, `eventvisorVersion`, the validation failure policy, and resolved runtime maps. Reusable Schemas are inlined and Target dependency closure is already applied. A Target exclusion that removes a required dependency fails the build.
+Selective builds: `--target checkout` and `--tag web` are repeatable. Use `--set staging` for one Set. `--json [--pretty]` prints instead of writing, and accepts **at most one** `--target` (with none, it prints the whole project datafile); Sets projects must also pass one `--set`. Tags are selection metadata and do not create artifacts. Datafiles contain `schemaVersion`, `revision`, `eventvisorVersion`, the validation failure policy, and resolved runtime maps. Reusable Schemas are inlined and Target dependency closure is already applied. A Target exclusion that removes a required dependency fails the build.
 
 ## Revisions
 
@@ -45,7 +45,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
-        with: { node-version: 20 }
+        with: { node-version: 24 }
       - run: npm ci
       - run: npx eventvisor lint
       - run: npx eventvisor test
@@ -66,7 +66,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
-        with: { node-version: 20 }
+        with: { node-version: 24 }
       - run: npm ci
       - run: npx eventvisor lint
       - run: npx eventvisor test

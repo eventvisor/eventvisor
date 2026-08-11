@@ -30,7 +30,7 @@ conditions:
     value: button_click
 ```
 
-App installs both modules; routing changes never touch app code again. Event-side `destinations:` overrides handle per-event exceptions ([events.md](events.md#destinations)).
+App installs both modules; routing changes never touch app code again. Event-side `destinations:` overrides handle per-event exceptions ([events.md](events.md#destinations-per-destination-overrides)).
 
 ## Migrating vendors
 

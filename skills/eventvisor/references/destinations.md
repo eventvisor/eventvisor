@@ -41,7 +41,7 @@ archived: false                               # excluded from datafiles
 Every tracked event that survives the event-level pipeline is offered to **every destination** in the datafile, independently. For each destination the SDK checks, in order:
 
 1. The `transport` module exists in the app — else an error diagnostic ("Destination has no transport") and nothing is delivered. **The #1 silent failure**: definition says `transport: ga4` but the app never installed `@eventvisor/module-ga4`.
-2. The event's own per-destination override (`destinations:` in the event file — `false` disables, or its conditions/sample/transforms run first; see [events.md](events.md#destinations)).
+2. The event's own per-destination override (`destinations:` in the event file — `false` disables, or its conditions/sample/transforms run first; see [events.md](events.md#destinations-per-destination-overrides)).
 3. This destination's `conditions` → `sample` → `transforms`.
 4. The resulting body goes to the transport.
 

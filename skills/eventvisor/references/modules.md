@@ -46,7 +46,7 @@ const eventvisor = createEventvisor({
 });
 ```
 
-Vendor module docs (setup options like measurement IDs, keys): `https://eventvisor.org/docs/modules/<name>`.
+Vendor module docs, with setup options like measurement IDs and keys, live under <https://eventvisor.org/docs/modules> (one page per module, e.g. `/docs/modules/ga4`).
 
 ## Custom modules
 

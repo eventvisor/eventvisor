@@ -28,7 +28,7 @@ const eventvisor = createEventvisor({
 
 `createEventvisor()` is the factory; the `Eventvisor` type is exported for passing instances around. Async SDK operations wait for readiness automatically. Use `await eventvisor.onReady()` when application code must know that persisted attribute and effect state has loaded before doing synchronous reads.
 
-> Migrating pre-v1 code? `createInstance` → `createEventvisor`, `registerModule` → `addModule`, logger handlers → `onDiagnostic`. Full mapping: <https://eventvisor.org/docs/migration/v1>.
+> Migrating pre-v1 code? `createInstance` → `createEventvisor`, `registerModule` → `addModule`, logger handlers → `onDiagnostic`. Full mapping: [upgrading-to-v1.md](upgrading-to-v1.md).
 
 ## Tracking and attributes — async by contract
 
@@ -84,6 +84,20 @@ const unsub = eventvisor.onDiagnostic((d) => console.log(d.level, d.code, d.mess
 
 Error-level diagnostics also fire the `error` SDK event. This is where "Destination has no transport" and validation failures surface in production.
 
+**Codes are stable and meant to be alerted on; messages are not.** Wire them into observability rather than matching message text:
+
+| Area                         | Codes                                                                                              |
+| ---------------------------- | -------------------------------------------------------------------------------------------------- |
+| Datafiles and initialization | `invalid_datafile`, `initialization_failed`                                                        |
+| Events and attributes        | `event_not_found`, `event_validation_failed`, `attribute_not_found`, `attribute_validation_failed` |
+| Conditions and sampling      | `conditions_parse_failed`, `condition_evaluation_failed`, `sample_by_invalid`                      |
+| Transforms                   | `transform_conversion_failed`, `transform_invalid_input`, `transform_output_invalid`               |
+| Effects                      | `effect_handler_failed`, `effect_reentrancy_blocked`                                               |
+| Modules                      | `duplicate_module`, `module_setup_failed`, `module_transport_failed`, `module_flush_failed`        |
+| Queueing transports          | `http_queue_full`, `http_delivery_failed`, `beacon_queue_full`, `beacon_delivery_failed`           |
+
+A rising `event_validation_failed` rate is the signal that a schema change landed ahead of the applications producing that event. `http_queue_full` and `beacon_queue_full` mean data is being discarded before delivery, so treat them as capacity alerts, not noise.
+
 ## Modules at runtime
 
 ```js
@@ -116,3 +130,4 @@ Always `close()` what you create — especially in tests and server processes.
 - **Node.js**: identical API — fetch/read the datafile however you like.
 - **Old browsers / React Native**: deterministic bucketing includes portable UTF-8 handling and does not require `TextEncoder`.
 - **Typed usage**: prefer generated bindings for compile-checked event keys and payload types — [code-generation.md](code-generation.md).
+- **Java / JVM**: the same datafiles and the same pipeline, with a builder-style API — [sdk-java.md](sdk-java.md). Relevant whenever a backend service and a browser app share one project.

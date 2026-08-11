@@ -2,7 +2,7 @@
 
 Full docs: <https://eventvisor.org/docs/cli>
 
-Run through `npx eventvisor` inside a project (or `npx @eventvisor/cli` for `init`). Any command + `--help` prints its typed options. `--rootDirectoryPath <path>` (also `--root-directory-path`, `--projectDirectoryPath`) runs against another checkout. In Sets projects, project commands accept `--set`; without it they process every set.
+Requires **Node.js 24 or newer**. Run through `npx eventvisor` inside a project (or `npx @eventvisor/cli` for `init`). Any command + `--help` prints its typed options. `--rootDirectoryPath <path>` (also `--root-directory-path`, `--projectDirectoryPath`) runs against another checkout. In Sets projects, project commands accept `--set`; without it they process every set.
 
 ## init (new projects)
 
@@ -65,7 +65,7 @@ npx eventvisor build --revision-from-hash     # content-derived revision (stable
 npx eventvisor build --datafilesDir=<dir>
 ```
 
-Notes: normal builds write `datafiles/` and bump the incremental revision under `.eventvisor/` — CI usually owns committing that state (or use `--revision-from-hash` and skip it). `--json` requires a single selection (and a single `--set` in Sets projects).
+Notes: normal builds write `datafiles/` and bump the incremental revision under `.eventvisor/` — CI usually owns committing that state (or use `--revision-from-hash` and skip it). `--json` prints instead of writing and leaves the stored revision untouched; it accepts **at most one** `--target` (none prints the whole project datafile) and requires one `--set` in Sets projects.
 
 ## Promote Sets
 
