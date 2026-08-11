@@ -94,6 +94,6 @@ Destination-level sampling is the recommended place to cut ingestion costs — t
 
 ## Adding a destination end-to-end
 
-1. Create `destinations/<name>.yml` with the transport module's name ([modules.md](modules.md) lists official transport names: `console`, `ga4`, `gtm`, `segment-browser`, `sentry-browser`, `datadog-browser`, `amplitude-browser`, `mixpanel-browser`, `newrelic-browser`, or a custom module name).
+1. Create `destinations/<name>.yml` with the transport module's name ([modules.md](modules.md) lists official transport names: `http` and `beacon` for your own endpoints, `console` for development, `ga4`, `gtm`, `segment-browser`, `sentry-browser`, `datadog-browser`, `amplitude-browser`, `mixpanel-browser`, `newrelic-browser` for vendors, or a custom module name). For a real backend, `http` (bounded batching and retries) or `beacon` (delivery on page hide) is almost always the right answer over a hand-written transport.
 2. Tell the user the application change: `npm install @eventvisor/module-<x>` and add `create<X>Module(...)` to `createEventvisor({ modules: [...] })`. **App first, definition second** — otherwise events route to a transport that isn't there.
 3. `npx eventvisor lint`, then offer a destination test spec asserting the exact body ([templates/test-destination.spec.yml](../templates/test-destination.spec.yml)).

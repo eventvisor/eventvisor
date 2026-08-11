@@ -8,7 +8,7 @@ Conditions gate almost everything: event filtering, destination routing, per-tra
 
 ```yaml
 conditions:
-  - attribute: country      # a source (see sources.md): source | attribute | payload | state | lookup
+  - attribute: country      # a source (see sources.md): source | attribute | payload | state | effect | lookup
     operator: equals
     value: us
 ```
@@ -111,10 +111,4 @@ conditions:
 - Conditions evaluated during event processing see `payload` as the event's current (validated, possibly transformed-so-far) value, plus `eventName` and `eventLevel` as sources.
 - Datafiles may carry conditions in stringified form (a build optimization via the `stringify` config); malformed stringified conditions **fail closed** at runtime — they match nothing rather than everything.
 - Operator/value combinations are validated at lint time (e.g. `in` requires an array `value`).
-
-# Conditions
-
-Conditions use the same logical grammar whether they are emitted as objects or compact JSON
-strings. Stringification is a datafile representation defined by schema version `1`, not a different
-authoring syntax. SDKs parse and cache stringified conditions for the active datafile. Malformed
-strings fail closed. Configure `stringify: false` globally or on a Target for readable datafiles.
+- The grammar is identical whether conditions end up in the datafile as objects or as compact JSON strings. Stringification is a datafile representation defined by schema version `1`, not a second authoring syntax: SDKs parse and cache stringified conditions for the active datafile. Set `stringify: false` globally or per Target when you want readable datafiles.

@@ -38,7 +38,7 @@ excludeEvents: checkout_internal_*
 includeAttributes: [userId, sessionId]
 includeDestinations: "*"
 includeEffects: cart_*
-excludeEffects: ""                           # each include* has a matching exclude*
+excludeEffects: cart_debug_*                 # each include* has a matching exclude*
 pretty: true                                 # per-target datafile formatting
 stringify: true                              # compact condition stringification
 revisionFromHash: true                       # content-derived revision (stable cache keys)

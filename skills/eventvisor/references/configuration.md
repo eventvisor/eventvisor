@@ -56,7 +56,7 @@ module.exports = {
 };
 ```
 
-Custom parsers must provide both functions. `stringify` receives the current file path as an optional second argument, which can be used to preserve comments and formatting. Built in YAML and JSON implementations are published in `@eventvisor/parsers`. The YAML parser preserves existing comments during editorial writes where possible.
+Custom parsers must provide both functions. Both receive the current file path as an optional second argument, which is what lets a parser preserve comments and formatting on editorial writes. Built in YAML and JSON implementations are published in `@eventvisor/parsers`. The YAML parser preserves existing comments during editorial writes where possible.
 
 With a custom parser, write **all** entity files in that format with that extension. Reference projects: `project-yml`, `project-json` in the monorepo.
 
