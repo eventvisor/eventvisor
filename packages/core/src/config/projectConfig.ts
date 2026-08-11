@@ -272,6 +272,10 @@ export function showProjectConfig(
 export const configPlugin: Plugin = {
   command: "config",
   description: "show the resolved project configuration",
+  options: {
+    json: { type: "boolean", description: "print JSON" },
+    pretty: { type: "boolean", description: "pretty print JSON" },
+  },
   handler: async ({ rootDirectoryPath, parsed }) => {
     const projectConfig = getProjectConfig(rootDirectoryPath);
     showProjectConfig(projectConfig, {

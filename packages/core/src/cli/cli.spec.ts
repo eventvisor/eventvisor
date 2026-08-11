@@ -23,6 +23,15 @@ describe("runCLI help", () => {
     await expect(runCLI({ rootDirectoryPath: "/tmp/not-an-eventvisor-project" })).resolves.toBe(0);
   });
 
+  it("declares documented config output options", async () => {
+    process.argv = ["node", "eventvisor", "config", "--help"];
+    const output = jest.spyOn(console, "log").mockImplementation(() => undefined);
+    await expect(runCLI({ rootDirectoryPath: "/tmp/not-an-eventvisor-project" })).resolves.toBe(0);
+    const text = output.mock.calls.flat().join(" ");
+    expect(text).toContain("--json");
+    expect(text).toContain("--pretty");
+  });
+
   it("reports a useful error when executing a project command outside a project", async () => {
     process.argv = ["node", "eventvisor", "build"];
     const error = jest.spyOn(console, "error").mockImplementation(() => undefined);
