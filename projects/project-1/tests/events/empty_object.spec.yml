@@ -1,0 +1,12 @@
+event: empty_object
+
+assertions:
+  - description: Empty object is valid
+    track: {}
+    expectedToBeValid: true
+    expectedEvent: {}
+
+  - description: Properties are not accepted
+    track:
+      unexpected: true
+    expectedToBeValid: false
