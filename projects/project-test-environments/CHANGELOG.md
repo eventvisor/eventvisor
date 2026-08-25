@@ -5,14 +5,4 @@ See [Conventional Commits](https://conventionalcommits.org) for commit guideline
 
 # [1.1.0](https://github.com/eventvisor/eventvisor/compare/v1.0.0...v1.1.0) (2026-08-25)
 
-**Note:** Version bump only for package @eventvisor/module-http
-
-
-
-
-
-# Changelog
-
-## 0.26.0
-
-- Add the first HTTP transport with bounded batching, retries, diagnostics, and flushing.
+**Note:** Version bump only for package @eventvisor/project-test-environments

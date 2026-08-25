@@ -1,6 +1,6 @@
 {
   "name": "@eventvisor/react",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "React bindings for the Eventvisor JavaScript SDK",
   "main": "cjs/index.js",
   "module": "esm/index.js",
@@ -48,7 +48,7 @@
     "url": "https://github.com/eventvisor/eventvisor/issues"
   },
   "dependencies": {
-    "@eventvisor/sdk": "1.0.0",
+    "@eventvisor/sdk": "1.1.0",
     "@eventvisor/types": "1.0.0"
   },
   "peerDependencies": {
