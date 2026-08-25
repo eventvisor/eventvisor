@@ -3,6 +3,8 @@ tag: web
 includeEvents:
   - page_view
   - banner_*
+  - empty_object
+  - open_object
   - sdk_conformance
 includeAttributes: user*
 includeDestinations: console*

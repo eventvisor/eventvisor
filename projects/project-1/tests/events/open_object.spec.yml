@@ -1,0 +1,20 @@
+event: open_object
+
+assertions:
+  - description: Empty object is valid
+    track: {}
+    expectedToBeValid: true
+    expectedEvent: {}
+
+  - description: Arbitrary properties are accepted
+    track:
+      message: Hello
+      count: 2
+      nested:
+        enabled: true
+    expectedToBeValid: true
+    expectedEvent:
+      message: Hello
+      count: 2
+      nested:
+        enabled: true

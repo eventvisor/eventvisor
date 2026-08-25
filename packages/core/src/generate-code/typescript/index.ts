@@ -232,9 +232,22 @@ export function assignEventHandler(handler: TrackHandler | null) {
   trackHandler = handler;
 }
 
-export async function track<K extends keyof Events>(
+type EventNamesWithoutRequiredPayload = {
+  [K in keyof Events]: Record<string, never> extends Events[K] ? K : never;
+}[keyof Events];
+
+export function track<K extends EventNamesWithoutRequiredPayload>(
+  eventName: K,
+): Promise<Value | null | undefined>;
+
+export function track<K extends keyof Events>(
   eventName: K,
   payload: Events[K],
+): Promise<Value | null | undefined>;
+
+export async function track<K extends keyof Events>(
+  eventName: K,
+  payload: Events[K] = {} as Events[K],
 ): Promise<Value | null | undefined> {
   let result: Value | null | undefined;
 

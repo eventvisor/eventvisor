@@ -84,7 +84,7 @@ export class Eventvisor {
       getRevision: () => this.getRevision(),
       onDiagnostic: (handler) => this.onDiagnostic(handler),
       reportDiagnostic: (diagnostic) => this.reportDiagnostic(diagnostic),
-      track: (eventName, payload) => this.trackWithEffectChain(eventName, payload, []),
+      track: (eventName, payload = {}) => this.trackWithEffectChain(eventName, payload, []),
     });
 
     this.validator = new Validator({
@@ -376,7 +376,7 @@ export class Eventvisor {
   /**
    * Event
    */
-  track(eventName: EventName, value: Value): Promise<Value | null> {
+  track(eventName: EventName, value: Value = {}): Promise<Value | null> {
     return this.runOperation(() => this.trackWithEffectChain(eventName, value, []));
   }
 

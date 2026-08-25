@@ -47,7 +47,7 @@ schema: product          # root-level reference; see schemas.md
 
 ## Where each field acts in the pipeline
 
-Order on `track(key, payload)`: required attributes → validation policy → conditions → sampling → event transforms → effects → parallel destination routing → SDK event emission. Validation always sees the original tracked payload. Effects finish before destination routing starts. Destination attempts run in parallel.
+Order on `track(key, payload)`: required attributes → validation policy → conditions → sampling → event transforms → effects → parallel destination routing → SDK event emission. The payload defaults to an empty object when omitted. Validation always sees the original tracked payload. Effects finish before destination routing starts. Destination attempts run in parallel.
 
 - **Validation** checks the original tracked payload — transforms run after, so transformed shapes don't need to satisfy the schema.
 - **`requiredAttributes`** is enforced before validation, even when validation is skipped.

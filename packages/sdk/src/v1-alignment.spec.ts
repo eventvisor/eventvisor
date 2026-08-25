@@ -1,4 +1,4 @@
-import { createEventvisor } from "./index.js";
+import { createEventvisor, type EventvisorModuleApi } from "./index.js";
 import type { DatafileContent } from "@eventvisor/types";
 
 function datafile(overrides: Partial<DatafileContent> = {}): DatafileContent {
@@ -14,6 +14,29 @@ function datafile(overrides: Partial<DatafileContent> = {}): DatafileContent {
 }
 
 describe("Eventvisor public lifecycle", () => {
+  it("uses an empty object when an event value is omitted", async () => {
+    let moduleApi: EventvisorModuleApi | undefined;
+    const instance = createEventvisor({
+      datafile: datafile({ events: { started: { type: "object" } } }),
+      modules: [
+        {
+          name: "tracker",
+          setup(api) {
+            moduleApi = api;
+          },
+        },
+      ],
+    });
+
+    await instance.onReady();
+
+    await expect(instance.track("started")).resolves.toEqual({});
+    if (!moduleApi) throw new Error("Module API was not initialized");
+    await expect(moduleApi.track("started")).resolves.toEqual({});
+
+    await instance.close();
+  });
+
   it("reports invalid datafiles without throwing and preserves the parse message", async () => {
     const diagnostics: any[] = [];
     const instance = createEventvisor({

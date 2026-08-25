@@ -1,0 +1,5 @@
+description: Event with an empty object payload
+tags:
+  - web
+
+type: object

@@ -1,0 +1,6 @@
+description: Event with an open object payload
+tags:
+  - web
+
+type: object
+additionalProperties: true
