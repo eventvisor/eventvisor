@@ -39,6 +39,9 @@ const finalPayload = await eventvisor.track("page_view", {
 });
 // resolves to the transformed payload, or null when the pipeline dropped it
 
+await eventvisor.track("application_started");
+// the event value defaults to {}
+
 await eventvisor.setAttribute("userId", "user-123");
 await eventvisor.removeAttribute("userId");
 
@@ -48,6 +51,8 @@ eventvisor.isAttributeSet("userId");
 ```
 
 `track`, `setAttribute`, `removeAttribute`, `setDatafile`, `removeModule`, `flush`, and `close` are async. Public operations are processed in call order, including calls made before readiness. Await them when the application needs completion or a result. Destination attempts begin in parallel. A `null` from `track` means governance dropped the event, not that an exception occurred.
+
+The second argument to `track` defaults to an empty object. It can be omitted when the event schema accepts an empty object.
 
 Invalid attribute values are not set. Invalid event payloads follow `onValidationFailure`: drop by default, deliver with validation metadata, or route to quarantine. Validation failures produce diagnostics. Falsy values (`false`, `0`, `""`) are valid values.
 

@@ -1,6 +1,7 @@
 import * as fs from "fs";
 import * as os from "os";
 import * as path from "path";
+import * as ts from "typescript";
 
 import { JSONSchema } from "@eventvisor/types";
 
@@ -116,7 +117,15 @@ describe("TypeScript code generation", () => {
         listAttributes: jest.fn().mockResolvedValue(["zeta", "alpha"]),
         readAttribute: jest.fn().mockResolvedValue({ type: "string" }),
         listEvents: jest.fn().mockResolvedValue(["zeta", "alpha"]),
-        readEvent: jest.fn().mockResolvedValue({ type: "object" }),
+        readEvent: jest.fn().mockImplementation(async (name: string) =>
+          name === "alpha"
+            ? { type: "object" }
+            : {
+                type: "object",
+                properties: { id: { type: "string" } },
+                required: ["id"],
+              },
+        ),
         listSchemas: jest.fn().mockResolvedValue([]),
         readSchema: jest.fn(),
       },
@@ -127,8 +136,52 @@ describe("TypeScript code generation", () => {
     const eventsContent = fs.readFileSync(path.join(outputPath, "events.ts"), "utf8");
     const indexContent = fs.readFileSync(path.join(outputPath, "index.ts"), "utf8");
     expect(eventsContent.indexOf("alpha")).toBeLessThan(eventsContent.indexOf("zeta"));
+    expect(indexContent).toContain("type EventNamesWithoutRequiredPayload");
+    expect(indexContent).toContain("Record<string, never> extends Events[K]");
+    expect(indexContent).toContain("payload: Events[K] = {} as Events[K]");
     expect(indexContent).toContain("result = await instance.track");
     expect(indexContent).toContain("return result;");
+
+    const usagePath = path.join(outputPath, "usage.ts");
+    fs.writeFileSync(
+      usagePath,
+      [
+        'import { track } from "./index";',
+        'void track("alpha");',
+        'void track("zeta", { id: "event-1" });',
+        "// @ts-expect-error zeta has a required payload property",
+        'void track("zeta");',
+      ].join("\n"),
+    );
+
+    const sdkTypesDirectory = path.join(outputPath, "node_modules", "@eventvisor", "sdk");
+    fs.mkdirSync(sdkTypesDirectory, { recursive: true });
+    fs.writeFileSync(
+      path.join(sdkTypesDirectory, "index.d.ts"),
+      [
+        "export type Value = unknown;",
+        "export interface Eventvisor {",
+        "  track(eventName: string, value?: Value): Promise<Value | null>;",
+        "  setAttribute(attributeName: string, value: Value): Promise<Value | null>;",
+        "}",
+      ].join("\n"),
+    );
+
+    const program = ts.createProgram([usagePath], {
+      ignoreDeprecations: "6.0",
+      module: ts.ModuleKind.CommonJS,
+      moduleResolution: ts.ModuleResolutionKind.Node10,
+      noEmit: true,
+      skipLibCheck: true,
+      strict: true,
+      target: ts.ScriptTarget.ES2020,
+    });
+    const diagnostics = ts.getPreEmitDiagnostics(program);
+    expect(
+      diagnostics.map((diagnostic) =>
+        ts.flattenDiagnosticMessageText(diagnostic.messageText, "\n"),
+      ),
+    ).toEqual([]);
   });
 });
 

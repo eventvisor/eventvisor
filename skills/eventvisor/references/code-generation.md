@@ -37,7 +37,11 @@ await setAttribute("userId", "user-123");     // key and value type checked
 await track("page_view", {                    // payload type checked against the schema
   url: "https://www.yoursite.com/home",
 });
+
+await track("application_started");            // allowed when the event accepts {}
 ```
+
+Generated helpers only make the payload optional for events whose generated type accepts an empty object. Events with required payload properties still require the second argument.
 
 ## When to recommend it
 

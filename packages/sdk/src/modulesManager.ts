@@ -58,7 +58,7 @@ export interface EventvisorModuleApi {
   getRevision: () => string;
   onDiagnostic: (handler: EventvisorDiagnosticHandler) => () => void;
   reportDiagnostic: (diagnostic: EventvisorDiagnostic) => void;
-  track: (eventName: EventName, payload: Value) => Promise<Value | null>;
+  track: (eventName: EventName, payload?: Value) => Promise<Value | null>;
 }
 
 export interface EventvisorModule {
@@ -87,7 +87,7 @@ export interface ModulesManagerOptions {
   getRevision: () => string;
   onDiagnostic: (handler: EventvisorDiagnosticHandler) => () => void;
   reportDiagnostic: (diagnostic: EventvisorDiagnostic) => void;
-  track?: (eventName: EventName, payload: Value) => Promise<Value | null>;
+  track?: (eventName: EventName, payload?: Value) => Promise<Value | null>;
 }
 
 export class ModulesManager {

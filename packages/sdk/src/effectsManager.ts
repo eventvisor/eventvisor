@@ -177,7 +177,7 @@ export class EffectsManager {
                 effect,
                 step,
                 value,
-                (eventName, payload) => this.track(eventName, payload, nextEffectChain),
+                (eventName, payload = {}) => this.track(eventName, payload, nextEffectChain),
               );
             } catch (handlerError) {
               this.logger.error(`Effect handler error`, {

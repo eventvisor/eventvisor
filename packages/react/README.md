@@ -26,7 +26,7 @@ function CheckoutButton() {
   const ready = useEventvisorReady();
   const { track } = useEventvisor();
 
-  return <button disabled={!ready} onClick={() => track("checkout.started", {})}>Checkout</button>;
+  return <button disabled={!ready} onClick={() => track("checkout.started")}>Checkout</button>;
 }
 ```
 

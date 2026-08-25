@@ -16,7 +16,10 @@ const eventvisor = createEventvisor({
 
 await eventvisor.onReady();
 await eventvisor.track("checkout.completed", { orderId: "order-1" });
+await eventvisor.track("application.started");
 ```
+
+The event value defaults to an empty object, so events without payload properties can be tracked by passing only their name.
 
 ## Attributes
 

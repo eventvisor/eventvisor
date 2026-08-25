@@ -102,7 +102,7 @@ A **complete end-to-end mini project** lives in [templates/example-project/](tem
 
 ## The pipeline: how a tracked event flows
 
-Nearly every authoring question is really a question about where in this pipeline something happens. When `track(eventName, payload)` runs in an app, the SDK executes — in this order:
+Nearly every authoring question is really a question about where in this pipeline something happens. When `track(eventName, payload)` runs in an app, the SDK executes the following steps in order. The payload can be omitted for events that accept an empty object.
 
 1. **Event lookup** — unknown event key → warning, dropped.
 2. **`requiredAttributes`** — every listed attribute must currently be set, else dropped.
